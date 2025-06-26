@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Universe Model Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-2xl font-bold mb-4">Universe Model Demo</h1>
+  <div id="output" class="space-y-2"></div>
+
+  <script type="module">
+    import { SeedManager } from '../dist/SeedManager.js';
+    import { PropertyGraph } from '../dist/PropertyGraph.js';
+    import { ProceduralEntity } from '../dist/ProceduralEntity.js';
+    import { createPlanetDefinitions } from '../dist/PlanetDefinitions.js';
+
+    const seedManager = new SeedManager('DemoSeed42');
+    const graph = new PropertyGraph(createPlanetDefinitions());
+    const planet = new ProceduralEntity('Planet-X', ['MilkyWay','System-4','Planet-X'], seedManager, graph);
+
+    const properties = planet.generate();
+    const container = document.getElementById('output');
+
+    for (const [key, value] of Object.entries(properties)) {
+      const row = document.createElement('div');
+      row.className = 'flex justify-between bg-white shadow px-4 py-2 rounded';
+      row.innerHTML = `<span class="font-mono">${key}</span><span>${value}</span>`;
+      container.appendChild(row);
+    }
+  </script>
+</body>
+</html>

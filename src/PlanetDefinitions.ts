@@ -1,5 +1,5 @@
 import { PropertyDefinition } from "./PropertyGraph";
-import { getNoise01, mapRange01, resolveDiscrete } from "./ProceduralUtils";
+import { getNoise01, mapRange01, resolveDiscrete } from "./ProceduralUtils.js";
 
 /** Base physical properties of the planet */
 export function createBasicSubsystem(): PropertyDefinition[] {
