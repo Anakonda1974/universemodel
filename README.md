@@ -49,3 +49,23 @@ const earth = new ProceduralEntity(
 
 console.log(earth.generate());
 ```
+
+## Extended Planet Properties
+
+The `createPlanetDefinitions` helper combines several subsystems such as
+basic physics, atmosphere, geology and climate. The definitions can be
+extended or replaced as needed to model additional effects.
+
+```ts
+import { createPlanetDefinitions } from "./dist/PlanetDefinitions";
+
+const planetGraph = new PropertyGraph(createPlanetDefinitions());
+const mars = new ProceduralEntity(
+  "Mars",
+  ["Solar", "System", "Mars"],
+  seedManager,
+  planetGraph
+);
+
+console.log(mars.generate());
+```
