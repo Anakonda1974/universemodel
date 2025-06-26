@@ -69,3 +69,8 @@ const mars = new ProceduralEntity(
 
 console.log(mars.generate());
 ```
+
+## HTML Demo
+
+After running `npm run build`, open `demo/index.html` in a browser to see a
+Tailwind-powered page that lists the generated properties for a sample planet.
