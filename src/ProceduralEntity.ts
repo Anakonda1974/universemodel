@@ -16,4 +16,9 @@ export class ProceduralEntity {
   generate(log?: (msg: string) => void): Record<string, any> {
     return this.graph.evaluate(this.fullSeed, log);
   }
+
+  /** Generate grouped property results using PropertyGraph.evaluateGrouped */
+  generateGrouped(log?: (msg: string) => void) {
+    return this.graph.evaluateGrouped(this.fullSeed, log);
+  }
 }

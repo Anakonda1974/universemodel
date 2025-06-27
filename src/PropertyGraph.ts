@@ -2,7 +2,11 @@ export type PropertyDefinition = {
   id: string;
   inputs?: string[];
   compute: (ctx: Record<string, any>, seed: string) => any;
+  /** Optional group used to organize related properties */
+  group?: string;
 };
+
+export type GroupedProperties = Record<string, Record<string, any>>;
 
 export class PropertyGraph {
   constructor(private definitions: PropertyDefinition[]) {}
@@ -40,5 +44,22 @@ export class PropertyGraph {
     }
 
     return context;
+  }
+
+  /**
+   * Evaluates all properties and groups the resulting values by the
+   * {@link PropertyDefinition.group} field.
+   */
+  evaluateGrouped(seed: string, log?: (msg: string) => void): GroupedProperties {
+    const flat = this.evaluate(seed, log);
+    const grouped: GroupedProperties = {};
+    for (const def of this.definitions) {
+      const group = def.group ?? "default";
+      if (!(group in grouped)) {
+        grouped[group] = {};
+      }
+      grouped[group][def.id] = flat[def.id];
+    }
+    return grouped;
   }
 }

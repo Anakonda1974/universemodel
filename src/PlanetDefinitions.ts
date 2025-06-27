@@ -6,40 +6,49 @@ export function createBasicSubsystem(): PropertyDefinition[] {
   return [
     {
       id: "radius",
+      group: "basic",
       compute: (_, seed) => mapRange01(getNoise01(seed, "radius"), 0.5, 3),
     },
     {
       id: "density",
+      group: "basic",
       compute: (_, seed) => mapRange01(getNoise01(seed, "density"), 0.5, 5),
     },
     {
       id: "mass",
       inputs: ["radius", "density"],
+      group: "basic",
       compute: (ctx) => ctx.radius ** 3 * ctx.density,
     },
     {
       id: "gravity",
       inputs: ["mass", "radius"],
+      group: "basic",
       compute: (ctx) => ctx.mass / ctx.radius ** 2,
     },
     {
       id: "axialTilt",
+      group: "basic",
       compute: (_, seed) => mapRange01(getNoise01(seed, "tilt"), 0, 45),
     },
     {
       id: "dayLength",
+      group: "basic",
       compute: (_, seed) => mapRange01(getNoise01(seed, "day"), 8, 40),
     },
     {
       id: "yearLength",
+      group: "basic",
       compute: (_, seed) => mapRange01(getNoise01(seed, "year"), 200, 800),
     },
     {
       id: "waterCoverage",
+      group: "basic",
       compute: (_, seed) => getNoise01(seed, "water"),
     },
     {
       id: "baseTemperature",
+      group: "basic",
       compute: (_, seed) => mapRange01(getNoise01(seed, "temp"), 150, 350),
     },
   ];
@@ -50,11 +59,13 @@ export function createAtmosphereSubsystem(): PropertyDefinition[] {
   return [
     {
       id: "atmosphereDensity",
+      group: "atmosphere",
       compute: (_, seed) => mapRange01(getNoise01(seed, "atm_density"), 0, 10),
     },
     {
       id: "atmosphereType",
       inputs: ["atmosphereDensity"],
+      group: "atmosphere",
       compute: (ctx, seed) =>
         resolveDiscrete(getNoise01(seed, "atm_type"), [
           [0.1, ctx.atmosphereDensity < 0.1 ? "none" : "thin"],
@@ -67,6 +78,7 @@ export function createAtmosphereSubsystem(): PropertyDefinition[] {
     {
       id: "atmosphereComposition",
       inputs: ["atmosphereType"],
+      group: "atmosphere",
       compute: (ctx, seed) => {
         if (ctx.atmosphereType === "none") return "vacuum";
         return resolveDiscrete(getNoise01(seed, "atm_mix"), [
@@ -85,6 +97,7 @@ export function createGeologySubsystem(): PropertyDefinition[] {
   return [
     {
       id: "crustType",
+      group: "geology",
       compute: (_, seed) =>
         resolveDiscrete(getNoise01(seed, "crust"), [
           [0.5, "rocky"],
@@ -95,6 +108,7 @@ export function createGeologySubsystem(): PropertyDefinition[] {
     },
     {
       id: "coreType",
+      group: "geology",
       compute: (_, seed) =>
         resolveDiscrete(getNoise01(seed, "core"), [
           [0.5, "solid"],
@@ -104,6 +118,7 @@ export function createGeologySubsystem(): PropertyDefinition[] {
     },
     {
       id: "tectonicActivity",
+      group: "geology",
       compute: (_, seed) =>
         resolveDiscrete(getNoise01(seed, "tectonic"), [
           [0.3, "none"],
@@ -114,6 +129,7 @@ export function createGeologySubsystem(): PropertyDefinition[] {
     {
       id: "magneticFieldStrength",
       inputs: ["coreType", "radius"],
+      group: "geology",
       compute: (ctx, seed) => {
         const base = ctx.coreType === "molten" ? 1 : ctx.coreType === "solid" ? 0.5 : 1.5;
         return base * mapRange01(getNoise01(seed, "magfield"), 0.1, 3);
@@ -128,6 +144,7 @@ export function createClimateSubsystem(): PropertyDefinition[] {
     {
       id: "weatherPattern",
       inputs: ["baseTemperature", "waterCoverage"],
+      group: "climate",
       compute: (ctx, seed) => {
         const noise = getNoise01(seed, "weather");
         if (ctx.waterCoverage < 0.2) {
@@ -142,6 +159,7 @@ export function createClimateSubsystem(): PropertyDefinition[] {
     {
       id: "dominantBiome",
       inputs: ["baseTemperature", "waterCoverage"],
+      group: "climate",
       compute: (ctx, seed) => {
         const noise = getNoise01(seed, "biome");
         if (ctx.waterCoverage > 0.6) {
