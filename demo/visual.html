@@ -68,9 +68,6 @@
       header.appendChild(title);
       header.appendChild(close);
 
-      header.className = 'text-lg underline mb-2';
-      header.textContent = group;
-
       card.appendChild(header);
 
       for (const [key, value] of Object.entries(props)) {
@@ -100,7 +97,6 @@
 
         row.addEventListener('dblclick', () => subdivideRow(row, card, key));
 
-
         allPorts.set(outPort.id, outPort);
         allPorts.set(inPort.id, inPort);
         card.appendChild(row);
@@ -113,6 +109,9 @@
 
     function removeConnection(conn) {
       conn.line.remove();
+
+      conn.handle.remove();
+
       connections.splice(connections.indexOf(conn), 1);
     }
 
@@ -150,7 +149,9 @@
       cards.push(newCard);
       if (!parentCard.querySelector('[data-id]')) removeCard(parentCard);
       interact(newCard).draggable(dragOptions);
-      connections.forEach(c => c.line.position());
+
+      connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+
     }
 
     function addConnection(from, to) {
@@ -160,8 +161,27 @@
         startPlug: 'square',
         endPlug: 'arrow'
       });
-      const conn = { line, from, to };
-      line.path.addEventListener('dblclick', () => removeConnection(conn));
+
+      const handle = document.createElement('div');
+      handle.className = 'line-handle';
+      workspace.appendChild(handle);
+      const conn = { line, from, to, handle };
+
+      function updateHandle() {
+        const wsRect = workspace.getBoundingClientRect();
+        const s = from.getBoundingClientRect();
+        const e = to.getBoundingClientRect();
+        const x = ((s.left + s.right) / 2 + (e.left + e.right) / 2) / 2 - wsRect.left;
+        const y = ((s.top + s.bottom) / 2 + (e.top + e.bottom) / 2) / 2 - wsRect.top;
+        handle.style.left = `${x - handle.offsetWidth / 2}px`;
+        handle.style.top = `${y - handle.offsetHeight / 2}px`;
+      }
+      conn.updateHandle = updateHandle;
+      updateHandle();
+      line.position();
+
+      handle.addEventListener('dblclick', () => removeConnection(conn));
+
       connections.push(conn);
       return conn;
     }
@@ -225,7 +245,8 @@
           target.dataset.x = x;
           target.dataset.y = y;
 
-          connections.forEach(c => c.line.position());
+          connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+
         }
       }
     };
