@@ -109,7 +109,6 @@
 
         row.appendChild(outPort);
 
-        row.addEventListener('dblclick', () => subdivideRow(row, card, key));
 
         allPorts.set(outPort.id, outPort);
         allPorts.set(inPort.id, inPort);
@@ -140,34 +139,6 @@
       card.remove();
     }
 
-    function subdivideRow(row, parentCard, key) {
-      const newCard = document.createElement('div');
-      newCard.className = 'card absolute bg-gray-900 p-4 rounded-lg space-y-2';
-      newCard.style.left = (parseInt(parentCard.style.left || 0) + 220) + 'px';
-      newCard.style.top = parentCard.style.top;
-
-      const header = document.createElement('div');
-      header.className = 'flex justify-between items-center mb-2';
-      const title = document.createElement('span');
-      title.className = 'text-lg underline';
-      title.textContent = key;
-      const close = document.createElement('button');
-      close.textContent = '×';
-      close.className = 'text-red-400';
-      close.addEventListener('click', () => removeCard(newCard));
-      header.appendChild(title);
-      header.appendChild(close);
-      newCard.appendChild(header);
-
-      newCard.appendChild(row);
-      workspace.appendChild(newCard);
-      cards.push(newCard);
-      if (!parentCard.querySelector('[data-id]')) removeCard(parentCard);
-      interact(newCard).draggable(dragOptions);
-
-      connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
-
-    }
 
     function addConnection(from, to) {
       const line = new LeaderLine(from, to, {
