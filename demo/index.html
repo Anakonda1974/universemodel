@@ -18,7 +18,7 @@
     const seedManager = new SeedManager('DemoSeed42');
     const graph = new PropertyGraph(createPlanetDefinitions());
     const planet = new ProceduralEntity('Planet-X', ['MilkyWay','System-4','Planet-X'], seedManager, graph);
-
+console.log('Planet Entity:', planet);
     const groups = planet.generateGrouped();
     const container = document.getElementById('output');
 

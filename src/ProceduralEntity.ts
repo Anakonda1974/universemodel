@@ -19,6 +19,10 @@ export class ProceduralEntity {
 
   /** Generate grouped property results using PropertyGraph.evaluateGrouped */
   generateGrouped(log?: (msg: string) => void) {
+   
+    if (!this.graph.evaluateGrouped) {
+      throw new Error("PropertyGraph does not support grouped evaluation");
+    }
     return this.graph.evaluateGrouped(this.fullSeed, log);
   }
 }
