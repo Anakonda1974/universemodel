@@ -27,12 +27,16 @@
     }
     .card { width: 200px; }
 
+    .row:nth-child(odd) { background: #334155; }
+    .row:nth-child(even) { background: #1f2937; }
+
     .port {
-      width: 0.75rem;
-      height: 0.75rem;
+      width: 1rem;
+      height: 1rem;
       cursor: pointer;
+      transition: outline 0.1s ease-in-out;
     }
-    .port:hover { outline: 2px solid #fbbf24; }
+    .port-hover, .port:hover { outline: 2px solid #fbbf24; }
     .collapsed .row { display: none; }
     .line-handle {
       width: 0.75rem;
@@ -108,7 +112,7 @@
 
       for (const [key, value] of Object.entries(props)) {
         const row = document.createElement('div');
-        row.className = 'row flex items-center text-sm mb-1 space-x-1';
+        row.className = 'row flex items-center text-sm mb-1 space-x-1 px-1';
         row.dataset.id = key;
 
         const inPort = document.createElement('div');
@@ -123,9 +127,11 @@
         label.textContent = key + ':';
         row.appendChild(label);
 
-        const valueSpan = document.createElement('span');
-        valueSpan.textContent = value;
-        row.appendChild(valueSpan);
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.value = value;
+        valueInput.className = 'value-input bg-gray-700 rounded px-1 text-black w-20';
+        row.appendChild(valueInput);
 
 
         const outPort = document.createElement('div');
@@ -227,6 +233,7 @@
     interact('.out-port').draggable({
       listeners: {
         start(event) {
+          event.target.classList.add('port-hover');
           tempLine = new LeaderLine(event.target, { x: event.clientX, y: event.clientY }, {
             color: 'cyan',
             path: 'fluid',
@@ -238,6 +245,7 @@
           if (tempLine) tempLine.setOptions({ end: { x: event.clientX, y: event.clientY } });
         },
         end(event) {
+          event.target.classList.remove('port-hover');
           if (tempLine) {
             tempLine.remove();
             tempLine = null;
@@ -247,7 +255,14 @@
     });
 
     interact('.in-port').dropzone({
+      ondragenter(event) {
+        event.target.classList.add('port-hover');
+      },
+      ondragleave(event) {
+        event.target.classList.remove('port-hover');
+      },
       ondrop(event) {
+        event.target.classList.remove('port-hover');
         if (tempLine) {
           tempLine.remove();
           tempLine = null;
