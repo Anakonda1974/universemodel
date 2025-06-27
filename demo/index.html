@@ -7,7 +7,7 @@
 </head>
 <body class="bg-black text-white p-6 font-sans">
   <div class="bg-orange-600 text-black text-3xl font-bold px-6 py-4 rounded-r-full mb-6 w-fit">Universe Model Demo</div>
-  <div id="output" class="space-y-2"></div>
+  <div id="output" class="space-y-4"></div>
 
   <script type="module">
     import { SeedManager } from '../dist/SeedManager.js';
@@ -25,14 +25,27 @@ console.log('Planet Entity:', planet);
     const rowMap = new Map();
 
     for (const [group, props] of Object.entries(groups)) {
+      const card = document.createElement('div');
+      card.className = 'bg-gray-900 p-4 rounded-lg space-y-2';
+
       const header = document.createElement('div');
-      header.className = 'text-xl mt-4 mb-2 underline';
+      header.className = 'text-xl mb-2 underline';
       header.textContent = group;
-      container.appendChild(header);
+      card.appendChild(header);
+
       for (const [key, value] of Object.entries(props)) {
         const row = document.createElement('div');
-        row.className = 'flex justify-between bg-purple-600 text-black px-4 py-2 rounded-r-full cursor-pointer';
-        row.innerHTML = `<span class="font-mono pr-4">${key}</span><span class="flex-1 text-right">${value}</span>`;
+        row.className = 'bg-purple-600 text-black px-4 py-2 rounded cursor-pointer';
+        row.innerHTML = `<div class="flex justify-between"><span class="font-mono pr-4">${key}</span><span>${value}</span></div>`;
+
+        const inputs = trace[key]?.inputs || {};
+        const inputStr = Object.entries(inputs).map(([k,v]) => `${k}: ${v}`).join(', ');
+        const def = graph.getDefinition(key);
+        const formula = def && def.compute ? def.compute.toString().replace(/\n/g, ' ') : '';
+        const info = document.createElement('div');
+        info.className = 'text-xs text-white mt-1 font-mono';
+        info.textContent = formula + (inputStr ? ` | ${inputStr}` : '');
+        row.appendChild(info);
         row.addEventListener('click', () => {
           document.querySelectorAll('.highlight').forEach(el => el.classList.remove('ring-2','ring-yellow-400','highlight'));
           row.classList.add('ring-2','ring-yellow-400','highlight');
@@ -43,8 +56,9 @@ console.log('Planet Entity:', planet);
           });
         });
         rowMap.set(key, row);
-        container.appendChild(row);
+        card.appendChild(row);
       }
+      container.appendChild(card);
     }
   </script>
 </body>
