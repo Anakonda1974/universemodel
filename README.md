@@ -100,3 +100,9 @@ console.log(trace.mass.value);  // result of compute function
 
 After running `npm run build`, open `demo/index.html` in a browser to see a
 Tailwind-powered page that lists the generated properties for a sample planet.
+
+For an interactive view that visualises property dependencies, open
+`demo/visual.html`. This demo displays each subsystem in a draggable card with
+input ports on the left and output ports on the right. Connections can be
+dragged between ports, double‑clicked to remove and rows can be split into new
+cards by double‑clicking.

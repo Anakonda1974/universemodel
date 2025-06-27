@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Universe Model Visual</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/leader-line@1.0.7/leader-line.min.js"></script>
+  <script src="https://unpkg.com/interactjs/dist/interact.min.js"></script>
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    #workspace { width: 100%; height: 100%; position: relative; }
+    .card { width: 200px; }
+    .port {
+      width: 0.75rem;
+      height: 0.75rem;
+      cursor: pointer;
+    }
+    .line-handle {
+      width: 0.75rem;
+      height: 0.75rem;
+      background: #22c55e;
+      border-radius: 9999px;
+      position: absolute;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="bg-black text-white">
+  <div id="workspace"></div>
+
+  <script type="module">
+    import { SeedManager } from '../dist/SeedManager.js';
+    import { PropertyGraph } from '../dist/PropertyGraph.js';
+    import { ProceduralEntity } from '../dist/ProceduralEntity.js';
+    import { createPlanetDefinitions } from '../dist/PlanetDefinitions.js';
+
+    const seedManager = new SeedManager('DemoSeed42');
+    const graph = new PropertyGraph(createPlanetDefinitions());
+    const planet = new ProceduralEntity('Planet-X', ['MilkyWay','System-4','Planet-X'], seedManager, graph);
+
+    const groups = planet.generateGrouped();
+    const workspace = document.getElementById('workspace');
+
+    const allPorts = new Map();
+    const cards = [];
+
+    let left = 20, top = 20;
+    for (const [group, props] of Object.entries(groups)) {
+      const card = document.createElement('div');
+      card.className = 'card absolute bg-gray-900 p-4 rounded-lg space-y-2';
+      card.style.left = left + 'px';
+      card.style.top = top + 'px';
+      top += 30;
+      left += 220;
+
+      const header = document.createElement('div');
+      header.className = 'flex justify-between items-center mb-2';
+      const title = document.createElement('span');
+      title.className = 'text-lg underline';
+      title.textContent = group;
+      const close = document.createElement('button');
+      close.textContent = '×';
+      close.className = 'text-red-400';
+      close.addEventListener('click', () => removeCard(card));
+      header.appendChild(title);
+      header.appendChild(close);
+      card.appendChild(header);
+
+      for (const [key, value] of Object.entries(props)) {
+        const row = document.createElement('div');
+        row.className = 'flex items-center text-sm mb-1 space-x-1';
+        row.dataset.id = key;
+
+        const inPort = document.createElement('div');
+        inPort.className = 'port bg-red-400 rounded-full in-port';
+        inPort.id = `in-${key}`;
+        row.appendChild(inPort);
+
+        const label = document.createElement('span');
+        label.textContent = key + ':';
+        row.appendChild(label);
+
+        const valueSpan = document.createElement('span');
+        valueSpan.textContent = value;
+        row.appendChild(valueSpan);
+
+        const outPort = document.createElement('div');
+        outPort.className = 'port bg-blue-400 rounded-full out-port';
+        outPort.id = `out-${key}`;
+        row.appendChild(outPort);
+
+        row.addEventListener('dblclick', () => subdivideRow(row, card, key));
+
+        allPorts.set(outPort.id, outPort);
+        allPorts.set(inPort.id, inPort);
+        card.appendChild(row);
+      }
+      workspace.appendChild(card);
+      cards.push(card);
+    }
+
+    const connections = [];
+
+    function removeConnection(conn) {
+      conn.line.remove();
+      conn.handle.remove();
+      connections.splice(connections.indexOf(conn), 1);
+    }
+
+    function removeCard(card) {
+      const ports = card.querySelectorAll('.port');
+      ports.forEach(p => {
+        connections.slice().forEach(c => {
+          if (c.from === p || c.to === p) removeConnection(c);
+        });
+      });
+      card.remove();
+    }
+
+    function subdivideRow(row, parentCard, key) {
+      const newCard = document.createElement('div');
+      newCard.className = 'card absolute bg-gray-900 p-4 rounded-lg space-y-2';
+      newCard.style.left = (parseInt(parentCard.style.left || 0) + 220) + 'px';
+      newCard.style.top = parentCard.style.top;
+
+      const header = document.createElement('div');
+      header.className = 'flex justify-between items-center mb-2';
+      const title = document.createElement('span');
+      title.className = 'text-lg underline';
+      title.textContent = key;
+      const close = document.createElement('button');
+      close.textContent = '×';
+      close.className = 'text-red-400';
+      close.addEventListener('click', () => removeCard(newCard));
+      header.appendChild(title);
+      header.appendChild(close);
+      newCard.appendChild(header);
+
+      newCard.appendChild(row);
+      workspace.appendChild(newCard);
+      cards.push(newCard);
+      if (!parentCard.querySelector('[data-id]')) removeCard(parentCard);
+      interact(newCard).draggable(dragOptions);
+      connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+    }
+
+    function addConnection(from, to) {
+      const line = new LeaderLine(from, to, {
+        color: 'cyan',
+        path: 'straight',
+        startPlug: 'square',
+        endPlug: 'arrow'
+      });
+      const handle = document.createElement('div');
+      handle.className = 'line-handle';
+      workspace.appendChild(handle);
+      const conn = { line, from, to, handle };
+
+      function updateHandle() {
+        const wsRect = workspace.getBoundingClientRect();
+        const s = from.getBoundingClientRect();
+        const e = to.getBoundingClientRect();
+        const x = ((s.left + s.right) / 2 + (e.left + e.right) / 2) / 2 - wsRect.left;
+        const y = ((s.top + s.bottom) / 2 + (e.top + e.bottom) / 2) / 2 - wsRect.top;
+        handle.style.left = `${x - handle.offsetWidth / 2}px`;
+        handle.style.top = `${y - handle.offsetHeight / 2}px`;
+      }
+      conn.updateHandle = updateHandle;
+      updateHandle();
+      line.position();
+
+      handle.addEventListener('dblclick', () => removeConnection(conn));
+      connections.push(conn);
+      return conn;
+    }
+
+    for (const def of graph.getDefinitions()) {
+      const deps = def.inputs || [];
+      for (const dep of deps) {
+        const from = document.getElementById('out-' + dep);
+        const to = document.getElementById('in-' + def.id);
+        if (from && to) {
+          addConnection(from, to);
+        }
+      }
+    }
+
+    let tempLine = null;
+    interact('.out-port').draggable({
+      listeners: {
+        start(event) {
+          tempLine = new LeaderLine(event.target, { x: event.clientX, y: event.clientY }, {
+            color: 'cyan',
+            path: 'straight',
+            startPlug: 'square',
+            endPlug: 'arrow'
+          });
+        },
+        move(event) {
+          if (tempLine) tempLine.setOptions({ end: { x: event.clientX, y: event.clientY } });
+        },
+        end(event) {
+          if (tempLine) {
+            tempLine.remove();
+            tempLine = null;
+          }
+        }
+      }
+    });
+
+    interact('.in-port').dropzone({
+      ondrop(event) {
+        if (tempLine) {
+          tempLine.remove();
+          tempLine = null;
+        }
+        const from = event.relatedTarget;
+        const to = event.target;
+        addConnection(from, to);
+      }
+    });
+
+    const dragOptions = {
+      listeners: {
+        move(event) {
+          const target = event.target;
+          const x = (parseFloat(target.dataset.x) || 0) + event.dx;
+          const y = (parseFloat(target.dataset.y) || 0) + event.dy;
+          target.style.transform = `translate(${x}px, ${y}px)`;
+          target.dataset.x = x;
+          target.dataset.y = y;
+          connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+        }
+      }
+    };
+
+    interact('.card').draggable(dragOptions);
+  </script>
+</body>
+</html>
