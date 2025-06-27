@@ -21,14 +21,14 @@
     }
     .bg-grid {
       background-image:
-        linear-gradient(#2d2d2d 1px, transparent 1px),
-        linear-gradient(90deg, #2d2d2d 1px, transparent 1px);
+        linear-gradient(#e5e7eb 1px, transparent 1px),
+        linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
       background-size: 40px 40px;
     }
     .card { width: 200px; }
 
-    .row:nth-child(odd) { background: #334155; }
-    .row:nth-child(even) { background: #1f2937; }
+    .row:nth-child(odd) { background: #eef2ff; }
+    .row:nth-child(even) { background: #e0e7ff; }
 
     .port {
       width: 1rem;
@@ -59,10 +59,10 @@
 
   </style>
 </head>
-<body class="bg-black text-white">
+<body class="bg-gray-50 text-gray-900">
   <div id="toolbar" class="absolute z-10 top-2 left-2 space-x-2">
-    <button id="resetBtn" class="bg-gray-700 px-2 py-1 rounded">Reset view</button>
-    <button id="clearBtn" class="bg-gray-700 px-2 py-1 rounded">Clear connections</button>
+    <button id="resetBtn" class="bg-white border border-gray-300 px-2 py-1 rounded shadow text-sm hover:bg-gray-100">Reset view</button>
+    <button id="clearBtn" class="bg-white border border-gray-300 px-2 py-1 rounded shadow text-sm hover:bg-gray-100">Clear connections</button>
   </div>
   <div id="workspace" class="bg-grid">
     <div id="canvas"></div>
@@ -88,7 +88,7 @@
     let left = 20, top = 20;
     for (const [group, props] of Object.entries(groups)) {
       const card = document.createElement('div');
-      card.className = 'card absolute bg-gray-900 p-4 rounded-lg space-y-2';
+      card.className = 'card absolute bg-white p-4 rounded-lg shadow space-y-2';
       card.style.left = left + 'px';
       card.style.top = top + 'px';
       top += 30;
@@ -102,7 +102,7 @@
       title.textContent = group;
       const close = document.createElement('button');
       close.textContent = '×';
-      close.className = 'text-red-400';
+      close.className = 'text-red-500 hover:text-red-700';
       close.addEventListener('click', () => removeCard(card));
       header.appendChild(title);
       header.appendChild(close);
@@ -134,7 +134,7 @@
         row.dataset.id = key;
 
         const inPort = document.createElement('div');
-        inPort.className = 'port bg-red-400 rounded-full in-port';
+        inPort.className = 'port bg-red-300 rounded-full border border-red-400 in-port';
         inPort.id = `in-${key}`;
 
         inPort.dataset.prop = key;
@@ -148,12 +148,12 @@
         const valueInput = document.createElement('input');
         valueInput.type = 'text';
         valueInput.value = value;
-        valueInput.className = 'value-input bg-gray-700 rounded px-1 text-black w-20';
+        valueInput.className = 'value-input bg-gray-100 border border-gray-300 rounded px-1 text-gray-900 w-20';
         row.appendChild(valueInput);
 
 
         const outPort = document.createElement('div');
-        outPort.className = 'port bg-blue-400 rounded-full out-port';
+        outPort.className = 'port bg-blue-300 rounded-full border border-blue-400 out-port';
         outPort.id = `out-${key}`;
         outPort.dataset.prop = key;
 

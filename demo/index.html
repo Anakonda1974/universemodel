@@ -11,8 +11,8 @@
     }
   </style>
 </head>
-<body class="bg-black text-white p-6 font-sans">
-  <div class="bg-orange-600 text-black text-3xl font-bold px-6 py-4 rounded-r-full mb-6 w-fit">Universe Model Demo</div>
+<body class="bg-gray-50 text-gray-900 p-8 font-sans">
+  <div class="bg-blue-600 text-white text-3xl font-semibold px-6 py-4 rounded-md shadow mb-8 inline-block">Universe Model Demo</div>
   <div id="output" class="space-y-4"></div>
 
   <script type="module">
@@ -32,7 +32,7 @@ console.log('Planet Entity:', planet);
 
     for (const [group, props] of Object.entries(groups)) {
       const card = document.createElement('div');
-      card.className = 'bg-gray-900 p-4 rounded-lg space-y-2';
+      card.className = 'bg-white p-6 rounded-lg shadow space-y-2';
 
       const header = document.createElement('div');
       header.className = 'text-xl mb-2 underline';
@@ -41,13 +41,13 @@ console.log('Planet Entity:', planet);
 
       for (const [key, value] of Object.entries(props)) {
         const row = document.createElement('div');
-        row.className = 'bg-purple-600 text-black px-4 py-2 rounded cursor-pointer';
+        row.className = 'bg-blue-50 hover:bg-blue-100 text-gray-800 px-4 py-2 rounded cursor-pointer';
 
         const wrapper = document.createElement('div');
         wrapper.className = 'flex items-center justify-between space-x-2';
 
         const inPort = document.createElement('div');
-        inPort.className = 'port bg-red-400 rounded-full';
+        inPort.className = 'port bg-red-300 rounded-full border border-red-400';
 
         const keySpan = document.createElement('span');
         keySpan.className = 'font-mono';
@@ -57,7 +57,7 @@ console.log('Planet Entity:', planet);
         valueSpan.textContent = value;
 
         const outPort = document.createElement('div');
-        outPort.className = 'port bg-blue-400 rounded-full';
+        outPort.className = 'port bg-blue-300 rounded-full border border-blue-400';
 
         wrapper.appendChild(inPort);
         wrapper.appendChild(keySpan);
@@ -70,7 +70,7 @@ console.log('Planet Entity:', planet);
         const def = graph.getDefinition(key);
         const formula = def && def.compute ? def.compute.toString().replace(/\n/g, ' ') : '';
         const info = document.createElement('div');
-        info.className = 'text-xs text-white mt-1 font-mono';
+        info.className = 'text-xs text-gray-500 mt-1 font-mono';
         info.textContent = formula + (inputStr ? ` | ${inputStr}` : '');
         row.appendChild(info);
         row.addEventListener('click', () => {
