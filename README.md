@@ -83,6 +83,19 @@ const grouped = mars.generateGrouped();
 console.log(grouped.basic.radius); // access values by group and id
 ```
 
+### Tracing Property Dependencies
+
+Sometimes it's helpful to see exactly how a value was produced. Each
+`ProceduralEntity` exposes `generateTrace()` which returns the computed value
+for every property along with the inputs used. This can be useful for debugging
+or for building more communicative UI elements.
+
+```ts
+const trace = mars.generateTrace(console.log);
+console.log(trace.mass.inputs); // { radius: 1.5, density: 2 }
+console.log(trace.mass.value);  // result of compute function
+```
+
 ## HTML Demo
 
 After running `npm run build`, open `demo/index.html` in a browser to see a

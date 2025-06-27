@@ -19,10 +19,19 @@ export class ProceduralEntity {
 
   /** Generate grouped property results using PropertyGraph.evaluateGrouped */
   generateGrouped(log?: (msg: string) => void) {
-   
+
     if (!this.graph.evaluateGrouped) {
       throw new Error("PropertyGraph does not support grouped evaluation");
     }
     return this.graph.evaluateGrouped(this.fullSeed, log);
+  }
+
+  /** Generate detailed traces for each property using PropertyGraph.evaluateWithTrace */
+  generateTrace(log?: (msg: string) => void) {
+    if (!(this.graph as any).evaluateWithTrace) {
+      throw new Error("PropertyGraph does not support trace evaluation");
+    }
+    // Type assertion because evaluateWithTrace is defined on PropertyGraph
+    return (this.graph as any).evaluateWithTrace(this.fullSeed, log);
   }
 }
