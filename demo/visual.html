@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Universe Model Visual</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/leader-line@1.0.7/leader-line.min.js"></script>
+  <script src="https://unpkg.com/interactjs/dist/interact.min.js"></script>
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    #workspace { width: 100%; height: 100%; position: relative; }
+    .card { width: 200px; }
+    .port { width: 0.75rem; height: 0.75rem; }
+  </style>
+</head>
+<body class="bg-black text-white">
+  <div id="workspace"></div>
+
+  <script type="module">
+    import { SeedManager } from '../dist/SeedManager.js';
+    import { PropertyGraph } from '../dist/PropertyGraph.js';
+    import { ProceduralEntity } from '../dist/ProceduralEntity.js';
+    import { createPlanetDefinitions } from '../dist/PlanetDefinitions.js';
+
+    const seedManager = new SeedManager('DemoSeed42');
+    const graph = new PropertyGraph(createPlanetDefinitions());
+    const planet = new ProceduralEntity('Planet-X', ['MilkyWay','System-4','Planet-X'], seedManager, graph);
+
+    const groups = planet.generateGrouped();
+    const workspace = document.getElementById('workspace');
+
+    const allPorts = new Map();
+    const cards = [];
+
+    let left = 20, top = 20;
+    for (const [group, props] of Object.entries(groups)) {
+      const card = document.createElement('div');
+      card.className = 'card absolute bg-gray-900 p-4 rounded-lg space-y-2';
+      card.style.left = left + 'px';
+      card.style.top = top + 'px';
+      top += 30;
+      left += 220;
+
+      const header = document.createElement('div');
+      header.className = 'text-lg underline mb-2';
+      header.textContent = group;
+      card.appendChild(header);
+
+      for (const [key, value] of Object.entries(props)) {
+        const row = document.createElement('div');
+        row.className = 'flex items-center text-sm mb-1 space-x-1';
+        row.dataset.id = key;
+
+        const outPort = document.createElement('div');
+        outPort.className = 'port bg-blue-400 rounded-full';
+        outPort.id = `out-${key}`;
+        row.appendChild(outPort);
+
+        const label = document.createElement('span');
+        label.textContent = key + ':';
+        row.appendChild(label);
+
+        const valueSpan = document.createElement('span');
+        valueSpan.textContent = value;
+        row.appendChild(valueSpan);
+
+        const inPort = document.createElement('div');
+        inPort.className = 'port bg-red-400 rounded-full';
+        inPort.id = `in-${key}`;
+        row.appendChild(inPort);
+
+        allPorts.set(outPort.id, outPort);
+        allPorts.set(inPort.id, inPort);
+        card.appendChild(row);
+      }
+      workspace.appendChild(card);
+      cards.push(card);
+    }
+
+    const lines = [];
+    for (const def of graph.getDefinitions()) {
+      const deps = def.inputs || [];
+      for (const dep of deps) {
+        const from = document.getElementById('out-' + dep);
+        const to = document.getElementById('in-' + def.id);
+        if (from && to) {
+          lines.push(new LeaderLine(from, to, { color: 'cyan', path: 'straight' }));
+        }
+      }
+    }
+
+    interact('.card').draggable({
+      listeners: {
+        move(event) {
+          const target = event.target;
+          const x = (parseFloat(target.dataset.x) || 0) + event.dx;
+          const y = (parseFloat(target.dataset.y) || 0) + event.dy;
+          target.style.transform = `translate(${x}px, ${y}px)`;
+          target.dataset.x = x;
+          target.dataset.y = y;
+          lines.forEach(l => l.position());
+        }
+      }
+    });
+  </script>
+</body>
+</html>
