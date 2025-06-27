@@ -70,6 +70,17 @@ const mars = new ProceduralEntity(
 console.log(mars.generate());
 ```
 
+### Grouped Output
+
+Properties can be organised into groups by adding a `group` field to each
+`PropertyDefinition`. Use `generateGrouped()` on a `ProceduralEntity` to obtain
+the values structured by these groups.
+
+```ts
+const grouped = mars.generateGrouped();
+console.log(grouped.basic.radius); // access values by group and id
+```
+
 ## HTML Demo
 
 After running `npm run build`, open `demo/index.html` in a browser to see a
