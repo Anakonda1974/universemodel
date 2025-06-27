@@ -37,7 +37,7 @@
       transition: outline 0.1s ease-in-out;
     }
     .port-hover, .port:hover { outline: 2px solid #fbbf24; }
-    .collapsed .row { display: none; }
+    .collapsed .row { position: absolute; opacity: 0; pointer-events: none; }
     .line-handle {
       width: 0.75rem;
       height: 0.75rem;
@@ -106,7 +106,25 @@
       close.addEventListener('click', () => removeCard(card));
       header.appendChild(title);
       header.appendChild(close);
-      header.addEventListener('dblclick', () => card.classList.toggle('collapsed'));
+      header.addEventListener('dblclick', () => {
+        card.classList.toggle('collapsed');
+        const collapsed = card.classList.contains('collapsed');
+        const rows = card.querySelectorAll('.row');
+        rows.forEach(r => {
+          if (collapsed) {
+            r.style.position = 'absolute';
+            r.style.top = r.dataset.top + 'px';
+            r.style.opacity = '0';
+            r.style.pointerEvents = 'none';
+          } else {
+            r.style.position = '';
+            r.style.top = '';
+            r.style.opacity = '';
+            r.style.pointerEvents = '';
+          }
+        });
+        connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+      });
 
       card.appendChild(header);
 
@@ -147,6 +165,8 @@
         card.appendChild(row);
       }
       canvas.appendChild(card);
+      const rows = card.querySelectorAll('.row');
+      rows.forEach(r => r.dataset.top = r.offsetTop);
       cards.push(card);
     }
 
