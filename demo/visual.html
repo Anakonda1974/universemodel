@@ -25,6 +25,16 @@
       cursor: pointer;
     }
 
+    .line-label {
+      position: absolute;
+      font-size: 0.75rem;
+      background: rgba(0,0,0,0.6);
+      padding: 0 0.25rem;
+      border-radius: 0.25rem;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
   </style>
 </head>
 <body class="bg-black text-white">
@@ -78,6 +88,8 @@
         const inPort = document.createElement('div');
         inPort.className = 'port bg-red-400 rounded-full in-port';
         inPort.id = `in-${key}`;
+
+        inPort.dataset.prop = key;
         row.appendChild(inPort);
 
 
@@ -93,6 +105,8 @@
         const outPort = document.createElement('div');
         outPort.className = 'port bg-blue-400 rounded-full out-port';
         outPort.id = `out-${key}`;
+        outPort.dataset.prop = key;
+
         row.appendChild(outPort);
 
         row.addEventListener('dblclick', () => subdivideRow(row, card, key));
@@ -111,6 +125,7 @@
       conn.line.remove();
 
       conn.handle.remove();
+      if (conn.label) conn.label.remove();
 
       connections.splice(connections.indexOf(conn), 1);
     }
@@ -165,7 +180,14 @@
       const handle = document.createElement('div');
       handle.className = 'line-handle';
       workspace.appendChild(handle);
-      const conn = { line, from, to, handle };
+
+      const label = document.createElement('div');
+      label.className = 'line-label';
+      label.textContent = `${from.dataset.prop} → ${to.dataset.prop}`;
+      workspace.appendChild(label);
+
+      const conn = { line, from, to, handle, label };
+
 
       function updateHandle() {
         const wsRect = workspace.getBoundingClientRect();
@@ -175,7 +197,12 @@
         const y = ((s.top + s.bottom) / 2 + (e.top + e.bottom) / 2) / 2 - wsRect.top;
         handle.style.left = `${x - handle.offsetWidth / 2}px`;
         handle.style.top = `${y - handle.offsetHeight / 2}px`;
+
+        label.style.left = `${x - label.offsetWidth / 2}px`;
+        label.style.top = `${y - 20}px`;
       }
+
+
       conn.updateHandle = updateHandle;
       updateHandle();
       line.position();

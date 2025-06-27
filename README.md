@@ -106,5 +106,5 @@ For an interactive view that visualises property dependencies, open
 `demo/visual.html`. This demo displays each subsystem in a draggable card with
 input ports on the left and output ports on the right. Connections can be
 dragged between ports, double‑clicked to remove and rows can be split into new
-cards by double‑clicking.
-
+cards by double‑clicking. Each connection also shows a label indicating which
+property values are linked.
