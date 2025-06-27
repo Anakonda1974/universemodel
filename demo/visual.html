@@ -214,8 +214,8 @@
       updateHandle();
       line.position();
 
-      const lineElement = line.element || line.path;
-      if (lineElement) {
+      const lineElement = line.element || line.path || line.svg;
+      if (lineElement && lineElement.style) {
         lineElement.style.pointerEvents = 'stroke';
         lineElement.addEventListener('dblclick', e => {
           const wsRect = workspace.getBoundingClientRect();
