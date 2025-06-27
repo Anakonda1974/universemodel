@@ -115,4 +115,14 @@ export class PropertyGraph {
 
     return trace;
   }
+
+  /** Retrieve a property definition by id */
+  getDefinition(id: string): PropertyDefinition | undefined {
+    return this.definitions.find((d) => d.id === id);
+  }
+
+  /** Return all property definitions */
+  getDefinitions(): PropertyDefinition[] {
+    return this.definitions;
+  }
 }
