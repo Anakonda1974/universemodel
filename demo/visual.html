@@ -189,15 +189,20 @@
       label.textContent = `${from.dataset.prop} → ${to.dataset.prop}`;
       workspace.appendChild(label);
 
-      const conn = { line, from, to, handle, label };
-
+      const conn = { line, from, to, handle, label, anchor: null, anchorPos: null };
 
       function updateHandle() {
         const wsRect = workspace.getBoundingClientRect();
-        const s = from.getBoundingClientRect();
-        const e = to.getBoundingClientRect();
-        const x = ((s.left + s.right) / 2 + (e.left + e.right) / 2) / 2 - wsRect.left;
-        const y = ((s.top + s.bottom) / 2 + (e.top + e.bottom) / 2) / 2 - wsRect.top;
+        let x, y;
+        if (conn.anchorPos) {
+          x = state.x + conn.anchorPos.x * state.scale;
+          y = state.y + conn.anchorPos.y * state.scale;
+        } else {
+          const s = from.getBoundingClientRect();
+          const e = to.getBoundingClientRect();
+          x = ((s.left + s.right) / 2 + (e.left + e.right) / 2) / 2 - wsRect.left;
+          y = ((s.top + s.bottom) / 2 + (e.top + e.bottom) / 2) / 2 - wsRect.top;
+        }
         handle.style.left = `${x - handle.offsetWidth / 2}px`;
         handle.style.top = `${y - handle.offsetHeight / 2}px`;
 
@@ -205,10 +210,29 @@
         label.style.top = `${y - 20}px`;
       }
 
-
       conn.updateHandle = updateHandle;
       updateHandle();
       line.position();
+
+      const lineElement = line.element || line.path;
+      if (lineElement) {
+        lineElement.style.pointerEvents = 'stroke';
+        lineElement.addEventListener('dblclick', e => {
+          const wsRect = workspace.getBoundingClientRect();
+          conn.anchorPos = {
+            x: (e.clientX - wsRect.left - state.x) / state.scale,
+            y: (e.clientY - wsRect.top - state.y) / state.scale
+          };
+          if (conn.anchor && line.removePointAnchor) {
+            line.removePointAnchor(conn.anchor);
+          }
+          if (line.addPointAnchor && LeaderLine.pointAnchor) {
+            conn.anchor = line.addPointAnchor(LeaderLine.pointAnchor({ element: handle }));
+          }
+          updateHandle();
+          line.position();
+        });
+      }
 
       handle.addEventListener('dblclick', () => removeConnection(conn));
 
