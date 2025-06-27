@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <title>Universe Model Demo</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .port {
+      width: 1rem;
+      height: 1rem;
+    }
+  </style>
 </head>
 <body class="bg-black text-white p-6 font-sans">
   <div class="bg-orange-600 text-black text-3xl font-bold px-6 py-4 rounded-r-full mb-6 w-fit">Universe Model Demo</div>
@@ -36,7 +42,28 @@ console.log('Planet Entity:', planet);
       for (const [key, value] of Object.entries(props)) {
         const row = document.createElement('div');
         row.className = 'bg-purple-600 text-black px-4 py-2 rounded cursor-pointer';
-        row.innerHTML = `<div class="flex justify-between"><span class="font-mono pr-4">${key}</span><span>${value}</span></div>`;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex items-center justify-between space-x-2';
+
+        const inPort = document.createElement('div');
+        inPort.className = 'port bg-red-400 rounded-full';
+
+        const keySpan = document.createElement('span');
+        keySpan.className = 'font-mono';
+        keySpan.textContent = key + ':';
+
+        const valueSpan = document.createElement('span');
+        valueSpan.textContent = value;
+
+        const outPort = document.createElement('div');
+        outPort.className = 'port bg-blue-400 rounded-full';
+
+        wrapper.appendChild(inPort);
+        wrapper.appendChild(keySpan);
+        wrapper.appendChild(valueSpan);
+        wrapper.appendChild(outPort);
+        row.appendChild(wrapper);
 
         const inputs = trace[key]?.inputs || {};
         const inputStr = Object.entries(inputs).map(([k,v]) => `${k}: ${v}`).join(', ');
