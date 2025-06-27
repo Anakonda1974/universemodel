@@ -386,6 +386,75 @@ export function createBiosphereSubsystem(): PropertyDefinition[] {
 }
 
 /** ------------------------------------------------------------------------
+ * 8. VISUAL SUBSYSTEM - parameters for rendering and appearance
+ * --------------------------------------------------------------------- */
+export function createVisualSubsystem(): PropertyDefinition[] {
+  return [
+    {
+      id: "surfaceHue", // 0-360 hue value
+      inputs: ["dominantBiome"],
+      group: "visual",
+      compute: (ctx, seed) => {
+        const base =
+          ctx.dominantBiome === "ocean"
+            ? 210
+            : ctx.dominantBiome === "swamp"
+            ? 120
+            : ctx.dominantBiome === "tundra"
+            ? 200
+            : ctx.dominantBiome === "glacier"
+            ? 190
+            : ctx.dominantBiome === "desert"
+            ? 40
+            : ctx.dominantBiome === "volcanic"
+            ? 10
+            : ctx.dominantBiome === "forest"
+            ? 110
+            : 90;
+        const variance = mapRange01(getNoise01(seed, "surfaceHue"), -10, 10);
+        let hue = base + variance;
+        if (hue < 0) hue += 360;
+        if (hue > 360) hue -= 360;
+        return hue;
+      },
+    },
+    {
+      id: "atmosphereHue", // 0-360 hue value
+      inputs: ["atmosphereComposition"],
+      group: "visual",
+      compute: (ctx, seed) => {
+        const base =
+          ctx.atmosphereComposition === "nitrogen-oxygen"
+            ? 200
+            : ctx.atmosphereComposition === "carbon-dioxide"
+            ? 0
+            : ctx.atmosphereComposition === "methane"
+            ? 300
+            : 120;
+        const variance = mapRange01(getNoise01(seed, "atmoHue"), -20, 20);
+        let hue = base + variance;
+        if (hue < 0) hue += 360;
+        if (hue > 360) hue -= 360;
+        return hue;
+      },
+    },
+    {
+      id: "waterHue", // 0-360 hue value
+      inputs: ["salinity"],
+      group: "visual",
+      compute: (ctx, seed) => {
+        const base = ctx.salinity > 30 ? 210 : 190;
+        const variance = mapRange01(getNoise01(seed, "waterHue"), -5, 5);
+        let hue = base + variance;
+        if (hue < 0) hue += 360;
+        if (hue > 360) hue -= 360;
+        return hue;
+      },
+    },
+  ];
+}
+
+/** ------------------------------------------------------------------------
  * 8. COMBINED EXPORT
  * --------------------------------------------------------------------- */
 export function createPlanetDefinitions(): PropertyDefinition[] {
@@ -397,5 +466,6 @@ export function createPlanetDefinitions(): PropertyDefinition[] {
     ...createOrbitalSubsystem(),
     ...createHydrologySubsystem(),
     ...createBiosphereSubsystem(),
+    ...createVisualSubsystem(),
   ];
 }

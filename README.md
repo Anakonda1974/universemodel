@@ -53,8 +53,10 @@ console.log(earth.generate());
 ## Extended Planet Properties
 
 The `createPlanetDefinitions` helper combines several subsystems such as
-basic physics, atmosphere, geology and climate. The definitions can be
-extended or replaced as needed to model additional effects.
+basic physics, atmosphere, geology and climate. It also includes
+orbital, hydrology, biosphere and a visual subsystem that outputs values
+useful for rendering. The definitions can be extended or replaced as
+needed to model additional effects.
 
 ```ts
 import { createPlanetDefinitions } from "./dist/PlanetDefinitions";
