@@ -8,7 +8,23 @@
   <script src="https://unpkg.com/interactjs/dist/interact.min.js"></script>
   <style>
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    #workspace { width: 100%; height: 100%; position: relative; }
+    #workspace {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    #canvas {
+      position: absolute;
+      inset: 0;
+      transform-origin: 0 0;
+    }
+    .bg-grid {
+      background-image:
+        linear-gradient(#2d2d2d 1px, transparent 1px),
+        linear-gradient(90deg, #2d2d2d 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
     .card { width: 200px; }
 
     .port {
@@ -16,6 +32,8 @@
       height: 0.75rem;
       cursor: pointer;
     }
+    .port:hover { outline: 2px solid #fbbf24; }
+    .collapsed .row { display: none; }
     .line-handle {
       width: 0.75rem;
       height: 0.75rem;
@@ -38,7 +56,13 @@
   </style>
 </head>
 <body class="bg-black text-white">
-  <div id="workspace"></div>
+  <div id="toolbar" class="absolute z-10 top-2 left-2 space-x-2">
+    <button id="resetBtn" class="bg-gray-700 px-2 py-1 rounded">Reset view</button>
+    <button id="clearBtn" class="bg-gray-700 px-2 py-1 rounded">Clear connections</button>
+  </div>
+  <div id="workspace" class="bg-grid">
+    <div id="canvas"></div>
+  </div>
 
   <script type="module">
     import { SeedManager } from '../dist/SeedManager.js';
@@ -52,6 +76,7 @@
 
     const groups = planet.generateGrouped();
     const workspace = document.getElementById('workspace');
+    const canvas = document.getElementById('canvas');
 
     const allPorts = new Map();
     const cards = [];
@@ -67,7 +92,7 @@
 
       const header = document.createElement('div');
 
-      header.className = 'flex justify-between items-center mb-2';
+      header.className = 'flex justify-between items-center mb-2 cursor-pointer';
       const title = document.createElement('span');
       title.className = 'text-lg underline';
       title.textContent = group;
@@ -77,12 +102,13 @@
       close.addEventListener('click', () => removeCard(card));
       header.appendChild(title);
       header.appendChild(close);
+      header.addEventListener('dblclick', () => card.classList.toggle('collapsed'));
 
       card.appendChild(header);
 
       for (const [key, value] of Object.entries(props)) {
         const row = document.createElement('div');
-        row.className = 'flex items-center text-sm mb-1 space-x-1';
+        row.className = 'row flex items-center text-sm mb-1 space-x-1';
         row.dataset.id = key;
 
         const inPort = document.createElement('div');
@@ -114,7 +140,7 @@
         allPorts.set(inPort.id, inPort);
         card.appendChild(row);
       }
-      workspace.appendChild(card);
+      canvas.appendChild(card);
       cards.push(card);
     }
 
@@ -143,7 +169,7 @@
     function addConnection(from, to) {
       const line = new LeaderLine(from, to, {
         color: 'cyan',
-        path: 'straight',
+        path: 'fluid',
         startPlug: 'square',
         endPlug: 'arrow'
       });
@@ -203,7 +229,7 @@
         start(event) {
           tempLine = new LeaderLine(event.target, { x: event.clientX, y: event.clientY }, {
             color: 'cyan',
-            path: 'straight',
+            path: 'fluid',
             startPlug: 'square',
             endPlug: 'arrow'
           });
@@ -250,6 +276,49 @@
     };
 
     interact('.card').draggable(dragOptions);
+
+    // Pan and zoom functionality
+    const state = { x: 0, y: 0, scale: 1 };
+    let panning = false;
+    let startX = 0, startY = 0;
+
+    function updateTransform() {
+      canvas.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+      connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+    }
+
+    workspace.addEventListener('mousedown', e => {
+      if (e.target === workspace) {
+        panning = true;
+        startX = e.clientX;
+        startY = e.clientY;
+      }
+    });
+    window.addEventListener('mousemove', e => {
+      if (panning) {
+        state.x += e.clientX - startX;
+        state.y += e.clientY - startY;
+        startX = e.clientX;
+        startY = e.clientY;
+        updateTransform();
+      }
+    });
+    window.addEventListener('mouseup', () => { panning = false; });
+
+    workspace.addEventListener('wheel', e => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.1 : -0.1;
+      state.scale = Math.min(2, Math.max(0.5, state.scale + delta));
+      updateTransform();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.x = 0; state.y = 0; state.scale = 1; updateTransform();
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      connections.slice().forEach(removeConnection);
+    });
 
   </script>
 </body>
