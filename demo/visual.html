@@ -156,6 +156,7 @@
     const undoStack = [];
     const redoStack = [];
     let isDraggingCard = false;
+    let dragStartX = 0, dragStartY = 0;
 
     // Track pan and zoom state early so other helpers can reference it
     const state = { x: 0, y: 0, scale: 1 };
@@ -516,9 +517,17 @@
         conn.anchors.push(data);
         interact(handle).draggable({
           listeners: {
+            start(ev) {
+              data.startX = data.pos.x;
+              data.startY = data.pos.y;
+              data.startClientX = ev.clientX;
+              data.startClientY = ev.clientY;
+            },
             move(ev) {
-              data.pos.x = snapCoord(data.pos.x + ev.dx / state.scale);
-              data.pos.y = snapCoord(data.pos.y + ev.dy / state.scale);
+              const dx = (ev.clientX - data.startClientX) / state.scale;
+              const dy = (ev.clientY - data.startClientY) / state.scale;
+              data.pos.x = snapCoord(data.startX + dx);
+              data.pos.y = snapCoord(data.startY + dy);
               updatePositions();
               line.position();
             }
@@ -697,13 +706,21 @@
           isDraggingCard = true;
           hideContextMenu();
           if (!selectedCards.has(event.target)) selectSingle(event.target);
-          selectedCards.forEach(c => c.classList.add('dragging'));
+          dragStartX = event.clientX;
+          dragStartY = event.clientY;
+          selectedCards.forEach(c => {
+            c.classList.add('dragging');
+            c.dataset.startX = c.dataset.x || 0;
+            c.dataset.startY = c.dataset.y || 0;
+          });
 
         },
         move(event) {
+          const dx = event.clientX - dragStartX;
+          const dy = event.clientY - dragStartY;
           selectedCards.forEach(card => {
-            let x = (parseFloat(card.dataset.x) || 0) + event.dx;
-            let y = (parseFloat(card.dataset.y) || 0) + event.dy;
+            let x = parseFloat(card.dataset.startX) + dx;
+            let y = parseFloat(card.dataset.startY) + dy;
             x = snapCoord(x);
             y = snapCoord(y);
             card.style.transform = `translate(${x}px, ${y}px)`;
