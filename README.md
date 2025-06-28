@@ -108,4 +108,5 @@ input ports on the left and output ports on the right. Connections can be
 dragged between ports and removed by double‑clicking the connection label. Each
 connection also shows a label indicating which property values are linked. You
 can double‑click on a connection itself to add hidden anchor points that shape
-the line without altering its curve.
+the line without altering its curve. Right‑click a card to open a small context
+menu with options to remove the card or clear all of its connections.
