@@ -24,7 +24,7 @@ implemented.
   undo mistakes.
 - **Snap To Grid**: ensure wires snap to grid positions defined by the "Snap"
   input field to keep layouts tidy.
-- **Connection Validation**: prevent invalid connections, such as linking an
+- [x] **Connection Validation**: prevent invalid connections, such as linking an
   output port to itself or creating circular dependencies.
 - **Connection Obstruction**: ensure lines never pass above cards and allow
   users to insert fixed anchor points along a path for manual rerouting.
