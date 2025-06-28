@@ -64,8 +64,8 @@
       border-radius: 9999px;
       position: absolute;
       cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
+      opacity: 0.8;
+      pointer-events: auto;
     }
 
     .line-label {
@@ -82,6 +82,9 @@
 </head>
 <body class="bg-gray-50 text-gray-900">
   <div id="toolbar" class="absolute z-10 top-2 left-2 space-x-2">
+    <label class="text-sm">Snap
+      <input id="snapInput" type="number" value="20" min="1" class="ml-1 w-16 border border-gray-300 rounded px-1" />
+    </label>
     <button id="resetBtn" class="bg-white border border-gray-300 px-2 py-1 rounded shadow text-sm hover:bg-gray-100">Reset view</button>
     <button id="clearBtn" class="bg-white border border-gray-300 px-2 py-1 rounded shadow text-sm hover:bg-gray-100">Clear connections</button>
   </div>
@@ -103,6 +106,12 @@
     const trace = planet.generateTrace();
     const workspace = document.getElementById('workspace');
     const canvas = document.getElementById('canvas');
+    const snapInput = document.getElementById('snapInput');
+    let snap = parseInt(snapInput.value) || 1;
+    snapInput.addEventListener('change', () => {
+      snap = parseInt(snapInput.value) || 1;
+    });
+    const snapCoord = v => Math.round(v / snap) * snap;
 
     const allPorts = new Map();
     const cards = [];
@@ -260,7 +269,19 @@
         handle.className = 'line-handle';
         workspace.appendChild(handle);
         const anchor = line.addPointAnchor(LeaderLine.pointAnchor({ element: handle }));
-        conn.anchors.push({ anchor, handle, pos: { x, y } });
+        const pos = { x: snapCoord(x), y: snapCoord(y) };
+        const data = { anchor, handle, pos };
+        conn.anchors.push(data);
+        interact(handle).draggable({
+          listeners: {
+            move(ev) {
+              data.pos.x = snapCoord(data.pos.x + ev.dx / state.scale);
+              data.pos.y = snapCoord(data.pos.y + ev.dy / state.scale);
+              updatePositions();
+              line.position();
+            }
+          }
+        });
         updatePositions();
         line.position();
       }
@@ -271,7 +292,7 @@
         }
         conn.anchors.forEach(a => a.handle.remove());
         conn.anchors = [];
-        points.forEach(p => addAnchorPoint(p.x, p.y));
+        points.forEach(p => addAnchorPoint(snapCoord(p.x), snapCoord(p.y)));
       }
 
       function updatePositions() {
@@ -314,7 +335,7 @@
             x: (e.clientX - wsRect.left - state.x) / state.scale,
             y: (e.clientY - wsRect.top - state.y) / state.scale
           };
-          addAnchorPoint(pos.x, pos.y);
+          addAnchorPoint(snapCoord(pos.x), snapCoord(pos.y));
         });
       }
 
@@ -392,8 +413,10 @@
       listeners: {
         move(event) {
           const target = event.target;
-          const x = (parseFloat(target.dataset.x) || 0) + event.dx;
-          const y = (parseFloat(target.dataset.y) || 0) + event.dy;
+          let x = (parseFloat(target.dataset.x) || 0) + event.dx;
+          let y = (parseFloat(target.dataset.y) || 0) + event.dy;
+          x = snapCoord(x);
+          y = snapCoord(y);
           target.style.transform = `translate(${x}px, ${y}px)`;
           target.dataset.x = x;
           target.dataset.y = y;
