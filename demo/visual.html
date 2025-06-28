@@ -64,6 +64,8 @@
       border-radius: 9999px;
       position: absolute;
       cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .line-label {
@@ -121,7 +123,11 @@
     function removeConnection(conn) {
       conn.line.remove();
 
-      conn.handle.remove();
+      if (conn.anchors) {
+        conn.anchors.forEach(a => a.handle.remove());
+      } else if (conn.handle) {
+        conn.handle.remove();
+      }
       if (conn.label) conn.label.remove();
 
       connections.splice(connections.indexOf(conn), 1);
@@ -182,7 +188,7 @@
           r.style.pointerEvents = '';
         }
       });
-      connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+      connections.forEach(c => { c.line.position(); if (c.updatePositions) c.updatePositions(); });
     });
 
     card.appendChild(header);
@@ -240,38 +246,63 @@
         endPlug: 'arrow'
       });
 
-      const handle = document.createElement('div');
-      handle.className = 'line-handle';
-      workspace.appendChild(handle);
-
       const label = document.createElement('div');
       label.className = 'line-label';
       label.textContent = `${from.dataset.prop} → ${to.dataset.prop}`;
+      label.addEventListener('dblclick', () => removeConnection(conn));
       workspace.appendChild(label);
 
-      const conn = { line, from, to, handle, label, anchor: null, anchorPos: null };
+      const conn = { line, from, to, label, anchors: [] };
 
-      function updateHandle() {
+      function addAnchorPoint(x, y) {
+        if (!line.addPointAnchor || !LeaderLine.pointAnchor) return;
+        const handle = document.createElement('div');
+        handle.className = 'line-handle';
+        workspace.appendChild(handle);
+        const anchor = line.addPointAnchor(LeaderLine.pointAnchor({ element: handle }));
+        conn.anchors.push({ anchor, handle, pos: { x, y } });
+        updatePositions();
+        line.position();
+      }
+
+      function setAnchorPoints(points) {
+        if (line.removePointAnchor) {
+          conn.anchors.forEach(a => line.removePointAnchor(a.anchor));
+        }
+        conn.anchors.forEach(a => a.handle.remove());
+        conn.anchors = [];
+        points.forEach(p => addAnchorPoint(p.x, p.y));
+      }
+
+      function updatePositions() {
         const wsRect = workspace.getBoundingClientRect();
         let x, y;
-        if (conn.anchorPos) {
-          x = state.x + conn.anchorPos.x * state.scale;
-          y = state.y + conn.anchorPos.y * state.scale;
+        if (conn.anchors.length) {
+          conn.anchors.forEach(a => {
+            const ax = state.x + a.pos.x * state.scale;
+            const ay = state.y + a.pos.y * state.scale;
+            a.handle.style.left = `${ax - a.handle.offsetWidth / 2}px`;
+            a.handle.style.top = `${ay - a.handle.offsetHeight / 2}px`;
+          });
+          const first = conn.anchors[0];
+          x = state.x + first.pos.x * state.scale;
+          y = state.y + first.pos.y * state.scale;
         } else {
           const s = from.getBoundingClientRect();
           const e = to.getBoundingClientRect();
           x = ((s.left + s.right) / 2 + (e.left + e.right) / 2) / 2 - wsRect.left;
           y = ((s.top + s.bottom) / 2 + (e.top + e.bottom) / 2) / 2 - wsRect.top;
         }
-        handle.style.left = `${x - handle.offsetWidth / 2}px`;
-        handle.style.top = `${y - handle.offsetHeight / 2}px`;
 
         label.style.left = `${x - label.offsetWidth / 2}px`;
         label.style.top = `${y - 20}px`;
       }
 
-      conn.updateHandle = updateHandle;
-      updateHandle();
+      conn.updatePositions = updatePositions;
+      conn.addAnchorPoint = addAnchorPoint;
+      conn.setAnchorPoints = setAnchorPoints;
+
+      updatePositions();
       line.position();
 
       const lineElement = line.element || line.path || line.svg;
@@ -279,22 +310,13 @@
         lineElement.style.pointerEvents = 'stroke';
         lineElement.addEventListener('dblclick', e => {
           const wsRect = workspace.getBoundingClientRect();
-          conn.anchorPos = {
+          const pos = {
             x: (e.clientX - wsRect.left - state.x) / state.scale,
             y: (e.clientY - wsRect.top - state.y) / state.scale
           };
-          if (conn.anchor && line.removePointAnchor) {
-            line.removePointAnchor(conn.anchor);
-          }
-          if (line.addPointAnchor && LeaderLine.pointAnchor) {
-            conn.anchor = line.addPointAnchor(LeaderLine.pointAnchor({ element: handle }));
-          }
-          updateHandle();
-          line.position();
+          addAnchorPoint(pos.x, pos.y);
         });
       }
-
-      handle.addEventListener('dblclick', () => removeConnection(conn));
 
       connections.push(conn);
       return conn;
@@ -376,7 +398,7 @@
           target.dataset.x = x;
           target.dataset.y = y;
 
-          connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+          connections.forEach(c => { c.line.position(); if (c.updatePositions) c.updatePositions(); });
 
         }
       }
@@ -391,7 +413,7 @@
 
     function updateTransform() {
       canvas.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
-      connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+      connections.forEach(c => { c.line.position(); if (c.updatePositions) c.updatePositions(); });
     }
 
     workspace.addEventListener('mousedown', e => {
