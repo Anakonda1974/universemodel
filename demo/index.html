@@ -32,7 +32,7 @@ console.log('Planet Entity:', planet);
 
     for (const [group, props] of Object.entries(groups)) {
       const card = document.createElement('div');
-      card.className = 'bg-white p-6 rounded-lg shadow space-y-2';
+      card.className = 'bg-white p-6 rounded-lg shadow space-y-2 w-72';
 
       const header = document.createElement('div');
       header.className = 'text-xl mb-2 underline';
@@ -41,19 +41,20 @@ console.log('Planet Entity:', planet);
 
       for (const [key, value] of Object.entries(props)) {
         const row = document.createElement('div');
-        row.className = 'bg-blue-50 hover:bg-blue-100 text-gray-800 px-4 py-2 rounded cursor-pointer';
+        row.className = 'bg-blue-50 hover:bg-blue-100 text-gray-800 px-4 py-2 rounded cursor-pointer overflow-hidden';
 
         const wrapper = document.createElement('div');
-        wrapper.className = 'flex items-center justify-between space-x-2';
+        wrapper.className = 'flex items-center justify-between space-x-2 w-full';
 
         const inPort = document.createElement('div');
         inPort.className = 'port bg-red-300 rounded-full border border-red-400';
 
         const keySpan = document.createElement('span');
-        keySpan.className = 'font-mono';
+        keySpan.className = 'font-mono truncate flex-1';
         keySpan.textContent = key + ':';
 
         const valueSpan = document.createElement('span');
+        valueSpan.className = 'truncate';
         valueSpan.textContent = value;
 
         const outPort = document.createElement('div');
@@ -69,10 +70,7 @@ console.log('Planet Entity:', planet);
         const inputStr = Object.entries(inputs).map(([k,v]) => `${k}: ${v}`).join(', ');
         const def = graph.getDefinition(key);
         const formula = def && def.compute ? def.compute.toString().replace(/\n/g, ' ') : '';
-        const info = document.createElement('div');
-        info.className = 'text-xs text-gray-500 mt-1 font-mono';
-        info.textContent = formula + (inputStr ? ` | ${inputStr}` : '');
-        row.appendChild(info);
+        row.title = formula + (inputStr ? ` | ${inputStr}` : '');
         row.addEventListener('click', () => {
           document.querySelectorAll('.highlight').forEach(el => el.classList.remove('ring-2','ring-yellow-400','highlight'));
           row.classList.add('ring-2','ring-yellow-400','highlight');
