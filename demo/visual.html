@@ -156,6 +156,9 @@
     const undoStack = [];
     const redoStack = [];
 
+    // Track pan and zoom state early so other helpers can reference it
+    const state = { x: 0, y: 0, scale: 1 };
+
     function buildGraph() {
       const defs = baseDefinitions
         .filter(def => document.getElementById('out-' + def.id))
@@ -714,7 +717,6 @@
     interact('.card[data-draggable="true"]').draggable(dragOptions);
 
     // Pan and zoom functionality
-    const state = { x: 0, y: 0, scale: 1 };
     let panning = false;
     let startX = 0, startY = 0;
 
