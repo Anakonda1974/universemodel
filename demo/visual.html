@@ -98,6 +98,7 @@
     const planet = new ProceduralEntity('Planet-X', ['MilkyWay','System-4','Planet-X'], seedManager, graph);
 
     const groups = planet.generateGrouped();
+    const trace = planet.generateTrace();
     const workspace = document.getElementById('workspace');
     const canvas = document.getElementById('canvas');
 
@@ -188,7 +189,7 @@
 
     for (const [key, value] of Object.entries(props)) {
       const row = document.createElement('div');
-      row.className = 'row flex items-center text-sm mb-1 space-x-1 px-1';
+      row.className = 'row flex items-center text-sm mb-1 space-x-1 px-1 overflow-hidden';
       row.dataset.id = key;
 
       const inPort = document.createElement('div');
@@ -198,6 +199,7 @@
       row.appendChild(inPort);
 
       const label = document.createElement('span');
+      label.className = 'truncate flex-1';
       label.textContent = key + ':';
       row.appendChild(label);
 
@@ -213,6 +215,12 @@
       outPort.dataset.prop = key;
 
       row.appendChild(outPort);
+
+      const inputs = trace[key]?.inputs || {};
+      const inputStr = Object.entries(inputs).map(([k, v]) => `${k}: ${v}`).join(', ');
+      const def = graph.getDefinition(key);
+      const formula = def && def.compute ? def.compute.toString().replace(/\n/g, ' ') : '';
+      row.title = formula + (inputStr ? ` | ${inputStr}` : '');
 
       allPorts.set(outPort.id, outPort);
       allPorts.set(inPort.id, inPort);
