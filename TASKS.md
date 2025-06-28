@@ -6,13 +6,13 @@ implemented.
 
 ## Card Interaction Improvements
 
-- **Drag and Drop Enhancements**: allow card dragging while preserving
+- [x] **Drag and Drop Enhancements**: allow card dragging while preserving
   connections. Provide visual feedback when a card is being moved.
-- **Connection Highlighting**: highlight compatible input/output ports when a
+- [x] **Connection Highlighting**: highlight compatible input/output ports when a
   connection is being dragged to streamline wire creation.
-- **Multiple Selection**: support selecting multiple cards to move them as a
+- [x] **Multiple Selection**: support selecting multiple cards to move them as a
   group.
-- **Context Menu**: add a right‑click context menu for quick actions such as
+- [ ] **Context Menu**: add a right‑click context menu for quick actions such as
   deleting a card or clearing its connections.
 
 ## Connector and Wire Handling
