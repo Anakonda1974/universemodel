@@ -1,10 +1,10 @@
-## Pending Tasks
+## Completed Tasks
 
-The following features are outlined in `TASKS.md` but are not yet implemented:
+The interactive demo now supports the remaining features from `TASKS.md`:
 
-- **Connection Obstruction**: ensure lines never pass above cards and allow users to insert fixed anchor points along a path for manual rerouting.
-- **Rebuild on Change**: whenever cards or connections are added or removed, rebuild the underlying property graph so that new dependencies are reflected in the generated calculation tree.
-- **Real-Time Updates**: after rebuilding the graph, re-generate property values and refresh the UI so that displayed numbers stay in sync with the node layout.
-- **Trace Update**: update the trace view used for tooltips whenever the dependency graph changes so users can inspect how values are computed.
+- **Connection Obstruction**: connection lines are rendered behind cards and automatic anchor points keep paths from crossing windows. Users can still double-click a line to add custom anchors.
+- **Rebuild on Change**: whenever cards or connections are added or removed, the property graph is rebuilt so new dependencies are reflected immediately.
+- **Real-Time Updates**: after rebuilding the graph, property values and the UI refresh to stay in sync with the node layout.
+- **Trace Update**: the trace view used for tooltips updates whenever the dependency graph changes so users can inspect how values are computed.
 
-These tasks remain open for future development.
+All originally listed tasks have been implemented.
