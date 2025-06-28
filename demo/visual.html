@@ -124,7 +124,7 @@
 
     const seedManager = new SeedManager('DemoSeed42');
     const baseDefinitions = createPlanetDefinitions();
-    let graph = new PropertyGraph(JSON.parse(JSON.stringify(baseDefinitions)));
+    let graph = new PropertyGraph(baseDefinitions.map(d => ({ ...d })));
     const planet = new ProceduralEntity('Planet-X', ['MilkyWay','System-4','Planet-X'], seedManager, graph);
 
     let groups = planet.generateGrouped();
