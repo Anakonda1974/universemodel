@@ -78,6 +78,16 @@
       white-space: nowrap;
     }
 
+    /* Visual hint when dragging cards */
+    .dragging {
+      box-shadow: 0 0 0 4px #60a5fa;
+    }
+
+    /* Highlight potential drop targets when wiring */
+    .port-target {
+      outline: 2px dashed #94a3b8;
+    }
+
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
@@ -361,6 +371,7 @@
       listeners: {
         start(event) {
           event.target.classList.add('port-hover');
+          document.querySelectorAll('.in-port').forEach(p => p.classList.add('port-target'));
           tempLine = new LeaderLine(
             event.target,
             LeaderLine.pointAnchor({ x: event.clientX, y: event.clientY }),
@@ -381,6 +392,7 @@
         },
         end(event) {
           event.target.classList.remove('port-hover');
+          document.querySelectorAll('.in-port').forEach(p => p.classList.remove('port-target'));
           if (tempLine) {
             tempLine.remove();
             tempLine = null;
@@ -411,6 +423,9 @@
     const dragOptions = {
 
       listeners: {
+        start(event) {
+          event.target.classList.add('dragging');
+        },
         move(event) {
           const target = event.target;
           let x = (parseFloat(target.dataset.x) || 0) + event.dx;
@@ -423,6 +438,9 @@
 
           connections.forEach(c => { c.line.position(); if (c.updatePositions) c.updatePositions(); });
 
+        },
+        end(event) {
+          event.target.classList.remove('dragging');
         }
       }
     };
