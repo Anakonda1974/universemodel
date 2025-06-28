@@ -125,8 +125,8 @@
     const graph = new PropertyGraph(createPlanetDefinitions());
     const planet = new ProceduralEntity('Planet-X', ['MilkyWay','System-4','Planet-X'], seedManager, graph);
 
-    const groups = planet.generateGrouped();
-    const trace = planet.generateTrace();
+    let groups = planet.generateGrouped();
+    let trace = planet.generateTrace();
     const workspace = document.getElementById('workspace');
     const canvas = document.getElementById('canvas');
     const snapInput = document.getElementById('snapInput');
@@ -153,6 +153,26 @@
     const connections = [];
     const undoStack = [];
     const redoStack = [];
+
+    function refreshValues() {
+      groups = planet.generateGrouped();
+      trace = planet.generateTrace();
+      for (const card of cards) {
+        const group = card.querySelector('.titlebar span').textContent;
+        const props = groups[group] || {};
+        for (const [key, value] of Object.entries(props)) {
+          const row = card.querySelector(`.row[data-id="${key}"]`);
+          if (!row) continue;
+          const input = row.querySelector('.value-input');
+          if (input) input.value = value;
+          const inputs = trace[key]?.inputs || {};
+          const inputStr = Object.entries(inputs).map(([k, v]) => `${k}: ${v}`).join(', ');
+          const def = graph.getDefinition(key);
+          const formula = def && def.compute ? def.compute.toString().replace(/\n/g, ' ') : '';
+          row.title = formula + (inputStr ? ` | ${inputStr}` : '');
+        }
+      }
+    }
 
     function recordAction(action) {
       undoStack.push(action);
@@ -251,6 +271,7 @@
         const points = conn.anchors ? conn.anchors.map(a => ({ x: a.pos.x, y: a.pos.y })) : [];
         recordAction({ type: 'remove', fromId: conn.from.id, toId: conn.to.id, points });
       }
+      refreshValues();
     }
 
   function removeCard(card) {
@@ -261,6 +282,7 @@
       });
     });
     card.remove();
+    refreshValues();
   }
 
   function createWindowCard(group, props, opts = {}) {
@@ -423,7 +445,9 @@
 
       const line = new LeaderLine(from, to, {
         color: 'cyan',
-        path: 'fluid',
+        path: 'grid',
+        startSocket: 'right',
+        endSocket: 'left',
         startPlug: 'square',
         endPlug: 'arrow'
       });
@@ -529,6 +553,7 @@
         const pts = conn.anchors.map(a => ({ x: a.pos.x, y: a.pos.y }));
         recordAction({ type: 'add', fromId: from.id, toId: to.id, points: pts });
       }
+      refreshValues();
       return conn;
     }
 
@@ -555,7 +580,9 @@
             LeaderLine.pointAnchor({ x: event.clientX, y: event.clientY }),
             {
             color: 'cyan',
-            path: 'fluid',
+            path: 'grid',
+            startSocket: 'right',
+            endSocket: 'left',
             startPlug: 'square',
             endPlug: 'arrow'
             }
@@ -672,6 +699,7 @@
 
     document.getElementById('clearBtn').addEventListener('click', () => {
       connections.slice().forEach(removeConnection);
+      refreshValues();
     });
 
     window.addEventListener('keydown', e => {
