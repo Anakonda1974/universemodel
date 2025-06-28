@@ -278,15 +278,23 @@
       listeners: {
         start(event) {
           event.target.classList.add('port-hover');
-          tempLine = new LeaderLine(event.target, { x: event.clientX, y: event.clientY }, {
+          tempLine = new LeaderLine(
+            event.target,
+            LeaderLine.pointAnchor({ x: event.clientX, y: event.clientY }),
+            {
             color: 'cyan',
             path: 'fluid',
             startPlug: 'square',
             endPlug: 'arrow'
-          });
+            }
+          );
         },
         move(event) {
-          if (tempLine) tempLine.setOptions({ end: { x: event.clientX, y: event.clientY } });
+          if (tempLine) {
+            tempLine.setOptions({
+              end: LeaderLine.pointAnchor({ x: event.clientX, y: event.clientY })
+            });
+          }
         },
         end(event) {
           event.target.classList.remove('port-hover');
