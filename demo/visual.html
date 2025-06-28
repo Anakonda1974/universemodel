@@ -23,7 +23,7 @@
       background-image:
         linear-gradient(#e5e7eb 1px, transparent 1px),
         linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
-      background-size: 40px 40px;
+      background-size: var(--grid-size, 40px) var(--grid-size, 40px);
     }
     .card {}
     .window {
@@ -108,8 +108,10 @@
     const canvas = document.getElementById('canvas');
     const snapInput = document.getElementById('snapInput');
     let snap = parseInt(snapInput.value) || 1;
-    snapInput.addEventListener('change', () => {
+    workspace.style.setProperty('--grid-size', snap + 'px');
+    snapInput.addEventListener('input', () => {
       snap = parseInt(snapInput.value) || 1;
+      workspace.style.setProperty('--grid-size', snap + 'px');
     });
     const snapCoord = v => Math.round(v / snap) * snap;
 
