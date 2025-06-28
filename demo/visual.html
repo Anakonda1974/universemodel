@@ -343,6 +343,45 @@
 
 
     function addConnection(from, to) {
+      const fromId = from.dataset.prop;
+      const toId = to.dataset.prop;
+      if (!fromId || !toId) return;
+      if (fromId === toId) {
+        alert('Cannot connect a property to itself');
+        return;
+      }
+
+      if (connections.some(c => c.from === from && c.to === to)) {
+        return; // duplicate connection
+      }
+
+      const graph = {};
+      connections.forEach(c => {
+        const a = c.from.dataset.prop;
+        const b = c.to.dataset.prop;
+        if (!graph[a]) graph[a] = new Set();
+        graph[a].add(b);
+      });
+      if (!graph[fromId]) graph[fromId] = new Set();
+      graph[fromId].add(toId);
+
+      function reachesStart(node, visited = new Set()) {
+        if (node === fromId) return true;
+        if (visited.has(node)) return false;
+        visited.add(node);
+        const next = graph[node];
+        if (!next) return false;
+        for (const n of next) {
+          if (reachesStart(n, visited)) return true;
+        }
+        return false;
+      }
+
+      if (reachesStart(toId)) {
+        alert('Invalid connection: circular dependency detected');
+        return;
+      }
+
       const line = new LeaderLine(from, to, {
         color: 'cyan',
         path: 'fluid',
