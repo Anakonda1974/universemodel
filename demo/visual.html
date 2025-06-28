@@ -155,6 +155,10 @@
     const connections = [];
     const undoStack = [];
     const redoStack = [];
+    let isDraggingCard = false;
+
+    // Track pan and zoom state early so other helpers can reference it
+    const state = { x: 0, y: 0, scale: 1 };
 
     // Track pan and zoom state early so other helpers can reference it
     const state = { x: 0, y: 0, scale: 1 };
@@ -619,6 +623,9 @@
     refreshValues();
 
     const observer = new MutationObserver(records => {
+
+      if (isDraggingCard) return;
+
       if (records.some(r =>
         [...r.addedNodes, ...r.removedNodes].some(n => n.classList && n.classList.contains('card')))) {
         buildGraph();
@@ -687,7 +694,8 @@
 
       listeners: {
         start(event) {
-
+          isDraggingCard = true;
+          hideContextMenu();
           if (!selectedCards.has(event.target)) selectSingle(event.target);
           selectedCards.forEach(c => c.classList.add('dragging'));
 
@@ -707,7 +715,7 @@
 
         },
         end(event) {
-
+          isDraggingCard = false;
           selectedCards.forEach(c => c.classList.remove('dragging'));
 
         }
