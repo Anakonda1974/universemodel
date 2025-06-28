@@ -20,9 +20,9 @@ implemented.
 - [x] **Anchor Editing**: make it easier to add or remove anchor points by
   double‑clicking wires. Provide handles that can be dragged to adjust the
   path.
-- **Undo/Redo Support**: maintain a history of connection changes so the user can
+- [x] **Undo/Redo Support**: maintain a history of connection changes so the user can
   undo mistakes.
-- **Snap To Grid**: ensure wires snap to grid positions defined by the "Snap"
+- [x] **Snap To Grid**: ensure wires snap to grid positions defined by the "Snap"
   input field to keep layouts tidy.
 - [x] **Connection Validation**: prevent invalid connections, such as linking an
   output port to itself or creating circular dependencies.

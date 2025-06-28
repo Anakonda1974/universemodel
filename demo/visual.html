@@ -151,6 +151,41 @@
     }
 
     const connections = [];
+    const undoStack = [];
+    const redoStack = [];
+
+    function recordAction(action) {
+      undoStack.push(action);
+      redoStack.length = 0;
+    }
+
+    function undo() {
+      const action = undoStack.pop();
+      if (!action) return;
+      if (action.type === 'add') {
+        const conn = connections.find(c => c.from.id === action.fromId && c.to.id === action.toId);
+        if (conn) removeConnection(conn, true);
+      } else if (action.type === 'remove') {
+        const from = document.getElementById(action.fromId);
+        const to = document.getElementById(action.toId);
+        if (from && to) addConnection(from, to, action.points, true);
+      }
+      redoStack.push(action);
+    }
+
+    function redo() {
+      const action = redoStack.pop();
+      if (!action) return;
+      if (action.type === 'add') {
+        const from = document.getElementById(action.fromId);
+        const to = document.getElementById(action.toId);
+        if (from && to) addConnection(from, to, action.points, true);
+      } else if (action.type === 'remove') {
+        const conn = connections.find(c => c.from.id === action.fromId && c.to.id === action.toId);
+        if (conn) removeConnection(conn, true);
+      }
+      undoStack.push(action);
+    }
 
     const selectedCards = new Set();
 
@@ -201,7 +236,7 @@
       selectedCards.add(card);
     }
 
-    function removeConnection(conn) {
+    function removeConnection(conn, skipHistory = false) {
       conn.line.remove();
 
       if (conn.anchors) {
@@ -212,6 +247,10 @@
       if (conn.label) conn.label.remove();
 
       connections.splice(connections.indexOf(conn), 1);
+      if (!skipHistory) {
+        const points = conn.anchors ? conn.anchors.map(a => ({ x: a.pos.x, y: a.pos.y })) : [];
+        recordAction({ type: 'remove', fromId: conn.from.id, toId: conn.to.id, points });
+      }
     }
 
   function removeCard(card) {
@@ -342,7 +381,7 @@
   }
 
 
-    function addConnection(from, to) {
+    function addConnection(from, to, points = [], skipHistory = false) {
       const fromId = from.dataset.prop;
       const toId = to.dataset.prop;
       if (!fromId || !toId) return;
@@ -483,7 +522,13 @@
         });
       }
 
+      if (points.length) setAnchorPoints(points);
+
       connections.push(conn);
+      if (!skipHistory) {
+        const pts = conn.anchors.map(a => ({ x: a.pos.x, y: a.pos.y }));
+        recordAction({ type: 'add', fromId: from.id, toId: to.id, points: pts });
+      }
       return conn;
     }
 
@@ -494,8 +539,7 @@
         const from = document.getElementById('out-' + dep);
         const to = document.getElementById('in-' + def.id);
         if (from && to) {
-
-          addConnection(from, to);
+          addConnection(from, to, [], true);
         }
       }
     }
@@ -628,6 +672,16 @@
 
     document.getElementById('clearBtn').addEventListener('click', () => {
       connections.slice().forEach(removeConnection);
+    });
+
+    window.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      } else if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+        e.preventDefault();
+        redo();
+      }
     });
 
   </script>
