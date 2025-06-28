@@ -88,6 +88,13 @@
       outline: 2px dashed #94a3b8;
     }
 
+
+    /* Selected cards */
+    .selected {
+      outline: 2px solid #10b981;
+    }
+
+
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
@@ -139,6 +146,30 @@
 
     const connections = [];
 
+    const selectedCards = new Set();
+
+    function clearSelection() {
+      selectedCards.forEach(c => c.classList.remove('selected'));
+      selectedCards.clear();
+    }
+
+    function toggleSelection(card) {
+      if (selectedCards.has(card)) {
+        card.classList.remove('selected');
+        selectedCards.delete(card);
+      } else {
+        card.classList.add('selected');
+        selectedCards.add(card);
+      }
+    }
+
+    function selectSingle(card) {
+      if (selectedCards.size === 1 && selectedCards.has(card)) return;
+      clearSelection();
+      card.classList.add('selected');
+      selectedCards.add(card);
+    }
+
     function removeConnection(conn) {
       conn.line.remove();
 
@@ -185,6 +216,14 @@
       closeBtn.addEventListener('click', () => removeCard(card));
       header.appendChild(closeBtn);
     }
+
+    header.addEventListener('mousedown', e => {
+      if (e.shiftKey) {
+        toggleSelection(card);
+      } else {
+        selectSingle(card);
+      }
+    });
 
     const body = document.createElement('div');
     body.className = 'window-body space-y-1';
@@ -424,23 +463,29 @@
 
       listeners: {
         start(event) {
-          event.target.classList.add('dragging');
+
+          if (!selectedCards.has(event.target)) selectSingle(event.target);
+          selectedCards.forEach(c => c.classList.add('dragging'));
+
         },
         move(event) {
-          const target = event.target;
-          let x = (parseFloat(target.dataset.x) || 0) + event.dx;
-          let y = (parseFloat(target.dataset.y) || 0) + event.dy;
-          x = snapCoord(x);
-          y = snapCoord(y);
-          target.style.transform = `translate(${x}px, ${y}px)`;
-          target.dataset.x = x;
-          target.dataset.y = y;
+          selectedCards.forEach(card => {
+            let x = (parseFloat(card.dataset.x) || 0) + event.dx;
+            let y = (parseFloat(card.dataset.y) || 0) + event.dy;
+            x = snapCoord(x);
+            y = snapCoord(y);
+            card.style.transform = `translate(${x}px, ${y}px)`;
+            card.dataset.x = x;
+            card.dataset.y = y;
+          });
 
           connections.forEach(c => { c.line.position(); if (c.updatePositions) c.updatePositions(); });
 
         },
         end(event) {
-          event.target.classList.remove('dragging');
+
+          selectedCards.forEach(c => c.classList.remove('dragging'));
+
         }
       }
     };
