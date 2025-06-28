@@ -160,6 +160,9 @@
     // Track pan and zoom state early so other helpers can reference it
     const state = { x: 0, y: 0, scale: 1 };
 
+    // Track pan and zoom state early so other helpers can reference it
+    const state = { x: 0, y: 0, scale: 1 };
+
     function buildGraph() {
       const defs = baseDefinitions
         .filter(def => document.getElementById('out-' + def.id))
@@ -620,7 +623,9 @@
     refreshValues();
 
     const observer = new MutationObserver(records => {
+
       if (isDraggingCard) return;
+
       if (records.some(r =>
         [...r.addedNodes, ...r.removedNodes].some(n => n.classList && n.classList.contains('card')))) {
         buildGraph();
