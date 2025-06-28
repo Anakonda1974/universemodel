@@ -31,6 +31,7 @@
       border-radius: 0.5rem;
       background: white;
       overflow: hidden;
+      z-index: 1;
     }
     .titlebar {
       background: #1e293b;
@@ -122,7 +123,8 @@
     import { createPlanetDefinitions } from '../dist/PlanetDefinitions.js';
 
     const seedManager = new SeedManager('DemoSeed42');
-    const graph = new PropertyGraph(createPlanetDefinitions());
+    const baseDefinitions = createPlanetDefinitions();
+    let graph = new PropertyGraph(JSON.parse(JSON.stringify(baseDefinitions)));
     const planet = new ProceduralEntity('Planet-X', ['MilkyWay','System-4','Planet-X'], seedManager, graph);
 
     let groups = planet.generateGrouped();
@@ -153,6 +155,23 @@
     const connections = [];
     const undoStack = [];
     const redoStack = [];
+
+    function buildGraph() {
+      const defs = baseDefinitions
+        .filter(def => document.getElementById('out-' + def.id))
+        .map(def => ({ ...def, inputs: [] }));
+      const map = {};
+      defs.forEach(d => (map[d.id] = d));
+      connections.forEach(c => {
+        const from = c.from.dataset.prop;
+        const to = c.to.dataset.prop;
+        if (map[to]) {
+          map[to].inputs.push(from);
+        }
+      });
+      graph = new PropertyGraph(Object.values(map));
+      planet.graph = graph;
+    }
 
     function refreshValues() {
       groups = planet.generateGrouped();
@@ -271,6 +290,7 @@
         const points = conn.anchors ? conn.anchors.map(a => ({ x: a.pos.x, y: a.pos.y })) : [];
         recordAction({ type: 'remove', fromId: conn.from.id, toId: conn.to.id, points });
       }
+      buildGraph();
       refreshValues();
     }
 
@@ -282,6 +302,7 @@
       });
     });
     card.remove();
+    buildGraph();
     refreshValues();
   }
 
@@ -449,7 +470,8 @@
         startSocket: 'right',
         endSocket: 'left',
         startPlug: 'square',
-        endPlug: 'arrow'
+        endPlug: 'arrow',
+        zIndex: 0
       });
 
       const label = document.createElement('div');
@@ -553,6 +575,7 @@
         const pts = conn.anchors.map(a => ({ x: a.pos.x, y: a.pos.y }));
         recordAction({ type: 'add', fromId: from.id, toId: to.id, points: pts });
       }
+      buildGraph();
       refreshValues();
       return conn;
     }
@@ -568,6 +591,9 @@
         }
       }
     }
+
+    buildGraph();
+    refreshValues();
 
     let tempLine = null;
     interact('.out-port').draggable({
@@ -699,6 +725,7 @@
 
     document.getElementById('clearBtn').addEventListener('click', () => {
       connections.slice().forEach(removeConnection);
+      buildGraph();
       refreshValues();
     });
 
