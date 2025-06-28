@@ -12,7 +12,7 @@ implemented.
   connection is being dragged to streamline wire creation.
 - [x] **Multiple Selection**: support selecting multiple cards to move them as a
   group.
-- [ ] **Context Menu**: add a right‑click context menu for quick actions such as
+- [x] **Context Menu**: add a right‑click context menu for quick actions such as
   deleting a card or clearing its connections.
 
 ## Connector and Wire Handling
@@ -26,6 +26,8 @@ implemented.
   input field to keep layouts tidy.
 - **Connection Validation**: prevent invalid connections, such as linking an
   output port to itself or creating circular dependencies.
+- **Connection Obstruction**: ensure lines never pass above cards and allow
+  users to insert fixed anchor points along a path for manual rerouting.
 
 ## Dynamic Calculation Tree
 
