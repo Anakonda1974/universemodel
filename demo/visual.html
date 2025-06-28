@@ -482,6 +482,22 @@
 
       const conn = { line, from, to, label, anchors: [] };
 
+      function routeDefault() {
+        const ws = workspace.getBoundingClientRect();
+        const s = from.getBoundingClientRect();
+        const e = to.getBoundingClientRect();
+        const offset = 40;
+        const start = {
+          x: (s.right - ws.left + offset - state.x) / state.scale,
+          y: ((s.top + s.bottom) / 2 - ws.top - state.y) / state.scale
+        };
+        const end = {
+          x: (e.left - ws.left - offset - state.x) / state.scale,
+          y: ((e.top + e.bottom) / 2 - ws.top - state.y) / state.scale
+        };
+        setAnchorPoints([start, end]);
+      }
+
       function addAnchorPoint(x, y) {
         if (!line.addPointAnchor || !LeaderLine.pointAnchor) return;
         const handle = document.createElement('div');
@@ -568,7 +584,11 @@
         });
       }
 
-      if (points.length) setAnchorPoints(points);
+      if (points.length) {
+        setAnchorPoints(points);
+      } else {
+        routeDefault();
+      }
 
       connections.push(conn);
       if (!skipHistory) {
@@ -594,6 +614,15 @@
 
     buildGraph();
     refreshValues();
+
+    const observer = new MutationObserver(records => {
+      if (records.some(r =>
+        [...r.addedNodes, ...r.removedNodes].some(n => n.classList && n.classList.contains('card')))) {
+        buildGraph();
+        refreshValues();
+      }
+    });
+    observer.observe(canvas, { childList: true });
 
     let tempLine = null;
     interact('.out-port').draggable({
