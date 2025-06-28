@@ -416,6 +416,16 @@
             }
           }
         });
+        handle.addEventListener('dblclick', () => {
+          if (line.removePointAnchor) {
+            line.removePointAnchor(anchor);
+          }
+          const idx = conn.anchors.indexOf(data);
+          if (idx !== -1) conn.anchors.splice(idx, 1);
+          handle.remove();
+          updatePositions();
+          line.position();
+        });
         updatePositions();
         line.position();
       }

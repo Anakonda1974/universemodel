@@ -17,7 +17,7 @@ implemented.
 
 ## Connector and Wire Handling
 
-- **Anchor Editing**: make it easier to add or remove anchor points by
+- [x] **Anchor Editing**: make it easier to add or remove anchor points by
   double‑clicking wires. Provide handles that can be dragged to adjust the
   path.
 - **Undo/Redo Support**: maintain a history of connection changes so the user can
