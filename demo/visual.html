@@ -25,7 +25,26 @@
         linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
       background-size: 40px 40px;
     }
-    .card { width: 200px; }
+    .card {}
+    .window {
+      border: 1px solid #cbd5e1;
+      border-radius: 0.5rem;
+      background: white;
+      overflow: hidden;
+    }
+    .titlebar {
+      background: #1e293b;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      cursor: move;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .titlebar .close-btn { color: #f87171; }
+    .titlebar .close-btn:hover { color: #b91c1c; }
+    .window-body { padding: 0.5rem; }
 
     .row:nth-child(odd) { background: #eef2ff; }
     .row:nth-child(even) { background: #e0e7ff; }
@@ -87,83 +106,9 @@
 
     let left = 20, top = 20;
     for (const [group, props] of Object.entries(groups)) {
-      const card = document.createElement('div');
-      card.className = 'card absolute bg-white p-4 rounded-lg shadow space-y-2';
-      card.style.left = left + 'px';
-      card.style.top = top + 'px';
+      const card = createWindowCard(group, props, { x: left, y: top });
       top += 30;
       left += 220;
-
-      const header = document.createElement('div');
-
-      header.className = 'flex justify-between items-center mb-2 cursor-pointer';
-      const title = document.createElement('span');
-      title.className = 'text-lg underline';
-      title.textContent = group;
-      const close = document.createElement('button');
-      close.textContent = '×';
-      close.className = 'text-red-500 hover:text-red-700';
-      close.addEventListener('click', () => removeCard(card));
-      header.appendChild(title);
-      header.appendChild(close);
-      header.addEventListener('dblclick', () => {
-        card.classList.toggle('collapsed');
-        const collapsed = card.classList.contains('collapsed');
-        const rows = card.querySelectorAll('.row');
-        rows.forEach(r => {
-          if (collapsed) {
-            r.style.position = 'absolute';
-            r.style.top = r.dataset.top + 'px';
-            r.style.opacity = '0';
-            r.style.pointerEvents = 'none';
-          } else {
-            r.style.position = '';
-            r.style.top = '';
-            r.style.opacity = '';
-            r.style.pointerEvents = '';
-          }
-        });
-        connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
-      });
-
-      card.appendChild(header);
-
-      for (const [key, value] of Object.entries(props)) {
-        const row = document.createElement('div');
-        row.className = 'row flex items-center text-sm mb-1 space-x-1 px-1';
-        row.dataset.id = key;
-
-        const inPort = document.createElement('div');
-        inPort.className = 'port bg-red-300 rounded-full border border-red-400 in-port';
-        inPort.id = `in-${key}`;
-
-        inPort.dataset.prop = key;
-        row.appendChild(inPort);
-
-
-        const label = document.createElement('span');
-        label.textContent = key + ':';
-        row.appendChild(label);
-
-        const valueInput = document.createElement('input');
-        valueInput.type = 'text';
-        valueInput.value = value;
-        valueInput.className = 'value-input bg-gray-100 border border-gray-300 rounded px-1 text-gray-900 w-20';
-        row.appendChild(valueInput);
-
-
-        const outPort = document.createElement('div');
-        outPort.className = 'port bg-blue-300 rounded-full border border-blue-400 out-port';
-        outPort.id = `out-${key}`;
-        outPort.dataset.prop = key;
-
-        row.appendChild(outPort);
-
-
-        allPorts.set(outPort.id, outPort);
-        allPorts.set(inPort.id, inPort);
-        card.appendChild(row);
-      }
       canvas.appendChild(card);
       const rows = card.querySelectorAll('.row');
       rows.forEach(r => r.dataset.top = r.offsetTop);
@@ -181,15 +126,102 @@
       connections.splice(connections.indexOf(conn), 1);
     }
 
-    function removeCard(card) {
-      const ports = card.querySelectorAll('.port');
-      ports.forEach(p => {
-        connections.slice().forEach(c => {
-          if (c.from === p || c.to === p) removeConnection(c);
-        });
+  function removeCard(card) {
+    const ports = card.querySelectorAll('.port');
+    ports.forEach(p => {
+      connections.slice().forEach(c => {
+        if (c.from === p || c.to === p) removeConnection(c);
       });
-      card.remove();
+    });
+    card.remove();
+  }
+
+  function createWindowCard(group, props, opts = {}) {
+    const { x = 0, y = 0, width = 200, closable = true, collapsible = true, draggable = true } = opts;
+    const card = document.createElement('div');
+    card.className = 'card window absolute shadow';
+    card.style.left = x + 'px';
+    card.style.top = y + 'px';
+    card.style.width = width + 'px';
+    card.dataset.x = 0;
+    card.dataset.y = 0;
+    card.dataset.draggable = draggable;
+
+    const header = document.createElement('div');
+    header.className = 'titlebar';
+    const titleEl = document.createElement('span');
+    titleEl.textContent = group;
+    header.appendChild(titleEl);
+    if (closable) {
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '×';
+      closeBtn.className = 'close-btn';
+      closeBtn.addEventListener('click', () => removeCard(card));
+      header.appendChild(closeBtn);
     }
+
+    const body = document.createElement('div');
+    body.className = 'window-body space-y-1';
+
+    header.addEventListener('dblclick', () => {
+      if (!collapsible) return;
+      card.classList.toggle('collapsed');
+      const collapsed = card.classList.contains('collapsed');
+      const rows = body.querySelectorAll('.row');
+      rows.forEach(r => {
+        if (collapsed) {
+          r.style.position = 'absolute';
+          r.style.top = r.dataset.top + 'px';
+          r.style.opacity = '0';
+          r.style.pointerEvents = 'none';
+        } else {
+          r.style.position = '';
+          r.style.top = '';
+          r.style.opacity = '';
+          r.style.pointerEvents = '';
+        }
+      });
+      connections.forEach(c => { c.line.position(); if (c.updateHandle) c.updateHandle(); });
+    });
+
+    card.appendChild(header);
+
+    for (const [key, value] of Object.entries(props)) {
+      const row = document.createElement('div');
+      row.className = 'row flex items-center text-sm mb-1 space-x-1 px-1';
+      row.dataset.id = key;
+
+      const inPort = document.createElement('div');
+      inPort.className = 'port bg-red-300 rounded-full border border-red-400 in-port';
+      inPort.id = `in-${key}`;
+      inPort.dataset.prop = key;
+      row.appendChild(inPort);
+
+      const label = document.createElement('span');
+      label.textContent = key + ':';
+      row.appendChild(label);
+
+      const valueInput = document.createElement('input');
+      valueInput.type = 'text';
+      valueInput.value = value;
+      valueInput.className = 'value-input bg-gray-100 border border-gray-300 rounded px-1 text-gray-900 w-20';
+      row.appendChild(valueInput);
+
+      const outPort = document.createElement('div');
+      outPort.className = 'port bg-blue-300 rounded-full border border-blue-400 out-port';
+      outPort.id = `out-${key}`;
+      outPort.dataset.prop = key;
+
+      row.appendChild(outPort);
+
+      allPorts.set(outPort.id, outPort);
+      allPorts.set(inPort.id, inPort);
+      body.appendChild(row);
+    }
+
+    card.appendChild(body);
+    return card;
+  }
 
 
     function addConnection(from, to) {
@@ -342,7 +374,7 @@
       }
     };
 
-    interact('.card').draggable(dragOptions);
+    interact('.card[data-draggable="true"]').draggable(dragOptions);
 
     // Pan and zoom functionality
     const state = { x: 0, y: 0, scale: 1 };
