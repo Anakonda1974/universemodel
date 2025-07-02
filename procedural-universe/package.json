@@ -1,0 +1,16 @@
+{
+  "name": "procedural-universe",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "three": "^0.161.0"
+  },
+  "devDependencies": {
+    "vite": "^4.0.0",
+    "vite-plugin-glsl": "^1.0.0"
+  }
+}
