@@ -20,8 +20,8 @@ The interactive demo now supports every feature originally outlined in `TASKS.md
 
 Implementation work is still pending for several procedural-universe features:
 
-- [ ] Implement noise functions
-- [ ] Determine neighboring planets
-- [ ] Generate planetary system
-- [ ] Generate planet details
-- [ ] Tectonic plates algorithm
+- [x] Implement noise functions
+- [x] Determine neighboring planets
+- [x] Generate planetary system
+- [x] Generate planet details
+- [x] Tectonic plates algorithm
