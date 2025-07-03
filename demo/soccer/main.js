@@ -113,6 +113,15 @@ loadFormations();
 setupMatchControls();
 
 
+// Score, timer, cards, etc.
+let scoreHome = 0, scoreAway = 0;
+let matchTime = 0; // in seconds
+let halftime = 1;
+let matchPaused = false;
+let halfLengthMinutes = 45;
+let lastFrameTime = null;
+let yellowCards = [], redCards = [];
+
 
 function updateScoreboard() {
   document.getElementById("score").textContent = `${scoreHome} : ${scoreAway}`;
