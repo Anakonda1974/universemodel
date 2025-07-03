@@ -1,10 +1,27 @@
 ## Completed Tasks
 
-The interactive demo now supports the remaining features from `TASKS.md`:
+The interactive demo now supports every feature originally outlined in `TASKS.md`:
 
-- **Connection Obstruction**: connection lines are rendered behind cards and automatic anchor points keep paths from crossing windows. Users can still double-click a line to add custom anchors.
-- **Rebuild on Change**: whenever cards or connections are added or removed, the property graph is rebuilt so new dependencies are reflected immediately.
-- **Real-Time Updates**: after rebuilding the graph, property values and the UI refresh to stay in sync with the node layout.
-- **Trace Update**: the trace view used for tooltips updates whenever the dependency graph changes so users can inspect how values are computed.
+- [x] Drag and Drop Enhancements
+- [x] Connection Highlighting
+- [x] Multiple Selection
+- [x] Context Menu
+- [x] Anchor Editing
+- [x] Undo/Redo Support
+- [x] Snap To Grid
+- [x] Connection Validation
+- [x] Connection Obstruction
+- [x] Rebuild on Change
+- [x] Real-Time Updates
+- [x] Trace Update
+- [x] Basic Galaxy Generation
 
-All originally listed tasks have been implemented.
+## Planned Tasks
+
+Implementation work is still pending for several procedural-universe features:
+
+- [x] Implement noise functions
+- [x] Determine neighboring planets
+- [x] Generate planetary system
+- [x] Generate planet details
+- [x] Tectonic plates algorithm

@@ -31,3 +31,4 @@ export function generateSystem(galaxySeed, systemIndex, maxPlanets = 8) {
 
   return { seed, numPlanets, planets };
 }
+
