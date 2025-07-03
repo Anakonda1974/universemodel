@@ -101,12 +101,15 @@ for (let i = 0; i < 11; i++) teamGast.push(new Player(970 - Math.random() * 20, 
 ball = new Ball(525, 340);
 
 loadFormations();
+setupMatchControls();
 
 // Score, timer, cards, etc.
 let scoreHome = 0, scoreAway = 0;
 let matchTime = 0; // in seconds
 let halftime = 1;
 let matchPaused = false;
+let halfLengthMinutes = 45;
+let lastFrameTime = null;
 let yellowCards = [], redCards = [];
 
 function updateScoreboard() {
@@ -114,6 +117,16 @@ function updateScoreboard() {
   document.getElementById("timer").textContent = toTimeString(matchTime);
   document.getElementById("halftime").textContent = halftime === 1 ? "1. Halbzeit" : "2. Halbzeit";
   document.getElementById("cards").textContent = "🟨" + yellowCards.length + " 🟥" + redCards.length;
+}
+
+function setupMatchControls() {
+  const input = document.getElementById("halfLengthInput");
+  if (input) {
+    halfLengthMinutes = parseInt(input.value, 10) || 45;
+    input.onchange = () => {
+      halfLengthMinutes = parseInt(input.value, 10) || 45;
+    };
+  }
 }
 function toTimeString(seconds) {
   let min = Math.floor(seconds / 60);
@@ -153,7 +166,21 @@ function clampBall(ball) {
 }
 
 // ----- GAME LOOP -----
-function gameLoop() {
+function gameLoop(timestamp) {
+  if (lastFrameTime === null) lastFrameTime = timestamp;
+  const delta = (timestamp - lastFrameTime) / 1000;
+  lastFrameTime = timestamp;
+
+  if (!matchPaused) {
+    matchTime += delta;
+    const halfSeconds = halfLengthMinutes * 60;
+    if (halftime === 1 && matchTime >= halfSeconds) {
+      halftime = 2;
+    }
+    if (halftime === 2 && matchTime >= halfSeconds * 2) {
+      matchPaused = true;
+    }
+  }
   const allPlayers = [...teamHeim, ...teamGast];
 
   // 1. Wahrnehmung (inkl. FOV/Kopf/Memory)
@@ -256,4 +283,4 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-gameLoop();
+requestAnimationFrame(gameLoop);
