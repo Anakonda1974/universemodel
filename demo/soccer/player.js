@@ -254,10 +254,11 @@ export class Player {
     this.formationX = x;
     this.formationY = y;
     this.hasBall = false;
+    this.stamina = 1;
 
     // --- KI / Perception / Memory ---
     this.perceived = {};
-    this.memory = {};
+    this.memory = { ball: { x: null, y: null, lastSeen: -Infinity, confidence: 0 } };
     this.mailbox = [];
     this.bt = createPlayerBT();
 
@@ -296,7 +297,7 @@ export class Player {
     }
   }
 
-    static getAllowedZone(player) {
+  static getAllowedZone(player) {
     // These must match decision-rules.js
     let marginX = 35, marginY = 25;
     let width = 160, height = 180;
@@ -318,6 +319,13 @@ export class Player {
     const maxY = Math.min(680 - marginY, player.formationY + height / 2);
 
     return { minX, maxX, minY, maxY };
+  }
+
+  static clampToZone(x, y, zone) {
+    return {
+      x: Math.max(zone.minX, Math.min(zone.maxX, x)),
+      y: Math.max(zone.minY, Math.min(zone.maxY, y)),
+    };
   }
 
   // --- Boni/Mali aus Trade-System holen ---
@@ -351,17 +359,102 @@ export class Player {
   }
 }
 
-  // --- Movement & Perception (aus bisherigen Player.js übernehmen/ergänzen) ---
-  updateDirectionTowardsTarget() { /* ... wie gehabt ... */ }
-  moveToTarget() { /* ... wie gehabt (mit Zonenclamp etc.) ... */ }
-  arrivedAtTarget() { /* ... wie gehabt ... */ }
-  perceive(objects) { /* ... wie gehabt (mit Kopf/FOV) ... */ }
-  updateMemory(label, obj) { /* ... wie gehabt ... */ }
-  predictObjectPosition(label, dt = 0.5) { /* ... wie gehabt ... */ }
+  // --- Movement & Perception ---
+  updateDirectionTowardsTarget() {
+    const dx = this.targetX - this.x;
+    const dy = this.targetY - this.y;
+    if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+      const desired = (Math.atan2(dy, dx) * 180) / Math.PI;
+      const maxTurn = this.derived.bodyTurnRate ?? 12;
+      let delta = ((desired - this.bodyDirection + 540) % 360) - 180;
+      if (Math.abs(delta) > maxTurn) {
+        this.bodyDirection += Math.sign(delta) * maxTurn;
+      } else {
+        this.bodyDirection = desired;
+      }
+      if (this.bodyDirection > 180) this.bodyDirection -= 360;
+      if (this.bodyDirection < -180) this.bodyDirection += 360;
+    }
+  }
+
+  moveToTarget() {
+    this.updateDirectionTowardsTarget();
+    const dx = this.targetX - this.x;
+    const dy = this.targetY - this.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 1) {
+      const speed = (this.derived.topSpeed ?? 2) * (this.stamina ?? 1);
+      const step = Math.min(speed, dist);
+      this.x += (dx / dist) * step;
+      this.y += (dy / dist) * step;
+      const zone = Player.getAllowedZone(this);
+      const pos = Player.clampToZone(this.x, this.y, zone);
+      this.x = pos.x;
+      this.y = pos.y;
+      this.stamina = Math.max(0, (this.stamina ?? 1) - step * 0.001);
+      return false;
+    }
+    this.stamina = Math.min(1, (this.stamina ?? 1) + 0.0005);
+    return true;
+  }
+
+  arrivedAtTarget() {
+    return Math.abs(this.x - this.targetX) < 1 && Math.abs(this.y - this.targetY) < 1;
+  }
+
+  perceive(objects) {
+    this.perceived = {};
+    for (const obj of objects) {
+      if (obj === this) continue;
+      const dx = obj.x - this.x;
+      const dy = obj.y - this.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > this.perceptionRange) continue;
+      const angleToObj = (Math.atan2(dy, dx) * 180) / Math.PI;
+      let delta = angleToObj - this.bodyDirection;
+      while (delta > 180) delta -= 360;
+      while (delta < -180) delta += 360;
+      if (Math.abs(delta) <= this.fovAngle / 2) {
+        const label = obj.role || obj.constructor.name.toLowerCase();
+        this.perceived[label] = { x: obj.x, y: obj.y, dist, angle: delta };
+        if (label === "ball") {
+          if (!this.memory.ball) {
+            this.memory.ball = { x: null, y: null, lastSeen: -Infinity, confidence: 0 };
+          }
+          this.memory.ball.x = obj.x;
+          this.memory.ball.y = obj.y;
+          this.memory.ball.lastSeen = performance.now();
+          this.memory.ball.confidence = 1.0 * (this.derived.vision ?? 1) + 0.5 * (this.derived.awareness ?? 1);
+        }
+      }
+    }
+  }
+
+  updateMemory(label, obj) {
+    this.memory[label] = { x: obj.x, y: obj.y, lastSeen: performance.now() };
+  }
+
+  predictObjectPosition(label, dt = 0.5) {
+    const m = this.memory[label];
+    if (!m) return null;
+    return { x: m.x, y: m.y };
+  }
 
   // --- Messaging, Head/Körper-Drehung etc. siehe vorherige Posts! ---
-  turnHeadTo(angle) { /* ... wie gehabt ... */ }
-  smoothTurnHeadTo(targetAngle, maxTurnPerTick = 12) { /* ... wie gehabt ... */ }
+  turnHeadTo(angle) {
+    this.headDirection = angle;
+  }
+
+  smoothTurnHeadTo(targetAngle, maxTurnPerTick = 12) {
+    let delta = ((targetAngle - this.headDirection + 540) % 360) - 180;
+    if (Math.abs(delta) > maxTurnPerTick) {
+      this.headDirection += Math.sign(delta) * maxTurnPerTick;
+    } else {
+      this.headDirection = targetAngle;
+    }
+    if (this.headDirection > 180) this.headDirection -= 360;
+    if (this.headDirection < -180) this.headDirection += 360;
+  }
   sendMessage(targetPlayer, message) { targetPlayer.mailbox.push({ from: this, ...message }); }
   broadcastMessage(team, message) { for (const mate of team) if (mate !== this) this.sendMessage(mate, message); }
 

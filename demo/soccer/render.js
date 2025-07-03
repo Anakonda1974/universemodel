@@ -24,7 +24,7 @@ export function drawPlayers(ctx, players, { showFOV = false } = {}) {
 
     // Draw head (smaller circle in front, based on direction)
     const headDist = p.radius * 0.85;
-    const angleRad = p.direction * Math.PI / 180;
+    const angleRad = p.bodyDirection * Math.PI / 180;
     const headX = p.x + Math.cos(angleRad) * headDist;
     const headY = p.y + Math.sin(angleRad) * headDist;
     ctx.beginPath();
@@ -40,6 +40,14 @@ export function drawPlayers(ctx, players, { showFOV = false } = {}) {
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = "#222";
     ctx.stroke();
+
+    // Draw stamina bar
+    if (typeof p.stamina === "number") {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(p.x - p.radius, p.y - p.radius - 6, p.radius * 2, 3);
+      ctx.fillStyle = "#0f0";
+      ctx.fillRect(p.x - p.radius, p.y - p.radius - 6, p.radius * 2 * p.stamina, 3);
+    }
 
     // Optionally: show number or role
     ctx.font = "bold 12px sans-serif";
