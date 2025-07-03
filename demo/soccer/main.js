@@ -22,6 +22,15 @@ let selectedFormationIndex = 0;
 const teamHeim = [], teamGast = [];
 let ball;
 
+// Score, timer, cards, etc.
+let scoreHome = 0, scoreAway = 0;
+let matchTime = 0; // in seconds
+let halftime = 1;
+let matchPaused = false;
+let halfLengthMinutes = 45;
+let lastFrameTime = null;
+let yellowCards = [], redCards = [];
+
 // --- Ball-Objekt ---
 class Ball {
   constructor(x, y) {
@@ -103,6 +112,7 @@ ball = new Ball(525, 340);
 loadFormations();
 setupMatchControls();
 
+
 // Score, timer, cards, etc.
 let scoreHome = 0, scoreAway = 0;
 let matchTime = 0; // in seconds
@@ -111,6 +121,7 @@ let matchPaused = false;
 let halfLengthMinutes = 45;
 let lastFrameTime = null;
 let yellowCards = [], redCards = [];
+
 
 function updateScoreboard() {
   document.getElementById("score").textContent = `${scoreHome} : ${scoreAway}`;
