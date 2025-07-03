@@ -18,7 +18,7 @@ npm run build
 import { SeedManager } from "./dist/SeedManager";
 import { PropertyGraph, PropertyDefinition } from "./dist/PropertyGraph";
 import { ProceduralEntity } from "./dist/ProceduralEntity";
-import { getNoise01, mapRange01 } from "./dist/ProceduralUtils";
+import { getNoise01, getFractalNoise01, mapRange01 } from "./dist/ProceduralUtils";
 
 const seedManager = new SeedManager("GenesisAlpha42");
 
@@ -48,6 +48,14 @@ const earth = new ProceduralEntity(
 );
 
 console.log(earth.generate());
+```
+
+`ProceduralUtils` also exposes `getFractalNoise01` which layers multiple noise
+samples to create smoother variations:
+
+```ts
+const rough = getNoise01(seed, "height");
+const smooth = getFractalNoise01(seed, "height");
 ```
 
 ## Extended Planet Properties
