@@ -3,7 +3,7 @@ import { deriveSeed, RNG } from './utils/rng.js';
 const params = new URLSearchParams(window.location.search);
 export const globalSeed = BigInt(params.get('seed') || 1);
 
-export function getGalaxies(seed = globalSeed, num = 1) {
+export function getGalaxies(seed = globalSeed, num = 10) {
   const baseSeed = deriveSeed(seed, 'universe');
   const rng = new RNG(baseSeed);
   const galaxies = [];

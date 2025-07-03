@@ -1,0 +1,372 @@
+import { Capabilities } from './capabilities.js';
+import { createPlayerBT } from "./footBallBTs.js";
+
+// export class Player {
+//   constructor(x, y, color = "blue") {
+//     this.x = x;
+//     this.y = y;
+//     this.radius = 8;
+//     this.color = color;
+//     this.role = "";
+//     this.style = "";
+//     this.direction = 0;
+//     this.fovAngle = 120;
+//     this.perceptionRange = 380;
+//     this.awareness = Math.random();
+//     this.vision = Math.random();
+//     this.teamwork = Math.random();
+//     this.courage = Math.random();
+//     this.creativity = Math.random();
+//     this.speed = 2 + Math.random() * 0.7;
+//     this.targetX = x;
+//     this.targetY = y;
+//     this.perceived = {};
+//     this.memory = {
+//       ball: { x: null, y: null, lastSeen: -Infinity, confidence: 0 }
+//     };
+
+//     this.formationX = x;
+//     this.formationY = y;
+//     this.hasBall = false;
+//     this.currentAction = "hold";
+//     this.bt = createPlayerBT();
+//     // --- For flip/hysteresis ---
+//     this.engagedTarget = null; // { x, y, type }
+//     this.engagedTimer = 0;
+//     this.lastAction = "";
+//   }
+
+//   static getAllowedZone(player) {
+//     let marginX = 35, marginY = 25;
+//     let width = 160, height = 180;
+//     switch (player.role) {
+//       case "TW": width = 80; height = 140; break;
+//       case "IV": case "LIV": case "RIV": width = 110; height = 190; break;
+//       case "LV": case "RV": width = 135; height = 220; break;
+//       case "DM": width = 170; height = 210; break;
+//       case "ZM": case "OM": width = 270; height = 220; break;
+//       case "LM": case "RM": width = 250; height = 270; break;
+//       case "LF": case "RF": width = 320; height = 210; break;
+//       case "ST": width = 320; height = 230; break;
+//       default: width = 170; height = 200; break;
+//     }
+//     const minX = Math.max(marginX, player.formationX - width / 2);
+//     const maxX = Math.min(1050 - marginX, player.formationX + width / 2);
+//     const minY = Math.max(marginY, player.formationY - height / 2);
+//     const maxY = Math.min(680 - marginY, player.formationY + height / 2);
+//     return { minX, maxX, minY, maxY };
+//   }
+
+//   static clampToZone(x, y, zone) {
+//     return {
+//       x: Math.max(zone.minX, Math.min(zone.maxX, x)),
+//       y: Math.max(zone.minY, Math.min(zone.maxY, y))
+//     };
+//   }
+
+//   moveToTarget() {
+//     this.updateDirectionTowardsTarget();
+//     let dx = this.targetX - this.x;
+//     let dy = this.targetY - this.y;
+//     let dist = Math.sqrt(dx * dx + dy * dy);
+//     if (dist > 1) {
+//       let step = Math.min(this.speed, dist);
+//       this.x += (dx / dist) * step;
+//       this.y += (dy / dist) * step;
+
+//       // Clamp actual position to tactical zone
+//       const zone = Player.getAllowedZone(this);
+//       const pos = Player.clampToZone(this.x, this.y, zone);
+//       this.x = pos.x;
+//       this.y = pos.y;
+
+//       return false;
+//     }
+//     return true;
+//   }
+
+//   // ---- Smooth turning, maxTurn per frame ----
+//   updateDirectionTowardsTarget() {
+//     let dx = this.targetX - this.x;
+//     let dy = this.targetY - this.y;
+//     if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+//       let desired = (Math.atan2(dy, dx) * 180) / Math.PI;
+//       const maxTurn = 12; // degrees/frame
+//       let delta = ((desired - this.direction + 540) % 360) - 180;
+//       if (Math.abs(delta) > maxTurn) {
+//         this.direction += Math.sign(delta) * maxTurn;
+//       } else {
+//         this.direction = desired;
+//       }
+//       // Normalize
+//       if (this.direction > 180) this.direction -= 360;
+//       if (this.direction < -180) this.direction += 360;
+//     }
+//   }
+
+//   arrivedAtTarget() {
+//     return Math.abs(this.x - this.targetX) < 1 && Math.abs(this.y - this.targetY) < 1;
+//   }
+
+//   perceive(objects) {
+//     this.perceived = {};
+//     for (const obj of objects) {
+//       if (obj === this) continue;
+//       let dx = obj.x - this.x, dy = obj.y - this.y;
+//       let dist = Math.sqrt(dx * dx + dy * dy);
+//       if (dist > this.perceptionRange) continue;
+//       let angleToObj = (Math.atan2(dy, dx) * 180) / Math.PI;
+//       let delta = angleToObj - this.direction;
+//       while (delta > 180) delta -= 360;
+//       while (delta < -180) delta += 360;
+//       if (Math.abs(delta) <= this.fovAngle / 2) {
+//         const label = obj.role || obj.constructor.name.toLowerCase();
+//         this.perceived[label] = { x: obj.x, y: obj.y, dist, angle: delta };
+//         if (label === "ball") {
+//           this.memory.ball.x = obj.x;
+//           this.memory.ball.y = obj.y;
+//           this.memory.ball.lastSeen = performance.now();
+//           this.memory.ball.confidence = 1.0 * this.vision + 0.5 * this.awareness;
+//         }
+//       }
+//     }
+//   }
+
+//   decide(gameState, world) {
+//     // Hysteresis/engagement lock: don't change action every frame!
+//     // Only switch target/action if either (1) engagedTimer expired, or (2) new action is "better" (by at least 8px), or (3) previous action is not "engage"-type
+
+//     let result = null;
+// this.bt.tick(this, world);
+//     // If currently engaged, decrement timer and lock on
+//     if (this.engagedTimer > 0 && this.engagedTarget) {
+//       this.engagedTimer--;
+//       this.targetX = this.engagedTarget.x;
+//       this.targetY = this.engagedTarget.y;
+//       this.currentAction = this.engagedTarget.type;
+//       return; // skip further decision
+//     }
+
+//     // Else, decide normally
+//     result = window.decidePlayerAction ? window.decidePlayerAction(this, world, gameState)
+//       : decidePlayerAction(this, world, gameState);
+
+//     if (result) {
+//       // If action is "tackle", "mark", "press", engage/lock for N frames
+//       if (["tackle", "mark", "press"].includes(result.type)) {
+//         // Only relock if the target is "meaningfully" different
+//         const dx = result.targetX - this.targetX;
+//         const dy = result.targetY - this.targetY;
+//         if (Math.abs(dx) > 8 || Math.abs(dy) > 8 || this.currentAction !== result.type) {
+//           this.engagedTarget = {
+//             x: result.targetX,
+//             y: result.targetY,
+//             type: result.type
+//           };
+//           this.engagedTimer = 8; // number of frames to lock before re-eval
+//         }
+//       } else {
+//         this.engagedTimer = 0;
+//         this.engagedTarget = null;
+//       }
+//       this.targetX = result.targetX;
+//       this.targetY = result.targetY;
+//       this.currentAction = result.type;
+//     }
+//     // Clamp again
+//     const zone = Player.getAllowedZone(this);
+//     const pos = Player.clampToZone(this.targetX, this.targetY, zone);
+//     this.targetX = pos.x;
+//     this.targetY = pos.y;
+//   }
+
+//   toString() {
+//     return `Player(${this.role}, ${this.x.toFixed(1)}, ${this.y.toFixed(1)})`;
+//   }
+// }
+
+
+// player.js
+
+
+
+const TradeProfiles = {
+  sniper:      { shootingAccuracy: +0.15, tacklingSkill: -0.1 },
+  playmaker:   { passingAccuracy: +0.15, topSpeed: -0.05 },
+  wall:        { tacklingSkill: +0.2, acceleration: -0.08 },
+  engine:      { fitness: +0.2, shootingPower: -0.1 }
+  // usw.
+};
+
+function getPositionMultipliers(pos) {
+  switch(pos) {
+    case "ST": return { shootingAccuracy: 1.2, tacklingSkill: 0.8 };
+    case "IV": return { tacklingSkill: 1.3, topSpeed: 0.9 };
+    case "ZM": return { passingAccuracy: 1.15, shootingPower: 0.95 };
+    // ...
+    default: return {};
+  }
+}
+
+export class Player {
+  constructor(x, y, color = "blue", options = {}) {
+    // --- Spielfeld & Rendering ---
+    this.x = x;
+    this.y = y;
+    this.radius = 8;
+    this.color = color;
+
+    // --- Basiswerte (roh, meist 0..1) ---
+    this.base = {
+      athleticism: options.athleticism ?? Math.random(),
+      intelligence: options.intelligence ?? Math.random(),
+      technique: options.technique ?? Math.random(),
+      mentality: options.mentality ?? Math.random(),
+      fitness: options.fitness ?? Math.random(),
+      reaction: options.reaction ?? Math.random(),
+      vision: options.vision ?? Math.random(),
+      workrate: options.workrate ?? Math.random(),
+      ...options.baseStats
+    };
+
+    // --- Spielerprofil / Trade (Sniper, Wall, Engine, Playmaker...) ---
+    this.trade = options.trade || null;
+    this.position = options.position || "ST"; // Default Stürmer
+
+    // --- Erfahrungssystem ---
+    this.xp = {
+      passing: 0, shooting: 0, tackling: 0, vision: 0, fitness: 0
+      // ...
+    };
+
+    // --- Derived (abgeleitete) Eigenschaften: ---
+    this.derived = {};
+    this.positionMultipliers = getPositionMultipliers(this.position);
+    this.updateDerived();
+
+    // --- State ---
+    this.bodyDirection = 0;
+    this.headDirection = 0;
+    this.fovAngle = 120;
+    this.perceptionRange = 380;
+    this.targetX = x;
+    this.targetY = y;
+    this.formationX = x;
+    this.formationY = y;
+    this.hasBall = false;
+
+    // --- KI / Perception / Memory ---
+    this.perceived = {};
+    this.memory = {};
+    this.mailbox = [];
+    this.bt = createPlayerBT();
+
+
+    // --- Decision-Timing (Awareness-Skill steuert Intervall) ---
+    this.lastDecision = 0;
+    this.reactionInterval = 300 + (1 - this.derived.awareness) * 400; // dynamisch
+
+    // --- Capabilities ---
+    this.capabilities = { ...Capabilities }; // oder rollen-/trade-spezifisch
+  }
+
+  // --- Abgeleitete Werte aktualisieren (immer nach XP-Gewinn o. Trade-Wechsel!) ---
+  updateDerived() {
+    const b = this.base;
+    const t = this.getTradeBonus();
+    // Beispielhaft einige abgeleitete Werte:
+    this.derived.acceleration     = b.athleticism * 0.7 + b.fitness * 0.3 + (t.acceleration     ?? 0);
+    this.derived.topSpeed         = b.athleticism * 0.6 + b.fitness * 0.4 + (t.topSpeed         ?? 0);
+    this.derived.bodyTurnRate     = b.athleticism * 0.3 + b.technique * 0.5 + (t.bodyTurnRate   ?? 0);
+    this.derived.headTurnRate     = b.vision * 0.6 + b.reaction * 0.4 + (t.headTurnRate         ?? 0);
+    this.derived.shootingPower    = b.technique * 0.5 + b.athleticism * 0.4 + (t.shootingPower  ?? 0);
+    this.derived.shootingAccuracy = b.technique * 0.5 + b.intelligence * 0.3 + (t.shootingAccuracy ?? 0);
+    this.derived.passingPower     = b.technique * 0.4 + b.intelligence * 0.5 + (t.passingPower     ?? 0);
+    this.derived.passingAccuracy  = b.technique * 0.5 + b.vision * 0.3 + b.intelligence * 0.2 + (t.passingAccuracy ?? 0);
+    this.derived.dribblingSkill   = b.technique * 0.5 + b.vision * 0.2 + b.fitness * 0.2 + (t.dribblingSkill ?? 0);
+    this.derived.tacklingSkill    = b.technique * 0.4 + b.mentality * 0.4 + b.athleticism * 0.2 + (t.tacklingSkill ?? 0);
+    this.derived.awareness        = b.vision * 0.5 + b.intelligence * 0.5 + (t.awareness ?? 0);
+    this.derived.balance          = b.athleticism * 0.3 + b.mentality * 0.7 + (t.balance ?? 0);
+
+    // --- Positionsbonus anwenden ---
+    for (const prop in this.positionMultipliers) {
+      if (this.derived[prop]) {
+        this.derived[prop] *= this.positionMultipliers[prop];
+      }
+    }
+  }
+
+    static getAllowedZone(player) {
+    // These must match decision-rules.js
+    let marginX = 35, marginY = 25;
+    let width = 160, height = 180;
+
+    switch (player.role) {
+      case "TW": width = 80; height = 140; break;
+      case "IV": case "LIV": case "RIV": width = 110; height = 190; break;
+      case "LV": case "RV": width = 135; height = 220; break;
+      case "DM": width = 170; height = 210; break;
+      case "ZM": case "OM": width = 270; height = 220; break;
+      case "LM": case "RM": width = 250; height = 270; break;
+      case "LF": case "RF": width = 320; height = 210; break;
+      case "ST": width = 320; height = 230; break;
+      default: width = 170; height = 200; break;
+    }
+    const minX = Math.max(marginX, player.formationX - width / 2);
+    const maxX = Math.min(1050 - marginX, player.formationX + width / 2);
+    const minY = Math.max(marginY, player.formationY - height / 2);
+    const maxY = Math.min(680 - marginY, player.formationY + height / 2);
+
+    return { minX, maxX, minY, maxY };
+  }
+
+  // --- Boni/Mali aus Trade-System holen ---
+  getTradeBonus() {
+    return TradeProfiles[this.trade] || {};
+  }
+
+  // --- Erfahrung steigern ---
+  gainXP(skill, amount) {
+    if (!this.xp[skill]) this.xp[skill] = 0;
+    this.xp[skill] += amount;
+    // Optional: Level-Up (z. B. alle 100 XP steigt entsprechender Basiswert leicht)
+    // z. B.:
+    if (this.xp[skill] % 100 === 0) {
+      this.base[skill] = Math.min(1, this.base[skill] + 0.01);
+      this.updateDerived();
+    }
+  }
+
+  // --- Capabilities verwenden (BT-Aufruf!) ---
+  do(action, ...args) {
+    if (this.capabilities[action]) {
+      this.capabilities[action](this, ...args);
+    }
+  }
+
+  maybeDecide(now, world, gameState) {
+  if ((now - this.lastDecision) > this.reactionInterval) {
+    this.lastDecision = now;
+    this.bt.tick(this, world);  // Behavior Tree entscheidet Ziel/Aktion
+  }
+}
+
+  // --- Movement & Perception (aus bisherigen Player.js übernehmen/ergänzen) ---
+  updateDirectionTowardsTarget() { /* ... wie gehabt ... */ }
+  moveToTarget() { /* ... wie gehabt (mit Zonenclamp etc.) ... */ }
+  arrivedAtTarget() { /* ... wie gehabt ... */ }
+  perceive(objects) { /* ... wie gehabt (mit Kopf/FOV) ... */ }
+  updateMemory(label, obj) { /* ... wie gehabt ... */ }
+  predictObjectPosition(label, dt = 0.5) { /* ... wie gehabt ... */ }
+
+  // --- Messaging, Head/Körper-Drehung etc. siehe vorherige Posts! ---
+  turnHeadTo(angle) { /* ... wie gehabt ... */ }
+  smoothTurnHeadTo(targetAngle, maxTurnPerTick = 12) { /* ... wie gehabt ... */ }
+  sendMessage(targetPlayer, message) { targetPlayer.mailbox.push({ from: this, ...message }); }
+  broadcastMessage(team, message) { for (const mate of team) if (mate !== this) this.sendMessage(mate, message); }
+
+  toString() {
+    return `Player(${this.role}, ${this.x.toFixed(1)}, ${this.y.toFixed(1)})`;
+  }
+}
+

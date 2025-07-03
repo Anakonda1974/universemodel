@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Football Sim – Modular Prototype</title>
+    <style>
+        body {
+            margin: 0; padding: 0; background: #222; color: #fff;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+        }
+        #toolbar {
+            display: flex;
+            gap: 2em;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 0 8px 0;
+            background: #191919;
+        }
+        label, select { font-size: 1.1em; }
+        canvas {
+            display: block;
+            margin: 0 auto 30px auto;
+            background-color: #4CAF50;
+            border: 2px solid white;
+            box-shadow: 0 4px 20px #0008;
+        }
+
+        #scoreboard {
+  text-align: center;
+  font-size: 1.7em;
+  padding: 12px 0 12px 0;
+  background: #282828;
+  color: #fff;
+  letter-spacing: 0.04em;
+  border-bottom: 1.5px solid #444;
+}
+#scoreboard span { margin: 0 0.3em; }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <label for="formationSelect">Formation:</label>
+        <select id="formationSelect"></select>
+        <span id="formationDesc"></span>
+    </div>
+
+    <div id="scoreboard">
+  <span id="score">0 : 0</span> &nbsp; | &nbsp;
+  <span id="timer">00:00</span> &nbsp; | &nbsp;
+  <span id="halftime">1. Halbzeit</span> &nbsp; | &nbsp;
+  <span id="cards"></span>
+</div>
+    <canvas id="spielfeld" width="1050" height="680"></canvas>
+    <script type="module" src="main.js"></script>
+</body>
+</html>

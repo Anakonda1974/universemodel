@@ -1,0 +1,36 @@
+[
+  {
+    "name": "4-4-2",
+    "description": "Klassisch, balanciert",
+    "players": [
+      { "x": 80,  "y": 340,  "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100,  "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220,  "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460,  "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580,  "role": "RV",  "style": "support" },
+      { "x": 360, "y": 140,  "role": "LM",  "style": "box-to-box" },
+      { "x": 360, "y": 240,  "role": "ZM",  "style": "holding" },
+      { "x": 360, "y": 440,  "role": "ZM",  "style": "holding" },
+      { "x": 360, "y": 540,  "role": "RM",  "style": "box-to-box" },
+      { "x": 500, "y": 260,  "role": "LS",  "style": "pressing" },
+      { "x": 500, "y": 420,  "role": "RS",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "4-3-3",
+    "description": "Modern, flexibel, offensiv",
+    "players": [
+      { "x": 80,  "y": 340,  "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100,  "role": "LV",  "style": "support" },
+      { "x": 220, "y": 240,  "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 440,  "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580,  "role": "RV",  "style": "support" },
+      { "x": 350, "y": 180,  "role": "ZM",  "style": "box-to-box" },
+      { "x": 350, "y": 340,  "role": "ZM",  "style": "holding" },
+      { "x": 350, "y": 500,  "role": "ZM",  "style": "box-to-box" },
+      { "x": 500, "y": 140,  "role": "LF",  "style": "attacking" },
+      { "x": 570, "y": 340,  "role": "MS",  "style": "pressing" },
+      { "x": 500, "y": 540,  "role": "RF",  "style": "attacking" }
+    ]
+  }
+]
