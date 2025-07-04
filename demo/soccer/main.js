@@ -2,7 +2,7 @@
 
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights, drawPassIndicator } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar } from "./render.js";
 import { logComment } from "./commentary.js";
 import { Referee } from "./referee.js";
 
@@ -11,6 +11,8 @@ const canvas = document.getElementById("spielfeld");
 const ctx = canvas.getContext("2d");
 const powerBarWrapper = document.getElementById("powerBarWrapper");
 const powerBar = document.getElementById("powerBar");
+const radarCanvas = document.getElementById("radar");
+const radarCtx = radarCanvas.getContext("2d");
 
 const GameState = {
   FORMATION: "Formation wählen",
@@ -874,6 +876,7 @@ function gameLoop(timestamp) {
 
   drawBall(ctx, ball);
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"} | Wetter: ${weather.type}`, canvas.width);
+  drawRadar(radarCtx, allPlayers, ball, radarCanvas.width, radarCanvas.height);
 
   // 8. Score/Goal Check/Timer
   checkGoal(ball);

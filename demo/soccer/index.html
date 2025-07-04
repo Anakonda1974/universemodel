@@ -57,6 +57,12 @@
             width: 0%;
             background: linear-gradient(green, red);
         }
+        #radar {
+            display: block;
+            margin: 6px auto;
+            background: #065;
+            border: 2px solid white;
+        }
     </style>
 </head>
 <body>
@@ -86,6 +92,7 @@
   <span id="halftime">1. Halbzeit</span> &nbsp; | &nbsp;
   <span id="cards"></span>
 </div>
+    <canvas id="radar" width="210" height="136"></canvas>
     <div id="powerBarWrapper"><div id="powerBar"></div></div>
     <p style="text-align:center;margin-top:4px;">Spieler anklicken und mit Pfeiltasten oder Gamepad steuern</p>
     <canvas id="spielfeld" width="1050" height="680"></canvas>
