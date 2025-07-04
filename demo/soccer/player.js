@@ -94,6 +94,10 @@ export class Player {
     this.slideDirY = 0;
     this.slideSpeed = 0;
 
+    // Bewegungsgeschwindigkeit (für Interpolation)
+    this.vx = 0;
+    this.vy = 0;
+
 
     // --- Decision-Timing (Awareness-Skill steuert Intervall) ---
     this.lastDecision = 0;
@@ -238,14 +242,19 @@ export class Player {
     if (dist > 1) {
       const injuryMod = this.injured ? 0.4 : 1;
       const speed = (this.derived.topSpeed ?? 2) * (this.stamina ?? 1) * (this.pressing ?? 1) * injuryMod;
-      const step = Math.min(speed, dist);
-      this.x += (dx / dist) * step;
-      this.y += (dy / dist) * step;
+      const desiredVx = (dx / dist) * speed;
+      const desiredVy = (dy / dist) * speed;
+      const smooth = 0.2;
+      this.vx = this.vx + (desiredVx - this.vx) * smooth;
+      this.vy = this.vy + (desiredVy - this.vy) * smooth;
+      this.x += this.vx;
+      this.y += this.vy;
       const zone = Player.getAllowedZone(this);
       const pos = Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
-      const drain = step * 0.001 * (1.2 - (this.base.stamina ?? 1));
+      const movement = Math.hypot(this.vx, this.vy);
+      const drain = movement * 0.001 * (1.2 - (this.base.stamina ?? 1));
       this.stamina = Math.max(0, (this.stamina ?? 1) - drain);
       return false;
     }
