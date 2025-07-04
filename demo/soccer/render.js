@@ -180,3 +180,20 @@ export function drawPerceptionHighlights(ctx, player) {
   }
   ctx.restore();
 }
+
+export function drawPassIndicator(ctx, indicator) {
+  if (!indicator) return;
+  ctx.save();
+  ctx.strokeStyle = 'yellow';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(indicator.from.x, indicator.from.y);
+  ctx.lineTo(indicator.to.x, indicator.to.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(indicator.to.x, indicator.to.y, 12, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
