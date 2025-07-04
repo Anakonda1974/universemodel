@@ -52,6 +52,9 @@ let prevTackle = false;
 let goalFlashTimer = 0;
 let goalFlashSide = null;
 
+let freeKickTimer = 0;
+let freeKickTaker = null;
+
 let lastBallOwnerTeam = null;
 
 const POIS = [
@@ -416,7 +419,18 @@ function handleCard(player, card) {
   }
   playWhistle();
 }
-referee = new Referee(handleCard);
+
+function handleFoul(fouler, victim) {
+  freeKickTimer = 2;
+  freeKickTaker = victim;
+  ball.owner = victim;
+  ball.isLoose = false;
+  ball.x = victim.x;
+  ball.y = victim.y;
+  logComment(`Foul an ${victim.role}`);
+  playWhistle();
+}
+referee = new Referee(handleCard, handleFoul);
 
 loadFormations();
 setupMatchControls();
@@ -657,6 +671,23 @@ function gameLoop(timestamp) {
   if (lastFrameTime === null) lastFrameTime = timestamp;
   const delta = (timestamp - lastFrameTime) / 1000;
   lastFrameTime = timestamp;
+  if (freeKickTimer > 0) {
+    freeKickTimer -= delta;
+    ball.x = freeKickTaker.x;
+    ball.y = freeKickTaker.y;
+    ball.vx = 0;
+    ball.vy = 0;
+    ball.owner = freeKickTaker;
+    const allPlayers = [...teamHeim, ...teamGast];
+    drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
+    drawZones(ctx, allPlayers);
+    drawPlayers(ctx, allPlayers);
+    drawBall(ctx, ball);
+    drawOverlay(ctx, `Freistoß: ${freeKickTimer.toFixed(1)}s`, canvas.width);
+    updateScoreboard();
+    requestAnimationFrame(gameLoop);
+    return;
+  }
   updateUserInput();
   if (selectedPlayer) {
     const active = Math.abs(userInput.dx) > 0.01 || Math.abs(userInput.dy) > 0.01;

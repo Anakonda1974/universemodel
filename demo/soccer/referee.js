@@ -1,8 +1,9 @@
 import { logComment } from './commentary.js';
 
 export class Referee {
-  constructor(onCardCallback) {
+  constructor(onCardCallback, onFoulCallback) {
     this.onCard = onCardCallback;
+    this.onFoul = onFoulCallback;
   }
 
   update(players, ball) {
@@ -31,5 +32,8 @@ export class Referee {
       logComment(`${victim.role} verletzt sich!`);
     }
     victim.highlightTimer = 1;
+    if (this.onFoul) {
+      this.onFoul(player, victim);
+    }
   }
 }
