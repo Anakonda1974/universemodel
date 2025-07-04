@@ -4,6 +4,7 @@ import { Player } from "./player.js";
 import { Coach } from "./coach.js";
 import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights } from "./render.js";
 import { logComment } from "./commentary.js";
+import { Referee } from "./referee.js";
 
 // ----- Game Setup -----
 const canvas = document.getElementById("spielfeld");
@@ -25,6 +26,7 @@ const teamHeim = [], teamGast = [];
 const benchHeim = [], benchGast = [];
 let ball;
 let coach;
+let referee;
 let selectedPlayer = null;
 const userInput = { up: false, down: false, left: false, right: false };
 let gamepadIndex = null;
@@ -237,6 +239,23 @@ for (let i = 0; i < 3; i++) {
 }
 ball = new Ball(525, 340);
 coach = new Coach([...teamHeim, ...teamGast]);
+function handleCard(player, card) {
+  if (card === "yellow") {
+    yellowCards.push(player);
+    logComment(`Gelbe Karte für ${player.role}`);
+  } else {
+    redCards.push(player);
+    logComment(`Rote Karte für ${player.role}!`);
+    if (ball.owner === player) {
+      ball.owner = null;
+      ball.isLoose = true;
+    }
+    player.x = -30;
+    player.y = -30;
+  }
+  playWhistle();
+}
+referee = new Referee(handleCard);
 
 loadFormations();
 setupMatchControls();
@@ -514,6 +533,8 @@ function gameLoop(timestamp) {
       }
     }
   }
+
+  referee.update(allPlayers, ball);
 
   checkSubstitutions();
 
