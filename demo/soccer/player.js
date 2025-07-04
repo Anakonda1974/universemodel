@@ -83,6 +83,9 @@ export class Player {
     this.injured = false;
     this.injuryRecovery = 0; // Sekunden bis zur Genesung
 
+    // Kurzer Highlight-Effekt nach Fouls
+    this.highlightTimer = 0;
+  
     // Tackling/Sliding
     this.tackleCooldown = 0;
     this.sliding = false;
@@ -328,6 +331,10 @@ export class Player {
       if (this.injuryRecovery <= 0) {
         this.injured = false;
       }
+    }
+    if (this.highlightTimer > 0) {
+      this.highlightTimer -= delta;
+      if (this.highlightTimer < 0) this.highlightTimer = 0;
     }
   }
 
