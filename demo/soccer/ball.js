@@ -9,8 +9,8 @@ export class Ball {
     this.angularVelocity = 0;
     this.radius = 6;
     this.mass = 0.43; // kg
-    // Slightly lower friction so passes travel further
-    this.friction = 0.98;
+    // Use a gentler friction so passes keep momentum
+    this.friction = 0.995;
     this.spinFriction = 0.985;
     this.restitution = 0.7;
     this.owner = null;
@@ -64,8 +64,10 @@ export class Ball {
       this.vy += ay;
     }
 
-    this.vx *= weather.friction ?? this.friction;
-    this.vy *= weather.friction ?? this.friction;
+    const fric = weather.friction ?? this.friction;
+    const decay = Math.pow(fric, delta * 60);
+    this.vx *= decay;
+    this.vy *= decay;
     this.angularVelocity *= this.spinFriction;
 
     // check collision with players
