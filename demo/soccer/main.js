@@ -2,7 +2,7 @@
 
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer } from "./render.js";
 import { logComment } from "./commentary.js";
 import { Referee } from "./referee.js";
 
@@ -972,6 +972,7 @@ function gameLoop(timestamp) {
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);
   drawPlayers(ctx, allPlayers, { showFOV: true, showRunDir: true, showHeadDir: true });
+  drawActivePlayer(ctx, selectedPlayer);
 
   drawPerceptionHighlights(ctx, selectedPlayer);
 

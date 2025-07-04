@@ -1,24 +1,42 @@
 // render.js
+let fieldCache = null;
+let fieldCacheWidth = 0;
+let fieldCacheHeight = 0;
+
+function buildFieldCache(width, height) {
+  fieldCacheWidth = width;
+  fieldCacheHeight = height;
+  fieldCache = document.createElement('canvas');
+  fieldCache.width = width;
+  fieldCache.height = height;
+  const c = fieldCache.getContext('2d');
+  c.strokeStyle = 'white';
+  c.lineWidth = 2;
+  c.fillStyle = '#065';
+  c.fillRect(0, 0, width, height);
+  c.beginPath(); c.moveTo(width/2, 0); c.lineTo(width/2, height); c.stroke();
+  c.beginPath(); c.arc(width/2, height/2, 91.5, 0, Math.PI*2); c.stroke();
+  c.fillStyle = 'white';
+  c.fillRect(0, height/2-50, 10, 100);
+  c.fillRect(width-10, height/2-50, 10, 100);
+}
+
 export function drawField(ctx, width, height, flashTimer = 0, flashSide = null) {
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-    ctx.clearRect(0, 0, width, height);
-    // Field lines, center, goals, etc.
-    ctx.beginPath(); ctx.moveTo(width/2, 0); ctx.lineTo(width/2, height); ctx.stroke();
-    ctx.beginPath(); ctx.arc(width/2, height/2, 91.5, 0, Math.PI*2); ctx.stroke();
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, height/2-50, 10, 100); // left goal
-    ctx.fillRect(width-10, height/2-50, 10, 100); // right goal
-    if (flashTimer > 0 && flashSide) {
-        ctx.save();
-        ctx.fillStyle = `rgba(255,255,0,${flashTimer})`;
-        if (flashSide === 'left') {
-            ctx.fillRect(0, height/2-60, 15, 120);
-        } else if (flashSide === 'right') {
-            ctx.fillRect(width-15, height/2-60, 15, 120);
-        }
-        ctx.restore();
+  if (!fieldCache || fieldCacheWidth !== width || fieldCacheHeight !== height) {
+    buildFieldCache(width, height);
+  }
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(fieldCache, 0, 0);
+  if (flashTimer > 0 && flashSide) {
+    ctx.save();
+    ctx.fillStyle = `rgba(255,255,0,${flashTimer})`;
+    if (flashSide === 'left') {
+      ctx.fillRect(0, height/2-60, 15, 120);
+    } else if (flashSide === 'right') {
+      ctx.fillRect(width-15, height/2-60, 15, 120);
     }
+    ctx.restore();
+  }
 }
 export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false, showHeadDir = false } = {}) {
   players.forEach(p => {
@@ -119,6 +137,17 @@ export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false,
     }
     ctx.restore();
   });
+}
+
+export function drawActivePlayer(ctx, player) {
+  if (!player) return;
+  ctx.save();
+  ctx.strokeStyle = 'yellow';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }
 
 export function drawPasses(ctx, allPlayers, ball) {
