@@ -10,3 +10,63 @@ They focus on refining player decisions and producing more natural head movement
 - [ ] **Movement Anticipation**: While running, have the head lead the body slightly when changing direction. Couple this with slower body turning for more believable motion.
 - [ ] **Idle Head Motion**: Add subtle idle animations where stationary players perform small, periodic head movements to avoid a frozen appearance.
 
+## Behavior Tree Action Nodes
+
+The soccer demo uses behavior trees to orchestrate player decisions. The
+following tasks outline the core action nodes that still need dedicated
+implementations.
+
+### Ball Possession & Offensive Actions
+- [ ] **shoot(goalPos)**: allow a player to attempt a shot on goal.
+- [ ] **pass(targetPlayer/pos)**: execute a ground or lofted pass to a teammate.
+- [ ] **lobPass(targetPlayer/pos)**: play an elevated long pass.
+- [ ] **cross(targetArea)**: deliver a cross into the target zone.
+- [ ] **dribble(targetPos/dir)**: move while controlling the ball.
+- [ ] **holdBall()**: shield the ball and slow the play down.
+- [ ] **fakeShot() / feint()**: perform a body feint or fake shot.
+- [ ] **oneTwo(targetPlayer)**: initiate a quick one-two pass sequence.
+- [ ] **backPass(targetPlayer/pos)**: recycle possession with a back pass.
+
+### Off-the-Ball Actions
+- [ ] **runToSpace(targetPos)**: move into open space to receive a pass.
+- [ ] **requestPass()**: signal a teammate for the ball.
+- [ ] **prepareShot()**: position for a shot attempt.
+- [ ] **screenOpponent(opponent)**: block or screen an opponent.
+- [ ] **overlap(teammate)**: perform an overlapping run.
+- [ ] **delayRun()**: time a run to avoid offside.
+
+### Defensive Actions
+- [ ] **tackle(targetPlayer/pos)**: challenge the ball carrier.
+- [ ] **interceptPass(passPath)**: anticipate and intercept a pass.
+- [ ] **markOpponent(opponent)**: apply man marking to an opponent.
+- [ ] **coverZone(targetZone)**: guard a defensive zone.
+- [ ] **trackBack()**: retreat towards the defensive half.
+- [ ] **pressBallCarrier(opponent)**: close down the player with the ball.
+- [ ] **clearBall(targetArea)**: perform a defensive clearance.
+- [ ] **blockShot()**: block an incoming shot.
+- [ ] **delayAttack()**: slow down the opponent without tackling.
+
+### Special Role Actions
+- [ ] **goalKick(targetArea)**: goalkeeper performs a goal kick.
+- [ ] **throwIn(targetPlayer/pos)**: take a throw-in.
+- [ ] **takeCorner(targetArea)**: take a corner kick.
+- [ ] **takeFreeKick(targetArea)**: take a free kick.
+- [ ] **commandDefense(action/teammate)**: issue defensive commands.
+
+### Communication & Meta Actions
+- [ ] **shoutInstruction(type, urgency, [targetPlayer])**: call out instructions.
+- [ ] **callForMarkSwitch(targetOpponent, targetTeammate)**: signal a mark switch.
+- [ ] **signalOffsideTrap()**: trigger the offside trap.
+- [ ] **signalKeeperOut()**: request the keeper to come out.
+
+### Perception & Focus
+- [ ] **turnHeadTo(angle/targetPos)**: deliberately turn the head to scan.
+- [ ] **scanField()**: perform a quick field awareness scan.
+- [ ] **memorizeSituation()**: store the current situation for prediction.
+- [ ] **focusOnObject(object)**: fix attention on a specific object.
+
+### Utility Actions
+- [ ] **holdFormation()**: maintain the tactical formation.
+- [ ] **recoverStamina()**: slow down to regain stamina.
+- [ ] **simulateInjury()**: feign an injury (for completeness).
+
