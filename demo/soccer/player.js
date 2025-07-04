@@ -149,6 +149,8 @@ export class Player {
       case "ST": width = 320; height = 230; break;
       default: width = 170; height = 200; break;
     }
+    // Widen each role's zone to ensure the team collectively covers its half
+    width += 100;
     const minX = Math.max(marginX, player.formationX - width / 2);
     const maxX = Math.min(1050 - marginX, player.formationX + width / 2);
     const minY = Math.max(marginY, player.formationY - height / 2);

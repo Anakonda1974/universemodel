@@ -63,6 +63,8 @@ function getAllowedZone(player, world) {
     case "ST": width = 320; height = 230; break;
     default: width = 170; height = 200; break;
   }
+  // Widen each role's zone to ensure the team collectively covers its half
+  width += 100;
 
   // --- Defensive PUSH: If ball is in our half, push formation up ---
   let push = 0;
