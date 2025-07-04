@@ -213,6 +213,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'ArrowDown' || e.code === 'KeyS') userInput.down = true;
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = true;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = true;
+  if (e.code === 'KeyR') resetGame();
 });
 window.addEventListener('keyup', e => {
   if (e.code === 'ArrowUp' || e.code === 'KeyW') userInput.up = false;
@@ -269,6 +270,17 @@ function resetKickoff() {
   ball.owner = teamHeim[4]; // oder nach Zufall/Regel
   ball.isLoose = false;
   playWhistle();
+}
+
+function resetGame() {
+  scoreHome = 0;
+  scoreAway = 0;
+  matchTime = 0;
+  halftime = 1;
+  yellowCards = [];
+  redCards = [];
+  resetKickoff();
+  updateScoreboard();
 }
 
 // --- Ball auf Spielfeld halten
