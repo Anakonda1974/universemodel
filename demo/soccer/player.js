@@ -263,6 +263,7 @@ export class Player {
     this.memory = { ball: { x: null, y: null, lastSeen: -Infinity, confidence: 0 } };
     this.mailbox = [];
     this.bt = createPlayerBT();
+    this.controlledByUser = false;
 
 
     // --- Decision-Timing (Awareness-Skill steuert Intervall) ---
@@ -355,13 +356,14 @@ export class Player {
   }
 
   maybeDecide(now, world, gameState) {
-  if ((now - this.lastDecision) > this.reactionInterval) {
-    this.lastDecision = now;
-    this.bt.tick(this, world);  // Behavior Tree entscheidet Ziel/Aktion
-    const angle = Math.atan2(world.ball.y - this.y, world.ball.x - this.x) * 180 / Math.PI;
-    this.smoothTurnHeadTo(angle, this.derived.headTurnRate ?? 12);
+    if (this.controlledByUser) return;
+    if ((now - this.lastDecision) > this.reactionInterval) {
+      this.lastDecision = now;
+      this.bt.tick(this, world);  // Behavior Tree entscheidet Ziel/Aktion
+      const angle = Math.atan2(world.ball.y - this.y, world.ball.x - this.x) * 180 / Math.PI;
+      this.smoothTurnHeadTo(angle, this.derived.headTurnRate ?? 12);
+    }
   }
-}
 
   // --- Movement & Perception ---
   updateDirectionTowardsTarget() {

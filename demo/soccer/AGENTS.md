@@ -439,11 +439,11 @@ Das hier beschriebene Design legt den Grundstein für ein spannendes KI-Fußball
 - [ ] Lokaler Multiplayer: Zwei Spieler am selben Rechner, jeder mit einem Gamepad, steuern entweder jeweils einen Spieler (z.B. nur den Stürmer) oder gar das gesamte Team (durch Spielerwechsel wie bei FIFA). Die restlichen Spieler würden von der KI gesteuert bleiben (wie ein Koop-Modus mit der KI).
 - [ ] Online Multiplayer: Netzwerkfunktion, wo zwei Spieler über Internet gegeneinander spielen. Das erfordert Synchronisation, Prediction etc., eine erhebliche Erweiterung der Architektur.
 - [ ] Hotseat/Coach: Alternativ könnten Spieler auch in Trainer-Rolle agieren, siehe Coach-KI.
-- [ ] Gamepad-Integration und manuelle Kontrolle: Auch im Singleplayer könnte man ermöglichen, dass der Nutzer einzelne Spieler selbst steuert:
-- [ ] Dazu braucht es eine Mechanik zum Umschalten des aktiven Spielers (z.B. derjenige dem Ball am nächsten ist oder per Knopfdruck).
-- [ ] Die KI würde für den aktiv gesteuerten Spieler aussetzen, während der Nutzer lenkt. Alle anderen KI bleiben wie gehabt.
-- [ ] Das Input-Handling müsste in main.js oder separat eingebunden werden und dann player.controlledByUser = true für den gewählten Spieler setzen, woraufhin in player.update() bei diesem evtl. nur die vom Controller vorgegebenen Bewegungen ausgeführt werden.
-- [ ] Ziel ist ein fließendes Zusammenspiel aus KI und menschlichem Einfluss, was dem Spielspaß dient.
+- [x] Gamepad-Integration und manuelle Kontrolle: Auch im Singleplayer könnte man ermöglichen, dass der Nutzer einzelne Spieler selbst steuert:
+- [x] Dazu braucht es eine Mechanik zum Umschalten des aktiven Spielers (z.B. derjenige dem Ball am nächsten ist oder per Knopfdruck).
+- [x] Die KI würde für den aktiv gesteuerten Spieler aussetzen, während der Nutzer lenkt. Alle anderen KI bleiben wie gehabt.
+- [x] Das Input-Handling müsste in main.js oder separat eingebunden werden und dann player.controlledByUser = true für den gewählten Spieler setzen, woraufhin in player.update() bei diesem evtl. nur die vom Controller vorgegebenen Bewegungen ausgeführt werden.
+- [x] Ziel ist ein fließendes Zusammenspiel aus KI und menschlichem Einfluss, was dem Spielspaß dient.
 - [ ] Coach-KI und Taktikmodul: Bisher reagiert die KI eher kurzfristig (pro Spieler-Entscheidungen). Ein Coach-Modul könnte höhere Ebene steuern:
 - [ ] Taktikanpassung: Je nach Spielverlauf (z.B. Rückstand kurz vor Ende) befiehlt der Coach der KI, offensiver zu stehen (Formation weiter nach vorne schieben, mehr Pressing) oder bei Führung defensiver (alle ziehen sich zurück).
 - [ ] Wechsel: Coach-KI entscheidet, Spieler auszutauschen (wenn wir einen Kader hätten), z.B. bei Erschöpfung oder taktisch (großer Stürmer rein in Minute 80 für lange Bälle).
