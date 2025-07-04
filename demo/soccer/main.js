@@ -221,6 +221,28 @@ function findNearestTeammate(player) {
   return best;
 }
 
+function findTeammateInDirection(player, dx, dy, maxAngle = 60) {
+  const team = teamHeim.includes(player) ? teamHeim : teamGast;
+  const mag = Math.hypot(dx, dy);
+  if (mag < 0.01) return null;
+  let best = null;
+  let bestAng = maxAngle;
+  for (const mate of team) {
+    if (mate === player) continue;
+    const mx = mate.x - player.x;
+    const my = mate.y - player.y;
+    const dist = Math.hypot(mx, my);
+    if (dist === 0) continue;
+    const dot = (mx * dx + my * dy) / (dist * mag);
+    const ang = Math.acos(Math.max(-1, Math.min(1, dot))) * 180 / Math.PI;
+    if (ang <= bestAng) {
+      bestAng = ang;
+      best = mate;
+    }
+  }
+  return best;
+}
+
 function getOffsideLine(attackingTeam) {
   const defenders = attackingTeam === teamHeim ? teamGast : teamHeim;
   const xs = defenders.map(p => p.x).sort((a, b) => a - b);
@@ -279,12 +301,17 @@ function passBall(from, to) {
   passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
 }
 
-function shootBall(player, power = 1) {
+function shootBall(player, power = 1, dirX = null, dirY = null) {
   if (!player) return;
-  const goalX = teamHeim.includes(player) ? 1040 : 10;
-  const goalY = 340;
-  const dx = goalX - player.x;
-  const dy = goalY - player.y;
+  let dx = dirX;
+  let dy = dirY;
+  const mag = Math.hypot(dx ?? 0, dy ?? 0);
+  if (mag < 0.1) {
+    const goalX = teamHeim.includes(player) ? 1040 : 10;
+    const goalY = 340;
+    dx = goalX - player.x;
+    dy = goalY - player.y;
+  }
   const dist = Math.hypot(dx, dy);
   if (dist === 0) return;
   ball.owner = null;
@@ -471,18 +498,12 @@ window.addEventListener('keydown', e => {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = true;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = true;
   if (e.code === 'Space') {
-    if (selectedPlayer && ball.owner === selectedPlayer) {
-      const mate = findNearestTeammate(selectedPlayer);
-      if (mate) passBall(selectedPlayer, mate);
-    }
+    userInput.passPressed = true;
   }
   if (e.code === 'KeyF') {
     userInput.shootPressed = true;
   }
   if (e.code === 'KeyX') {
-    if (selectedPlayer) {
-      tryTackle(selectedPlayer);
-    }
     userInput.tacklePressed = true;
   }
   if (e.code === 'KeyR') resetGame();
@@ -503,6 +524,7 @@ window.addEventListener('keyup', e => {
   if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = false;
   if (e.code === 'KeyX') userInput.tacklePressed = false;
   if (e.code === 'KeyF') userInput.shootPressed = false;
+  if (e.code === 'Space') userInput.passPressed = false;
 });
 window.addEventListener('gamepadconnected', e => { gamepadIndex = e.gamepad.index; });
 window.addEventListener('gamepaddisconnected', e => { if (gamepadIndex === e.gamepad.index) gamepadIndex = null; });
@@ -774,7 +796,7 @@ function gameLoop(timestamp) {
       shotCharging = true;
       shotCharge = Math.min(1, shotCharge + delta);
     } else if (shotCharging) {
-      shootBall(selectedPlayer, shotCharge);
+      shootBall(selectedPlayer, shotCharge, userInput.dx, userInput.dy);
       shotCharging = false;
       shotCharge = 0;
     }
@@ -783,7 +805,9 @@ function gameLoop(timestamp) {
     shotCharge = 0;
   }
   if (!prevPass && userInput.passPressed && selectedPlayer && ball.owner === selectedPlayer) {
-    const mate = findNearestTeammate(selectedPlayer);
+    let mate = null;
+    mate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
+    if (!mate) mate = findNearestTeammate(selectedPlayer);
     if (mate) passBall(selectedPlayer, mate);
   }
   if (!prevTackle && userInput.tacklePressed && selectedPlayer) {
