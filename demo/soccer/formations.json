@@ -32,5 +32,175 @@
       { "x": 570, "y": 340,  "role": "MS",  "style": "pressing" },
       { "x": 500, "y": 540,  "role": "RF",  "style": "attacking" }
     ]
+  },
+  {
+    "name": "3-5-2",
+    "description": "Drei Verteidiger, breites Mittelfeld",
+    "players": [
+      { "x": 80,  "y": 340,  "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 160, "role": "LIV", "style": "defensive" },
+      { "x": 220, "y": 340, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 520, "role": "RIV", "style": "defensive" },
+      { "x": 340, "y": 100, "role": "LM", "style": "box-to-box" },
+      { "x": 340, "y": 240, "role": "ZM", "style": "holding" },
+      { "x": 340, "y": 340, "role": "OM", "style": "creative" },
+      { "x": 340, "y": 440, "role": "ZM", "style": "holding" },
+      { "x": 340, "y": 580, "role": "RM", "style": "box-to-box" },
+      { "x": 520, "y": 260, "role": "LS", "style": "attacking" },
+      { "x": 520, "y": 420, "role": "RS", "style": "attacking" }
+    ]
+  },
+  {
+    "name": "5-3-2",
+    "description": "Fünferkette mit zwei Stürmern",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "LIV", "style": "defensive" },
+      { "x": 220, "y": 340, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "RIV", "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 350, "y": 180, "role": "ZM",  "style": "holding" },
+      { "x": 350, "y": 340, "role": "ZM",  "style": "box-to-box" },
+      { "x": 350, "y": 500, "role": "ZM",  "style": "holding" },
+      { "x": 520, "y": 260, "role": "LS",  "style": "attacking" },
+      { "x": 520, "y": 420, "role": "RS",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "4-2-3-1",
+    "description": "Doppel-Sechs mit hängender Spitze",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 320, "y": 260, "role": "DM",  "style": "holding" },
+      { "x": 320, "y": 420, "role": "DM",  "style": "holding" },
+      { "x": 460, "y": 140, "role": "LM",  "style": "box-to-box" },
+      { "x": 460, "y": 340, "role": "OM",  "style": "creative" },
+      { "x": 460, "y": 540, "role": "RM",  "style": "box-to-box" },
+      { "x": 570, "y": 340, "role": "ST",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "4-5-1",
+    "description": "Defensiv ausgerichtetes Mittelfeldband",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 360, "y": 100, "role": "LM",  "style": "box-to-box" },
+      { "x": 360, "y": 240, "role": "ZM",  "style": "holding" },
+      { "x": 360, "y": 340, "role": "ZM",  "style": "box-to-box" },
+      { "x": 360, "y": 440, "role": "ZM",  "style": "holding" },
+      { "x": 360, "y": 580, "role": "RM",  "style": "box-to-box" },
+      { "x": 570, "y": 340, "role": "ST",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "4-3-1-2",
+    "description": "Enges Mittelfeld mit zwei Spitzen",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 350, "y": 200, "role": "ZM",  "style": "holding" },
+      { "x": 350, "y": 340, "role": "ZM",  "style": "box-to-box" },
+      { "x": 350, "y": 480, "role": "ZM",  "style": "holding" },
+      { "x": 470, "y": 340, "role": "OM",  "style": "creative" },
+      { "x": 560, "y": 260, "role": "LS",  "style": "attacking" },
+      { "x": 560, "y": 420, "role": "RS",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "3-4-3",
+    "description": "Drei Stürmer für hohen Druck",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 160, "role": "LIV", "style": "defensive" },
+      { "x": 220, "y": 340, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 520, "role": "RIV", "style": "defensive" },
+      { "x": 350, "y": 150, "role": "LM",  "style": "box-to-box" },
+      { "x": 350, "y": 280, "role": "ZM",  "style": "holding" },
+      { "x": 350, "y": 420, "role": "ZM",  "style": "holding" },
+      { "x": 350, "y": 550, "role": "RM",  "style": "box-to-box" },
+      { "x": 520, "y": 140, "role": "LF",  "style": "attacking" },
+      { "x": 570, "y": 340, "role": "MS",  "style": "pressing" },
+      { "x": 520, "y": 540, "role": "RF",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "5-4-1",
+    "description": "Sehr defensiv, nur eine Spitze",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "LIV", "style": "defensive" },
+      { "x": 220, "y": 340, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "RIV", "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 360, "y": 160, "role": "LM",  "style": "box-to-box" },
+      { "x": 360, "y": 300, "role": "ZM",  "style": "holding" },
+      { "x": 360, "y": 420, "role": "ZM",  "style": "holding" },
+      { "x": 360, "y": 560, "role": "RM",  "style": "box-to-box" },
+      { "x": 570, "y": 340, "role": "ST",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "4-1-4-1",
+    "description": "Ein Sechser vor der Abwehr",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 300, "y": 340, "role": "DM",  "style": "holding" },
+      { "x": 440, "y": 120, "role": "LM",  "style": "box-to-box" },
+      { "x": 440, "y": 260, "role": "ZM",  "style": "holding" },
+      { "x": 440, "y": 420, "role": "ZM",  "style": "holding" },
+      { "x": 440, "y": 560, "role": "RM",  "style": "box-to-box" },
+      { "x": 570, "y": 340, "role": "ST",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "4-2-2-2",
+    "description": "Box-Mittelfeld mit zwei Spitzen",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 320, "y": 260, "role": "DM",  "style": "holding" },
+      { "x": 320, "y": 420, "role": "DM",  "style": "holding" },
+      { "x": 460, "y": 200, "role": "OM",  "style": "creative" },
+      { "x": 460, "y": 480, "role": "OM",  "style": "creative" },
+      { "x": 560, "y": 260, "role": "LS",  "style": "attacking" },
+      { "x": 560, "y": 420, "role": "RS",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "3-4-1-2",
+    "description": "Zentrale Offensive hinter zwei Stürmern",
+    "players": [
+      { "x": 80,  "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 160, "role": "LIV", "style": "defensive" },
+      { "x": 220, "y": 340, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 520, "role": "RIV", "style": "defensive" },
+      { "x": 350, "y": 160, "role": "LM",  "style": "box-to-box" },
+      { "x": 350, "y": 300, "role": "ZM",  "style": "holding" },
+      { "x": 350, "y": 380, "role": "ZM",  "style": "holding" },
+      { "x": 350, "y": 540, "role": "RM",  "style": "box-to-box" },
+      { "x": 470, "y": 340, "role": "OM",  "style": "creative" },
+      { "x": 570, "y": 260, "role": "LS",  "style": "attacking" },
+      { "x": 570, "y": 420, "role": "RS",  "style": "attacking" }
+    ]
   }
 ]
