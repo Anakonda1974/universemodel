@@ -34,6 +34,39 @@ const POIS = [
 let difficulty = "normal";
 const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
 
+// --- Weather ---
+let weather = { type: "clear", windX: 0, windY: 0, friction: 0.97 };
+
+function applyWeather() {
+  switch (weather.type) {
+    case "wind":
+      weather.windX = 0.03;
+      weather.windY = 0.01;
+      weather.friction = 0.97;
+      break;
+    case "rain":
+      weather.windX = 0;
+      weather.windY = 0;
+      weather.friction = 0.985;
+      break;
+    default:
+      weather.windX = 0;
+      weather.windY = 0;
+      weather.friction = 0.97;
+  }
+}
+
+function setupWeatherControls() {
+  const select = document.getElementById("weatherSelect");
+  if (select) {
+    select.value = weather.type;
+    select.onchange = () => {
+      weather.type = select.value;
+      applyWeather();
+    };
+  }
+}
+
 function applyDifficulty() {
   const mult = difficultyMultipliers[difficulty] || 1;
   [...teamHeim, ...teamGast].forEach(p => {
@@ -195,6 +228,8 @@ loadFormations();
 setupMatchControls();
 setupDifficultyControls();
 applyDifficulty();
+setupWeatherControls();
+applyWeather();
 
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -430,6 +465,10 @@ function gameLoop(timestamp) {
   if (!ball.owner) {
     ball.x += ball.vx;
     ball.y += ball.vy;
+    if (weather.windX || weather.windY) {
+      ball.vx += weather.windX;
+      ball.vy += weather.windY;
+    }
     if (Math.abs(ball.spin) > 0.0001) {
       const curve = ball.spin;
       const ax = -ball.vy * curve;
@@ -437,8 +476,8 @@ function gameLoop(timestamp) {
       ball.vx += ax;
       ball.vy += ay;
     }
-    ball.vx *= 0.97;
-    ball.vy *= 0.97;
+    ball.vx *= weather.friction;
+    ball.vy *= weather.friction;
     ball.spin *= 0.985;
 
     for (const p of allPlayers) {
@@ -479,7 +518,7 @@ function gameLoop(timestamp) {
   drawPerceptionHighlights(ctx, selectedPlayer);
 
   drawBall(ctx, ball);
-  drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"}`, canvas.width);
+  drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"} | Wetter: ${weather.type}`, canvas.width);
 
   // 8. Score/Goal Check/Timer
   checkGoal(ball);
