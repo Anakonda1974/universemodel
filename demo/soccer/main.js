@@ -80,6 +80,8 @@ const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
 // --- Weather ---
 let weather = { type: "clear", windX: 0, windY: 0, friction: 0.97 };
 
+let lastAnalysis = 0;
+
 function applyWeather() {
   switch (weather.type) {
     case "wind":
@@ -753,6 +755,13 @@ function updateFormationOffsets() {
       formationOffsetAway.x += 20;
     }
   }
+  if (coach.attackSide === 'left') {
+    formationOffsetHome.x -= 15;
+    formationOffsetAway.x += 15;
+  } else if (coach.attackSide === 'right') {
+    formationOffsetHome.x += 15;
+    formationOffsetAway.x -= 15;
+  }
   formationOffsetHome.y = 0;
   formationOffsetAway.y = 0;
 }
@@ -762,6 +771,10 @@ function gameLoop(timestamp) {
   if (lastFrameTime === null) lastFrameTime = timestamp;
   const delta = (timestamp - lastFrameTime) / 1000;
   lastFrameTime = timestamp;
+  if (timestamp - lastAnalysis > 5000) {
+    coach.analyzeOpponents(ball, teamHeim, teamGast);
+    lastAnalysis = timestamp;
+  }
   if (freeKickTimer > 0) {
     freeKickTimer -= delta;
     ball.x = freeKickTaker.x;
