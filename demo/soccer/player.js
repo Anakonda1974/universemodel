@@ -83,6 +83,14 @@ export class Player {
     this.injured = false;
     this.injuryRecovery = 0; // Sekunden bis zur Genesung
 
+    // Tackling/Sliding
+    this.tackleCooldown = 0;
+    this.sliding = false;
+    this.slideTimer = 0;
+    this.slideDirX = 0;
+    this.slideDirY = 0;
+    this.slideSpeed = 0;
+
 
     // --- Decision-Timing (Awareness-Skill steuert Intervall) ---
     this.lastDecision = 0;
@@ -203,6 +211,23 @@ export class Player {
   }
 
   moveToTarget() {
+    if (this.sliding) {
+      this.x += this.slideDirX * this.slideSpeed;
+      this.y += this.slideDirY * this.slideSpeed;
+      const zone = Player.getAllowedZone(this);
+      const pos = Player.clampToZone(this.x, this.y, zone);
+      this.x = pos.x;
+      this.y = pos.y;
+      this.slideTimer--;
+      if (this.slideTimer <= 0) {
+        this.sliding = false;
+        this.slideDirX = 0;
+        this.slideDirY = 0;
+      }
+      if (this.tackleCooldown > 0) this.tackleCooldown--;
+      return false;
+    }
+
     this.updateDirectionTowardsTarget();
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
@@ -223,6 +248,7 @@ export class Player {
     }
     const recovery = 0.0005 * (0.5 + (this.base.stamina ?? 1));
     this.stamina = Math.min(1, (this.stamina ?? 1) + recovery);
+    if (this.tackleCooldown > 0) this.tackleCooldown--;
     return true;
   }
 

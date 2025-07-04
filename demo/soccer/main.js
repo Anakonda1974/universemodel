@@ -35,7 +35,8 @@ const userInput = {
   left: false,
   right: false,
   passPressed: false,
-  shootPressed: false
+  shootPressed: false,
+  tacklePressed: false
 };
 let gamepadIndex = null;
 let passIndicator = null;
@@ -228,6 +229,36 @@ function shootBall(player) {
   player.currentAction = "shoot";
 }
 
+function tryTackle(player) {
+  if (!player || player.tackleCooldown > 0) return;
+  if (!ball.owner || ball.owner === player) return;
+  const target = ball.owner;
+  const dx = target.x - player.x;
+  const dy = target.y - player.y;
+  const dist = Math.hypot(dx, dy);
+  const tackleRadius = 18;
+  const slideRadius = 40;
+  if (dist < tackleRadius) {
+    ball.owner = player;
+    ball.isLoose = false;
+    ball.vx = 0;
+    ball.vy = 0;
+    ball.x = player.x;
+    ball.y = player.y;
+    for (const p of [...teamHeim, ...teamGast]) p.hasBall = false;
+    player.hasBall = true;
+    player.currentAction = "tackle";
+  } else if (dist < slideRadius) {
+    player.sliding = true;
+    player.slideDirX = dx / dist;
+    player.slideDirY = dy / dist;
+    player.slideSpeed = 8;
+    player.slideTimer = 30;
+    player.currentAction = "tackle";
+  }
+  player.tackleCooldown = 120;
+}
+
 // --- Formation laden und zuweisen ---
 function setFormation(index) {
   if (index < 0 || index >= formations.length) return;
@@ -372,6 +403,11 @@ window.addEventListener('keydown', e => {
       shootBall(selectedPlayer);
     }
   }
+  if (e.code === 'KeyX') {
+    if (selectedPlayer) {
+      tryTackle(selectedPlayer);
+    }
+  }
   if (e.code === 'KeyR') resetGame();
   if (e.code === 'KeyP') {
     const level = coach.pressing === 1 ? 1.5 : 1;
@@ -388,6 +424,7 @@ window.addEventListener('keyup', e => {
   if (e.code === 'ArrowDown' || e.code === 'KeyS') userInput.down = false;
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = false;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = false;
+  if (e.code === 'KeyX') userInput.tacklePressed = false;
 });
 window.addEventListener('gamepadconnected', e => { gamepadIndex = e.gamepad.index; });
 window.addEventListener('gamepaddisconnected', e => { if (gamepadIndex === e.gamepad.index) gamepadIndex = null; });
@@ -544,8 +581,14 @@ function updateUserInput() {
           shootBall(selectedPlayer);
         }
       }
+      if (gp.buttons[2] && gp.buttons[2].pressed && !userInput.tacklePressed) {
+        if (selectedPlayer) {
+          tryTackle(selectedPlayer);
+        }
+      }
       userInput.passPressed = gp.buttons[1] && gp.buttons[1].pressed;
       userInput.shootPressed = gp.buttons[0] && gp.buttons[0].pressed;
+      userInput.tacklePressed = gp.buttons[2] && gp.buttons[2].pressed;
     }
   }
 }
