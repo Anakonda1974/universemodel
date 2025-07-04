@@ -31,6 +31,13 @@ window.keyBindings = {
 };
 window.debugOptions = { showZones: true, showFOV: true, showBall: true };
 
+window.colorProfiles = {
+  default: { field: '#065', home: '#0000ff', away: '#ff0000', background: '#222' },
+  classic: { field: '#060', home: '#006400', away: '#ff8c00', background: '#333' },
+  highContrast: { field: '#022', home: '#ffff00', away: '#ff00ff', background: '#000' }
+};
+window.renderOptions = { lineAlpha: 1, colorProfile: 'default', fieldColor: '#065' };
+
 const GameState = {
   FORMATION: "Formation wählen",
   TRANSITION: "Positionswechsel",
@@ -160,16 +167,27 @@ function applyDifficulty() {
   });
 }
 
-function setupDifficultyControls() {
-  const select = document.getElementById("difficultySelect");
-  if (select) {
-    select.value = difficulty;
-    select.onchange = () => {
-      difficulty = select.value;
-      applyDifficulty();
-    };
+  function setupDifficultyControls() {
+    const select = document.getElementById("difficultySelect");
+    if (select) {
+      select.value = difficulty;
+      select.onchange = () => {
+        difficulty = select.value;
+        applyDifficulty();
+      };
+    }
   }
-}
+
+  function applyColorProfile(name) {
+    const profile = window.colorProfiles[name] || window.colorProfiles.default;
+    window.renderOptions.fieldColor = profile.field;
+    document.documentElement.style.setProperty('--bg-color', profile.background);
+    document.documentElement.style.setProperty('--field-color', profile.field);
+    [...teamHeim, ...benchHeim].forEach(p => p.color = profile.home);
+    [...teamGast, ...benchGast].forEach(p => p.color = profile.away);
+    if (window.invalidateField) window.invalidateField();
+  }
+  window.applyColorProfile = applyColorProfile;
 
 function teamId(player) {
   if (!player) return null;
@@ -429,7 +447,7 @@ function setFormation(index) {
       p.formationY = formation.players[i].y;
       p.targetX = formation.players[i].x;
       p.targetY = formation.players[i].y;
-      p.color = "#0000ff";
+      p.color = window.colorProfiles[window.renderOptions.colorProfile].home;
       p.position = formation.players[i].role;
     }
   });
@@ -441,7 +459,7 @@ function setFormation(index) {
       p.formationY = formation.players[i].y;
       p.targetX = 1050 - formation.players[i].x;
       p.targetY = formation.players[i].y;
-      p.color = "#ff0000";
+      p.color = window.colorProfiles[window.renderOptions.colorProfile].away;
       p.position = formation.players[i].role;
     }
   });
@@ -472,7 +490,7 @@ async function loadFormations() {
 
 // --- Teams initialisieren (mit Basiswerten für Skill/Trade/Position) ---
 for (let i = 0; i < 11; i++) {
-  const p = new Player(80 + Math.random() * 20, 100 + i * 40, "#0000ff", {
+  const p = new Player(80 + Math.random() * 20, 100 + i * 40, window.colorProfiles[window.renderOptions.colorProfile].home, {
     position: "ST",
     trade: (i === 9 ? "sniper" : null)
   });
@@ -480,7 +498,7 @@ for (let i = 0; i < 11; i++) {
   teamHeim.push(p);
 }
 for (let i = 0; i < 11; i++) {
-  const p = new Player(970 - Math.random() * 20, 100 + i * 40, "#ff0000", {
+  const p = new Player(970 - Math.random() * 20, 100 + i * 40, window.colorProfiles[window.renderOptions.colorProfile].away, {
     position: "IV",
     trade: (i === 2 ? "wall" : null)
   });
@@ -488,12 +506,12 @@ for (let i = 0; i < 11; i++) {
   teamGast.push(p);
 }
 for (let i = 0; i < 3; i++) {
-  const p = new Player(-30, -30, "#0000ff", { position: "ST" });
+  const p = new Player(-30, -30, window.colorProfiles[window.renderOptions.colorProfile].home, { position: "ST" });
   p.baseline = { ...p.base };
   benchHeim.push(p);
 }
 for (let i = 0; i < 3; i++) {
-  const p = new Player(-30, -30, "ff0000", { position: "IV" });
+  const p = new Player(-30, -30, window.colorProfiles[window.renderOptions.colorProfile].away, { position: "IV" });
   p.baseline = { ...p.base };
   benchGast.push(p);
 }
@@ -534,6 +552,7 @@ setupDifficultyControls();
 applyDifficulty();
 setupWeatherControls();
 applyWeather();
+applyColorProfile(window.renderOptions.colorProfile);
 initControlPanel({ teams: { home: teamHeim, away: teamGast }, ball, coach, formations });
 selectedPlayer = teamHeim[0];
 userTeam = teamHeim;
