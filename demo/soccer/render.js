@@ -127,7 +127,7 @@ export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false,
 
     // Optionally: Field of view
     if (showFOV) {
-      ctx.globalAlpha = 0.14;
+      ctx.globalAlpha = 0.14 * (window.renderOptions?.lineAlpha ?? 1);
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
       ctx.arc(p.x, p.y, p.perceptionRange, (angleRad - (p.fovAngle / 2) * Math.PI / 180), (angleRad + (p.fovAngle / 2) * Math.PI / 180));
@@ -158,7 +158,7 @@ export function drawPasses(ctx, allPlayers, ball) {
     ctx.strokeStyle = "#00bfff";
     ctx.setLineDash([5, 5]);
     ctx.lineWidth = 3;
-    ctx.globalAlpha = 0.7;
+    ctx.globalAlpha = 0.7 * (window.renderOptions?.lineAlpha ?? 1);
     // Draw pass vector from where pass was started to where it's going
     ctx.beginPath();
     ctx.moveTo(ball.x - ball.vx * 8, ball.y - ball.vy * 8); // previous location (approx)
@@ -207,14 +207,14 @@ export function drawZones(ctx, players, offsets = { home: {x:0,y:0}, away: {x:0,
     const zone = p.constructor.getAllowedZone ? p.constructor.getAllowedZone(p) : getAllowedZone(p);
     const off = (p.color === '#0000ff') ? offsets.home : offsets.away;
     zone.minX += off.x; zone.maxX += off.x; zone.minY += off.y; zone.maxY += off.y;
-    ctx.globalAlpha = 0.15;
+    ctx.globalAlpha = 0.15 * (window.renderOptions?.lineAlpha ?? 1);
     ctx.strokeStyle = p.color;
     ctx.fillStyle = p.color;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.rect(zone.minX, zone.minY, zone.maxX - zone.minX, zone.maxY - zone.minY);
     ctx.stroke();
-    ctx.globalAlpha = 0.08;
+    ctx.globalAlpha = 0.08 * (window.renderOptions?.lineAlpha ?? 1);
     ctx.fill();
     ctx.globalAlpha = 1.0;
   });
@@ -318,7 +318,7 @@ export function drawRadar(ctx, players, ball, width, height) {
 export function drawGoalHighlight(ctx, text, timer, width, height) {
   if (timer <= 0) return;
   ctx.save();
-  ctx.globalAlpha = Math.min(1, timer / 2);
+  ctx.globalAlpha = Math.min(1, timer / 2) * (window.renderOptions?.lineAlpha ?? 1);
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(0, height / 2 - 60, width, 120);
   ctx.fillStyle = '#fff';
