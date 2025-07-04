@@ -79,6 +79,10 @@ export class Player {
     this.bt = createPlayerBT();
     this.controlledByUser = false;
 
+    // Verletzungen
+    this.injured = false;
+    this.injuryRecovery = 0; // Sekunden bis zur Genesung
+
 
     // --- Decision-Timing (Awareness-Skill steuert Intervall) ---
     this.lastDecision = 0;
@@ -204,7 +208,8 @@ export class Player {
     const dy = this.targetY - this.y;
     const dist = Math.hypot(dx, dy);
     if (dist > 1) {
-      const speed = (this.derived.topSpeed ?? 2) * (this.stamina ?? 1) * (this.pressing ?? 1);
+      const injuryMod = this.injured ? 0.4 : 1;
+      const speed = (this.derived.topSpeed ?? 2) * (this.stamina ?? 1) * (this.pressing ?? 1) * injuryMod;
       const step = Math.min(speed, dist);
       this.x += (dx / dist) * step;
       this.y += (dy / dist) * step;
@@ -289,6 +294,15 @@ export class Player {
       }
       return true;
     });
+  }
+
+  updateInjury(delta) {
+    if (this.injured) {
+      this.injuryRecovery -= delta;
+      if (this.injuryRecovery <= 0) {
+        this.injured = false;
+      }
+    }
   }
 
   toString() {

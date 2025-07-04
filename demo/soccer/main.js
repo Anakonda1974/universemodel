@@ -419,7 +419,7 @@ function maybeSubstitute(team, bench) {
   if (!bench.length) return;
   for (let i = 0; i < team.length; i++) {
     const p = team[i];
-    if ((p.stamina ?? 1) < 0.3) {
+    if ((p.stamina ?? 1) < 0.3 || p.injured) {
       substitute(team, bench, i);
       break;
     }
@@ -478,6 +478,7 @@ function gameLoop(timestamp) {
     }
   }
   const allPlayers = [...teamHeim, ...teamGast];
+  allPlayers.forEach(p => p.updateInjury(delta));
 
   // 1. Wahrnehmung (inkl. FOV/Kopf/Memory)
   allPlayers.forEach(p => {

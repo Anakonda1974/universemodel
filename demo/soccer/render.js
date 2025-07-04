@@ -75,6 +75,13 @@ export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false,
       ctx.fillRect(p.x - p.radius, p.y - p.radius - 6, p.radius * 2 * p.stamina, 3);
     }
 
+    if (p.injured) {
+      ctx.fillStyle = "red";
+      ctx.font = "bold 14px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("✚", p.x, p.y - p.radius - 12);
+    }
+
     // Optionally: show number or role
     ctx.font = "bold 12px sans-serif";
     ctx.fillStyle = "#000";
