@@ -18,6 +18,32 @@ export function mapExp(value: number, base: number, range?: [number, number]): n
   return result;
 }
 
+/**
+ * Generate fractal noise by summing multiple {@link getNoise01} calls.
+ *
+ * @param seed Base seed used for the first octave
+ * @param label Context label for the noise function
+ * @param octaves Number of noise layers to combine
+ * @param persistence Amplitude reduction per octave
+ */
+export function getFractalNoise01(
+  seed: string,
+  label: string,
+  octaves = 4,
+  persistence = 0.5,
+): number {
+  let amplitude = 1;
+  let total = 0;
+  let max = 0;
+  for (let i = 0; i < octaves; i++) {
+    const octaveSeed = `${seed}:${i}`;
+    total += getNoise01(octaveSeed, label) * amplitude;
+    max += amplitude;
+    amplitude *= persistence;
+  }
+  return total / max;
+}
+
 export function resolveDiscrete<T>(value: number, thresholds: [number, T][]): T {
   for (const [thr, val] of thresholds) {
     if (value < thr) return val;
