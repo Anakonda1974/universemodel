@@ -895,6 +895,7 @@ function gameLoop(timestamp) {
     }
   }
 
+  let potentialMate = null;
   if (selectedPlayer && ball.owner === selectedPlayer) {
     if (userInput.shootPressed) {
       shotCharging = true;
@@ -957,7 +958,6 @@ function gameLoop(timestamp) {
     shotCharging2 = false;
     shotCharge2 = 0;
   }
-  let potentialMate = null;
   if (passCharging && selectedPlayer && ball.owner === selectedPlayer) {
     potentialMate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
     if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
