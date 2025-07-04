@@ -285,3 +285,16 @@ export function drawRadar(ctx, players, ball, width, height) {
   ctx.arc(ball.x * scaleX, ball.y * scaleY, 2, 0, Math.PI * 2);
   ctx.fill();
 }
+
+export function drawGoalHighlight(ctx, text, timer, width, height) {
+  if (timer <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, timer / 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(0, height / 2 - 60, width, 120);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 48px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, width / 2, height / 2 + 16);
+  ctx.restore();
+}
