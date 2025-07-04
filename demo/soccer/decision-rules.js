@@ -50,7 +50,7 @@ function playerIsClosestToBall(player, world) {
 
 // ---- Tactical Zone Definition ----
 function getAllowedZone(player, world) {
-  let marginX = 35, marginY = 25;
+  let marginX = 20, marginY = 15;
   let width = 160, height = 180;
   switch (player.role) {
     case "TW": width = 80; height = 140; break;
@@ -64,7 +64,8 @@ function getAllowedZone(player, world) {
     default: width = 170; height = 200; break;
   }
   // Widen each role's zone to ensure the team collectively covers its half
-  width += 100;
+  width += 200;
+  height += 80;
 
   // --- Defensive PUSH: If ball is in our half, push formation up ---
   let push = 0;

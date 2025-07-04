@@ -136,7 +136,7 @@ export class Player {
 
   static getAllowedZone(player) {
     // These must match decision-rules.js
-    let marginX = 35, marginY = 25;
+    let marginX = 20, marginY = 15;
     let width = 160, height = 180;
 
     switch (player.role) {
@@ -151,7 +151,8 @@ export class Player {
       default: width = 170; height = 200; break;
     }
     // Widen each role's zone to ensure the team collectively covers its half
-    width += 100;
+    width += 200;
+    height += 80;
     const minX = Math.max(marginX, player.formationX - width / 2);
     const maxX = Math.min(1050 - marginX, player.formationX + width / 2);
     const minY = Math.max(marginY, player.formationY - height / 2);

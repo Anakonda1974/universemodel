@@ -9,8 +9,8 @@ export class Ball {
     this.angularVelocity = 0;
     this.radius = 6;
     this.mass = 0.43; // kg
-    // Use a gentler friction so passes keep momentum
-    this.friction = 0.995;
+    // Use a gentler friction so passes keep momentum longer
+    this.friction = 0.998;
     this.spinFriction = 0.985;
     this.restitution = 0.7;
     this.owner = null;

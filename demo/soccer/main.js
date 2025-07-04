@@ -131,7 +131,7 @@ const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
 
 // --- Weather ---
 // Higher friction values closer to 1 mean less slowdown per frame
-window.weather = { type: "clear", windX: 0, windY: 0, friction: 0.995 };
+window.weather = { type: "clear", windX: 0, windY: 0, friction: 0.998 };
 const weather = window.weather;
 
 let lastAnalysis = 0;
@@ -141,17 +141,17 @@ function applyWeather() {
     case "wind":
       weather.windX = 0.03;
       weather.windY = 0.01;
-      weather.friction = 0.995;
+      weather.friction = 0.998;
       break;
     case "rain":
       weather.windX = 0;
       weather.windY = 0;
-      weather.friction = 0.99;
+      weather.friction = 0.995;
       break;
     default:
       weather.windX = 0;
       weather.windY = 0;
-      weather.friction = 0.995;
+      weather.friction = 0.998;
   }
 }
 
