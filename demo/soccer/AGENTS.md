@@ -446,17 +446,17 @@ Das hier beschriebene Design legt den Grundstein für ein spannendes KI-Fußball
 - [x] Ziel ist ein fließendes Zusammenspiel aus KI und menschlichem Einfluss, was dem Spielspaß dient.
 - [x] Coach-KI und Taktikmodul: Bisher reagiert die KI eher kurzfristig (pro Spieler-Entscheidungen). Ein Coach-Modul könnte höhere Ebene steuern:
 - [x] Taktikanpassung: Je nach Spielverlauf (z.B. Rückstand kurz vor Ende) befiehlt der Coach der KI, offensiver zu stehen (Formation weiter nach vorne schieben, mehr Pressing) oder bei Führung defensiver (alle ziehen sich zurück).
-- [ ] Wechsel: Coach-KI entscheidet, Spieler auszutauschen (wenn wir einen Kader hätten), z.B. bei Erschöpfung oder taktisch (großer Stürmer rein in Minute 80 für lange Bälle).
-- [ ] Formation Switch: Dynamisch während des Spiels die Formation ändern (z.B. von 4-4-2 auf 3-4-3 in der Schlussphase).
-- [ ] Gegneranalyse: Coach-KI könnte erkennen "gegnerische rechte Seite ist schwach" und anweisen, mehr Angriffe über links zu fahren (was dann die Spieler-KI in ihrer Entscheidungsgewichtung berücksichtigen müsste).
+- [x] Wechsel: Coach-KI entscheidet, Spieler auszutauschen (wenn wir einen Kader hätten), z.B. bei Erschöpfung oder taktisch (großer Stürmer rein in Minute 80 für lange Bälle).
+- [x] Formation Switch: Dynamisch während des Spiels die Formation ändern (z.B. von 4-4-2 auf 3-4-3 in der Schlussphase).
+- [x] Gegneranalyse: Coach-KI könnte erkennen "gegnerische rechte Seite ist schwach" und anweisen, mehr Angriffe über links zu fahren (was dann die Spieler-KI in ihrer Entscheidungsgewichtung berücksichtigen müsste).
 - [x] Kommunikationssystem: Coach-KI sendet taktische Befehle an Spieler
 - [x] Diese Sachen sind sehr komplex, aber auch schon kleine Elemente (z.B. Pressing-Level hoch/runter je nach Befehl) können das Spiel abwechslungsreicher machen.
 - [ ] Weitere Regeln und Details: Um näher an echten Fußball zu kommen, könnte man sukzessive weitere Regeln implementieren:
-- [ ] Abseits: Sehr schwieriges Thema KI-technisch, aber für Realismus eine große Komponente. Man bräuchte Linienrichter-Logik und KI-Spieler müssten Abseitsfallen stellen oder Offensivspieler sich an der Abseitslinie bewegen.
-- [ ] Injuries (Verletzungen): Spieler könnte sich verletzen bei harten Fouls oder hoher Belastung -> Austausch nötig, Leistungsminderung.
+- [x] Abseits: Sehr schwieriges Thema KI-technisch, aber für Realismus eine große Komponente. Man bräuchte Linienrichter-Logik und KI-Spieler müssten Abseitsfallen stellen oder Offensivspieler sich an der Abseitslinie bewegen.
+- [x] Injuries (Verletzungen): Spieler könnte sich verletzen bei harten Fouls oder hoher Belastung -> Austausch nötig, Leistungsminderung.
 - [x] Wetterbedingungen: Regen (rutschiger Boden, Ball schneller?), Wind (Beeinflusst Ballflug in 3D).
 - [x] Schiedsrichter-KI: Ein Referee-Agent, der Fouls pfeift, Vorteil abwartet, Karten gibt. (Aktuell würden wir Fouls automatisch sanktionieren, aber ein Schiri-Agent wäre interessant).
-- [ ] Audio & Präsentation:
+- [x] Audio & Präsentation:
  - [x] Hinzufügen von Publikumssound, Stadionatmosphäre. Torjubel, Pfiffe etc.
 - [x] Kommentator-KI: Ein System, das das Spielgeschehen in Worte fasst ("Ein wunderschöner Pass in die Tiefe... Schuss... Tooor!").
 - [x] Menüs, Einstellungen: Benutzeroberfläche, um Formationen zu wählen, Schwierigkeitsgrade (KI-Stärke via Attributen skalieren), Halbzeitlänge etc.
