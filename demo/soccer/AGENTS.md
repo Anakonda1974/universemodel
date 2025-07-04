@@ -454,7 +454,7 @@ Das hier beschriebene Design legt den Grundstein für ein spannendes KI-Fußball
 - [ ] Weitere Regeln und Details: Um näher an echten Fußball zu kommen, könnte man sukzessive weitere Regeln implementieren:
 - [ ] Abseits: Sehr schwieriges Thema KI-technisch, aber für Realismus eine große Komponente. Man bräuchte Linienrichter-Logik und KI-Spieler müssten Abseitsfallen stellen oder Offensivspieler sich an der Abseitslinie bewegen.
 - [ ] Injuries (Verletzungen): Spieler könnte sich verletzen bei harten Fouls oder hoher Belastung -> Austausch nötig, Leistungsminderung.
-- [ ] Wetterbedingungen: Regen (rutschiger Boden, Ball schneller?), Wind (Beeinflusst Ballflug in 3D).
+- [x] Wetterbedingungen: Regen (rutschiger Boden, Ball schneller?), Wind (Beeinflusst Ballflug in 3D).
 - [ ] Schiedsrichter-KI: Ein Referee-Agent, der Fouls pfeift, Vorteil abwartet, Karten gibt. (Aktuell würden wir Fouls automatisch sanktionieren, aber ein Schiri-Agent wäre interessant).
 - [ ] Audio & Präsentation:
  - [x] Hinzufügen von Publikumssound, Stadionatmosphäre. Torjubel, Pfiffe etc.
