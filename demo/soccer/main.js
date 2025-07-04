@@ -58,6 +58,24 @@ function setupDifficultyControls() {
 
 // --- Soundeffekte ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const crowdGain = audioCtx.createGain();
+crowdGain.gain.value = 0.05;
+
+function startCrowdNoise() {
+  const bufferSize = 2 * audioCtx.sampleRate;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    output[i] = Math.random() * 2 - 1;
+  }
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = noiseBuffer;
+  noise.loop = true;
+  noise.connect(crowdGain).connect(audioCtx.destination);
+  noise.start(0);
+}
+startCrowdNoise();
+
 function playBeep(freq, duration = 300) {
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();

@@ -457,7 +457,7 @@ Das hier beschriebene Design legt den Grundstein für ein spannendes KI-Fußball
 - [ ] Wetterbedingungen: Regen (rutschiger Boden, Ball schneller?), Wind (Beeinflusst Ballflug in 3D).
 - [ ] Schiedsrichter-KI: Ein Referee-Agent, der Fouls pfeift, Vorteil abwartet, Karten gibt. (Aktuell würden wir Fouls automatisch sanktionieren, aber ein Schiri-Agent wäre interessant).
 - [ ] Audio & Präsentation:
-- [ ] Hinzufügen von Publikumssound, Stadionatmosphäre. Torjubel, Pfiffe etc.
+ - [x] Hinzufügen von Publikumssound, Stadionatmosphäre. Torjubel, Pfiffe etc.
 - [ ] Kommentator-KI: Ein System, das das Spielgeschehen in Worte fasst ("Ein wunderschöner Pass in die Tiefe... Schuss... Tooor!").
 - [x] Menüs, Einstellungen: Benutzeroberfläche, um Formationen zu wählen, Schwierigkeitsgrade (KI-Stärke via Attributen skalieren), Halbzeitlänge etc.
 - [x] Optionale Debug-Overlays je Spieler: Laufrichtung per Pfeil darstellen
