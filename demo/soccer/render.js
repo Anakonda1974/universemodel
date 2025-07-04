@@ -163,11 +163,13 @@ export function drawOverlay(ctx, text, width) {
     ctx.fillText(text, 20, 28);
 }
 
-export function drawZones(ctx, players) {
+export function drawZones(ctx, players, offsets = { home: {x:0,y:0}, away: {x:0,y:0} }) {
   ctx.save();
   players.forEach(p => {
     // Use the same getAllowedZone logic as in player.js/decision-rules.js!
     const zone = p.constructor.getAllowedZone ? p.constructor.getAllowedZone(p) : getAllowedZone(p);
+    const off = (p.color === 'blue') ? offsets.home : offsets.away;
+    zone.minX += off.x; zone.maxX += off.x; zone.minY += off.y; zone.maxY += off.y;
     ctx.globalAlpha = 0.15;
     ctx.strokeStyle = p.color;
     ctx.fillStyle = p.color;

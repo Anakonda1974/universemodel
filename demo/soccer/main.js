@@ -63,6 +63,10 @@ const POIS = [
   { x: 60, y: 340, role: "farLeft" }
 ];
 
+// --- Dynamic formation offsets ---
+let formationOffsetHome = { x: 0, y: 0 };
+let formationOffsetAway = { x: 0, y: 0 };
+
 // --- Difficulty ---
 let difficulty = "normal";
 const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
@@ -668,6 +672,24 @@ function updateUserInput() {
   }
 }
 
+function updateFormationOffsets() {
+  const sideShift = (ball.x - 525) / 525 * 30;
+  formationOffsetHome.x = sideShift;
+  formationOffsetAway.x = sideShift;
+  const ownerTeam = teamId(ball.owner);
+  if (ownerTeam !== null) {
+    if (ownerTeam === 0) {
+      formationOffsetHome.x += 20;
+      formationOffsetAway.x -= 20;
+    } else {
+      formationOffsetHome.x -= 20;
+      formationOffsetAway.x += 20;
+    }
+  }
+  formationOffsetHome.y = 0;
+  formationOffsetAway.y = 0;
+}
+
 // ----- GAME LOOP -----
 function gameLoop(timestamp) {
   if (lastFrameTime === null) lastFrameTime = timestamp;
@@ -682,7 +704,7 @@ function gameLoop(timestamp) {
     ball.owner = freeKickTaker;
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-    drawZones(ctx, allPlayers);
+    drawZones(ctx, allPlayers, { home: formationOffsetHome, away: formationOffsetAway });
     drawPlayers(ctx, allPlayers);
     drawBall(ctx, ball);
     drawOverlay(ctx, `Freistoß: ${freeKickTimer.toFixed(1)}s`, canvas.width);
@@ -691,6 +713,7 @@ function gameLoop(timestamp) {
     return;
   }
   updateUserInput();
+  updateFormationOffsets();
   if (selectedPlayer) {
     const active = Math.abs(userInput.dx) > 0.01 || Math.abs(userInput.dy) > 0.01;
     selectedPlayer.controlledByUser = active;
@@ -767,6 +790,20 @@ function gameLoop(timestamp) {
     };
     // Jeder Spieler entscheidet im eigenen Rhythmus (siehe Player.maybeDecide)
     p.maybeDecide(performance.now(), world, currentState);
+    const teamIdx = teamHeim.includes(p) ? 0 : 1;
+    const off = teamIdx === 0 ? formationOffsetHome : formationOffsetAway;
+    if (!p.controlledByUser && (p.currentAction === 'hold' || p.currentAction === 'rest')) {
+      let tx = p.formationX + off.x;
+      let ty = p.formationY + off.y;
+      const dxBall = ball.x - p.formationX;
+      const dyBall = ball.y - p.formationY;
+      if (Math.hypot(dxBall, dyBall) < 200) {
+        tx += dxBall * 0.2;
+        ty += dyBall * 0.2;
+      }
+      p.targetX = tx;
+      p.targetY = ty;
+    }
   });
 
   // 3. PASS LOGIC: Nur Ballbesitzer kann passen
@@ -867,7 +904,7 @@ function gameLoop(timestamp) {
 
   // 7. RENDER
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-  drawZones(ctx, allPlayers);
+  drawZones(ctx, allPlayers, { home: formationOffsetHome, away: formationOffsetAway });
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
   drawPlayers(ctx, allPlayers, { showFOV: true, showRunDir: true, showHeadDir: true });
