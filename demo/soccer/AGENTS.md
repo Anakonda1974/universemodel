@@ -458,7 +458,7 @@ Das hier beschriebene Design legt den Grundstein für ein spannendes KI-Fußball
 - [ ] Schiedsrichter-KI: Ein Referee-Agent, der Fouls pfeift, Vorteil abwartet, Karten gibt. (Aktuell würden wir Fouls automatisch sanktionieren, aber ein Schiri-Agent wäre interessant).
 - [ ] Audio & Präsentation:
  - [x] Hinzufügen von Publikumssound, Stadionatmosphäre. Torjubel, Pfiffe etc.
-- [ ] Kommentator-KI: Ein System, das das Spielgeschehen in Worte fasst ("Ein wunderschöner Pass in die Tiefe... Schuss... Tooor!").
+- [x] Kommentator-KI: Ein System, das das Spielgeschehen in Worte fasst ("Ein wunderschöner Pass in die Tiefe... Schuss... Tooor!").
 - [x] Menüs, Einstellungen: Benutzeroberfläche, um Formationen zu wählen, Schwierigkeitsgrade (KI-Stärke via Attributen skalieren), Halbzeitlänge etc.
 - [x] Optionale Debug-Overlays je Spieler: Laufrichtung per Pfeil darstellen
 - [x] Optionale Debug-Overlays je Spieler: Kopf- bzw. Blickrichtung zeigen
