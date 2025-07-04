@@ -330,7 +330,7 @@ function gameLoop(timestamp) {
   drawField(ctx, canvas.width, canvas.height);
   drawZones(ctx, allPlayers);
   drawPasses(ctx, allPlayers, ball);
-  drawPlayers(ctx, allPlayers, { showFOV: true });
+  drawPlayers(ctx, allPlayers, { showFOV: true, showRunDir: true, showHeadDir: true });
   drawBall(ctx, ball);
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"}`, canvas.width);
 

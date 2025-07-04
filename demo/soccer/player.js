@@ -358,6 +358,8 @@ export class Player {
   if ((now - this.lastDecision) > this.reactionInterval) {
     this.lastDecision = now;
     this.bt.tick(this, world);  // Behavior Tree entscheidet Ziel/Aktion
+    const angle = Math.atan2(world.ball.y - this.y, world.ball.x - this.x) * 180 / Math.PI;
+    this.smoothTurnHeadTo(angle, this.derived.headTurnRate ?? 12);
   }
 }
 
