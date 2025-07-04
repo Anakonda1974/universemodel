@@ -2,7 +2,7 @@
 
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawSoftZones } from "./render.js";
 import { logComment } from "./commentary.js";
 import { Referee } from "./referee.js";
 
@@ -792,7 +792,7 @@ function gameLoop(timestamp) {
     ball.owner = freeKickTaker;
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-    drawZones(ctx, allPlayers, { home: formationOffsetHome, away: formationOffsetAway });
+    drawSoftZones(ctx, allPlayers, ball, coach);
     drawPlayers(ctx, allPlayers);
     drawBall(ctx, ball);
     drawOverlay(ctx, `Freistoß: ${freeKickTimer.toFixed(1)}s`, canvas.width);
@@ -1004,7 +1004,7 @@ function gameLoop(timestamp) {
 
   // 7. RENDER
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-  drawZones(ctx, allPlayers, { home: formationOffsetHome, away: formationOffsetAway });
+  drawSoftZones(ctx, allPlayers, ball, coach);
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);
