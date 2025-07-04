@@ -6,6 +6,15 @@ import {  playerIsClosestToBall, canPass, canShoot, findBestPass } from "./decis
 // Beispiel: Decision-Tree für Feldspieler
 export function createPlayerBT() {
   return new Selector(
+    // 0. Bei niedriger Ausdauer: in Position bleiben und Energie sparen
+    new Sequence(
+      new Condition((a, w) => (a.stamina ?? 1) < 0.3),
+      new Action((a, w) => {
+        a.targetX = a.formationX;
+        a.targetY = a.formationY;
+        a.currentAction = "rest";
+      })
+    ),
     // 1. Ballbesitz? → Shoot/Pass/Dribble
     new Sequence(
       new Condition((agent, world) => agent.hasBall),
