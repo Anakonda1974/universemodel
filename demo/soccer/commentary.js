@@ -1,4 +1,4 @@
-const messages = [];
+export const messages = [];
 const maxMessages = 5;
 
 function escapeHtml(str) {

@@ -5,6 +5,7 @@ import { Coach } from "./coach.js";
 import { Ball, FIELD_BOUNDS } from "./ball.js";
 import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawSoftZones, drawBallDebug } from "./render.js";
 import { logComment } from "./commentary.js";
+import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
 
 // ----- Game Setup -----
@@ -14,6 +15,21 @@ const powerBarWrapper = document.getElementById("powerBarWrapper");
 const powerBar = document.getElementById("powerBar");
 const radarCanvas = document.getElementById("radar");
 const radarCtx = radarCanvas.getContext("2d");
+
+// --- Global Settings ---
+window.keyBindings = {
+  moveUp: ["ArrowUp", "KeyW"],
+  moveDown: ["ArrowDown", "KeyS"],
+  moveLeft: ["ArrowLeft", "KeyA"],
+  moveRight: ["ArrowRight", "KeyD"],
+  pass: "Space",
+  shoot: "KeyF",
+  tackle: "KeyX",
+  switch: "KeyC",
+  togglePress: "KeyP",
+  reset: "KeyR"
+};
+window.debugOptions = { showZones: true, showFOV: true, showBall: true };
 
 const GameState = {
   FORMATION: "Formation wählen",
@@ -79,7 +95,8 @@ let difficulty = "normal";
 const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
 
 // --- Weather ---
-let weather = { type: "clear", windX: 0, windY: 0, friction: 0.97 };
+window.weather = { type: "clear", windX: 0, windY: 0, friction: 0.97 };
+const weather = window.weather;
 
 let lastAnalysis = 0;
 
@@ -499,6 +516,7 @@ setupDifficultyControls();
 applyDifficulty();
 setupWeatherControls();
 applyWeather();
+initControlPanel({ teams: { home: teamHeim, away: teamGast }, ball, coach, formations });
 selectedPlayer = teamHeim[0];
 userTeam = teamHeim;
 
@@ -518,38 +536,38 @@ canvas.addEventListener("click", (e) => {
 });
 
 window.addEventListener('keydown', e => {
-  if (e.code === 'ArrowUp' || e.code === 'KeyW') userInput.up = true;
-  if (e.code === 'ArrowDown' || e.code === 'KeyS') userInput.down = true;
-  if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = true;
-  if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = true;
-  if (e.code === 'Space') {
+  if (window.keyBindings.moveUp.includes(e.code)) userInput.up = true;
+  if (window.keyBindings.moveDown.includes(e.code)) userInput.down = true;
+  if (window.keyBindings.moveLeft.includes(e.code)) userInput.left = true;
+  if (window.keyBindings.moveRight.includes(e.code)) userInput.right = true;
+  if (e.code === window.keyBindings.pass) {
     userInput.passPressed = true;
   }
-  if (e.code === 'KeyF') {
+  if (e.code === window.keyBindings.shoot) {
     userInput.shootPressed = true;
   }
-  if (e.code === 'KeyX') {
+  if (e.code === window.keyBindings.tackle) {
     userInput.tacklePressed = true;
   }
-  if (e.code === 'KeyR') resetGame();
-  if (e.code === 'KeyP') {
+  if (e.code === window.keyBindings.reset) resetGame();
+  if (e.code === window.keyBindings.togglePress) {
     const level = coach.pressing === 1 ? 1.5 : 1;
     coach.setPressing(level);
     logComment(level > 1 ? 'Coach: Pressing hoch!' : 'Coach: Pressing normal');
   }
-  if (e.code === 'KeyC') {
+  if (e.code === window.keyBindings.switch) {
     switchToNearestPlayer(userTeam);
     logComment('Spieler gewechselt');
   }
 });
 window.addEventListener('keyup', e => {
-  if (e.code === 'ArrowUp' || e.code === 'KeyW') userInput.up = false;
-  if (e.code === 'ArrowDown' || e.code === 'KeyS') userInput.down = false;
-  if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = false;
-  if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = false;
-  if (e.code === 'KeyX') userInput.tacklePressed = false;
-  if (e.code === 'KeyF') userInput.shootPressed = false;
-  if (e.code === 'Space') userInput.passPressed = false;
+  if (window.keyBindings.moveUp.includes(e.code)) userInput.up = false;
+  if (window.keyBindings.moveDown.includes(e.code)) userInput.down = false;
+  if (window.keyBindings.moveLeft.includes(e.code)) userInput.left = false;
+  if (window.keyBindings.moveRight.includes(e.code)) userInput.right = false;
+  if (e.code === window.keyBindings.tackle) userInput.tacklePressed = false;
+  if (e.code === window.keyBindings.shoot) userInput.shootPressed = false;
+  if (e.code === window.keyBindings.pass) userInput.passPressed = false;
 });
 window.addEventListener('gamepadconnected', e => { gamepadIndex = e.gamepad.index; });
 window.addEventListener('gamepaddisconnected', e => { if (gamepadIndex === e.gamepad.index) gamepadIndex = null; });
@@ -793,10 +811,12 @@ function gameLoop(timestamp) {
     ball.owner = freeKickTaker;
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-    drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
+    if (window.debugOptions.showZones) {
+      drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
+    }
     drawPlayers(ctx, allPlayers);
     drawBall(ctx, ball);
-    drawBallDebug(ctx, ball);
+    if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
     drawOverlay(ctx, `Freistoß: ${freeKickTimer.toFixed(1)}s`, canvas.width);
     updateScoreboard();
     requestAnimationFrame(gameLoop);
@@ -975,20 +995,22 @@ function gameLoop(timestamp) {
 
   // 7. RENDER
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-  drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
+  if (window.debugOptions.showZones) {
+    drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
+  }
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);
-  drawPlayers(ctx, allPlayers, { showFOV: false, showRunDir: true, showHeadDir: true });
+  drawPlayers(ctx, allPlayers, { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true });
   if (selectedPlayer) {
-    drawPlayers(ctx, [selectedPlayer], { showFOV: true, showRunDir: true, showHeadDir: true });
+    drawPlayers(ctx, [selectedPlayer], { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true });
   }
   drawActivePlayer(ctx, selectedPlayer);
 
   drawPerceptionHighlights(ctx, selectedPlayer);
 
   drawBall(ctx, ball);
-  drawBallDebug(ctx, ball);
+  if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"} | Wetter: ${weather.type}`, canvas.width);
   drawGoalHighlight(ctx, goalOverlayText, goalOverlayTimer, canvas.width, canvas.height);
   drawRadar(radarCtx, allPlayers, ball, radarCanvas.width, radarCanvas.height);
