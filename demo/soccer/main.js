@@ -978,7 +978,10 @@ function gameLoop(timestamp) {
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);
-  drawPlayers(ctx, allPlayers, { showFOV: true, showRunDir: true, showHeadDir: true });
+  drawPlayers(ctx, allPlayers, { showFOV: false, showRunDir: true, showHeadDir: true });
+  if (selectedPlayer) {
+    drawPlayers(ctx, [selectedPlayer], { showFOV: true, showRunDir: true, showHeadDir: true });
+  }
   drawActivePlayer(ctx, selectedPlayer);
 
   drawPerceptionHighlights(ctx, selectedPlayer);
