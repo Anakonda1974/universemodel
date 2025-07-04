@@ -895,6 +895,7 @@ function gameLoop(timestamp) {
     }
   }
 
+  let potentialMate = null;
   if (selectedPlayer && ball.owner === selectedPlayer) {
     if (userInput.shootPressed) {
       shotCharging = true;
@@ -916,7 +917,11 @@ function gameLoop(timestamp) {
       potentialMate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
       if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
       if (potentialMate) {
-        passIndicator = { from: { x: selectedPlayer.x, y: selectedPlayer.y }, to: { x: potentialMate.x, y: potentialMate.y }, time: 0.2 };
+        passIndicator = {
+          from: { x: selectedPlayer.x, y: selectedPlayer.y },
+          to: { x: potentialMate.x, y: potentialMate.y },
+          time: 0.2,
+        };
       }
     }
     if (userInput.passUp && passCharging && inputHandler.can('pass')) {
@@ -957,14 +962,7 @@ function gameLoop(timestamp) {
     shotCharging2 = false;
     shotCharge2 = 0;
   }
-  let potentialMate = null;
-  if (passCharging && selectedPlayer && ball.owner === selectedPlayer) {
-    potentialMate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
-    if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
-    if (potentialMate) {
-      passIndicator = { from: { x: selectedPlayer.x, y: selectedPlayer.y }, to: { x: potentialMate.x, y: potentialMate.y }, time: 0.2 };
-    }
-  }
+
 
   let potentialMate2 = null;
   if (userInput2.passPressed && !prevPass2) {
