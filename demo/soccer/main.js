@@ -28,8 +28,11 @@ let ball;
 let coach;
 let referee;
 let selectedPlayer = null;
+let userTeam = teamHeim;
 const userInput = { up: false, down: false, left: false, right: false };
 let gamepadIndex = null;
+
+let lastBallOwnerTeam = null;
 
 const POIS = [
   { x: 60, y: 340, role: "farLeft" }
@@ -93,6 +96,27 @@ function setupDifficultyControls() {
       applyDifficulty();
     };
   }
+}
+
+function teamId(player) {
+  if (!player) return null;
+  if (teamHeim.includes(player)) return 0;
+  if (teamGast.includes(player)) return 1;
+  return null;
+}
+
+function switchToNearestPlayer(team) {
+  if (!team || !team.length) return;
+  let nearest = team[0];
+  let minDist = Infinity;
+  const bx = ball.x;
+  const by = ball.y;
+  for (const p of team) {
+    const d = Math.hypot(p.x - bx, p.y - by);
+    if (d < minDist) { minDist = d; nearest = p; }
+  }
+  if (selectedPlayer) selectedPlayer.controlledByUser = false;
+  selectedPlayer = nearest;
 }
 
 // --- Soundeffekte ---
@@ -263,6 +287,8 @@ setupDifficultyControls();
 applyDifficulty();
 setupWeatherControls();
 applyWeather();
+selectedPlayer = teamHeim[0];
+userTeam = teamHeim;
 
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -273,6 +299,7 @@ canvas.addEventListener("click", (e) => {
   for (const p of [...teamHeim, ...teamGast]) {
     if (Math.hypot(p.x - x, p.y - y) <= p.radius) {
       selectedPlayer = p;
+      userTeam = teamHeim.includes(p) ? teamHeim : teamGast;
       break;
     }
   }
@@ -288,6 +315,10 @@ window.addEventListener('keydown', e => {
     const level = coach.pressing === 1 ? 1.5 : 1;
     coach.setPressing(level);
     logComment(level > 1 ? 'Coach: Pressing hoch!' : 'Coach: Pressing normal');
+  }
+  if (e.code === 'KeyC') {
+    switchToNearestPlayer(userTeam);
+    logComment('Spieler gewechselt');
   }
 });
 window.addEventListener('keyup', e => {
@@ -575,6 +606,14 @@ function gameLoop(timestamp) {
     ball.x = ball.owner.x;
     ball.y = ball.owner.y;
   }
+
+  const currentTeam = teamId(ball.owner);
+  const myTeamId = userTeam === teamHeim ? 0 : 1;
+  if (lastBallOwnerTeam === myTeamId && currentTeam !== myTeamId) {
+    switchToNearestPlayer(userTeam);
+    logComment('Automatischer Spielerwechsel');
+  }
+  lastBallOwnerTeam = currentTeam;
 
   // 6. Ballschatten rendern (optional)
   if (ball.isLoose && (Math.abs(ball.vx) > 0.5 || Math.abs(ball.vy) > 0.5)) {
