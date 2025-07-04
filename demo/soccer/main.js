@@ -27,6 +27,33 @@ const POIS = [
   { x: 60, y: 340, role: "farLeft" }
 ];
 
+// --- Difficulty ---
+let difficulty = "normal";
+const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
+
+function applyDifficulty() {
+  const mult = difficultyMultipliers[difficulty] || 1;
+  [...teamHeim, ...teamGast].forEach(p => {
+    if (!p.baseline) p.baseline = { ...p.base };
+    p.base = { ...p.baseline };
+    if (typeof p.base.speed === "number") p.base.speed *= mult;
+    if (typeof p.base.stamina === "number") p.base.stamina *= mult;
+    if (typeof p.base.technique === "number") p.base.technique *= mult;
+    p.updateDerived();
+  });
+}
+
+function setupDifficultyControls() {
+  const select = document.getElementById("difficultySelect");
+  if (select) {
+    select.value = difficulty;
+    select.onchange = () => {
+      difficulty = select.value;
+      applyDifficulty();
+    };
+  }
+}
+
 // --- Soundeffekte ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function playBeep(freq, duration = 300) {
@@ -124,18 +151,28 @@ async function loadFormations() {
 }
 
 // --- Teams initialisieren (mit Basiswerten für Skill/Trade/Position) ---
-for (let i = 0; i < 11; i++) teamHeim.push(new Player(80 + Math.random() * 20, 100 + i * 40, "blue", {
-  position: "ST", // Später aus Formation-JSON überschreiben
-  trade: (i === 9 ? "sniper" : null) // Beispiel: Stürmer als Sniper, andere Standard
-}));
-for (let i = 0; i < 11; i++) teamGast.push(new Player(970 - Math.random() * 20, 100 + i * 40, "red", {
-  position: "IV", // Beispiel: als IV, kann überschrieben werden
-  trade: (i === 2 ? "wall" : null)
-}));
+for (let i = 0; i < 11; i++) {
+  const p = new Player(80 + Math.random() * 20, 100 + i * 40, "blue", {
+    position: "ST",
+    trade: (i === 9 ? "sniper" : null)
+  });
+  p.baseline = { ...p.base };
+  teamHeim.push(p);
+}
+for (let i = 0; i < 11; i++) {
+  const p = new Player(970 - Math.random() * 20, 100 + i * 40, "red", {
+    position: "IV",
+    trade: (i === 2 ? "wall" : null)
+  });
+  p.baseline = { ...p.base };
+  teamGast.push(p);
+}
 ball = new Ball(525, 340);
 
 loadFormations();
 setupMatchControls();
+setupDifficultyControls();
+applyDifficulty();
 
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
