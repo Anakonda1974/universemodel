@@ -22,7 +22,7 @@ function getPositionMultipliers(pos) {
 }
 
 export class Player {
-  constructor(x, y, color = "blue", options = {}) {
+  constructor(x, y, color = "#0000ff", options = {}) {
     // --- Spielfeld & Rendering ---
     this.x = x;
     this.y = y;

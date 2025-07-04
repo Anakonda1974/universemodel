@@ -112,7 +112,7 @@ export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false,
     }
 
     if (p.injured) {
-      ctx.fillStyle = "red";
+      ctx.fillStyle = "#ff0000";
       ctx.font = "bold 14px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("✚", p.x, p.y - p.radius - 12);
@@ -204,7 +204,7 @@ export function drawZones(ctx, players, offsets = { home: {x:0,y:0}, away: {x:0,
   players.forEach(p => {
     // Use the same getAllowedZone logic as in player.js/decision-rules.js!
     const zone = p.constructor.getAllowedZone ? p.constructor.getAllowedZone(p) : getAllowedZone(p);
-    const off = (p.color === 'blue') ? offsets.home : offsets.away;
+    const off = (p.color === '#0000ff') ? offsets.home : offsets.away;
     zone.minX += off.x; zone.maxX += off.x; zone.minY += off.y; zone.maxY += off.y;
     ctx.globalAlpha = 0.15;
     ctx.strokeStyle = p.color;

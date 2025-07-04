@@ -382,7 +382,7 @@ function setFormation(index) {
       p.formationY = formation.players[i].y;
       p.targetX = formation.players[i].x;
       p.targetY = formation.players[i].y;
-      p.color = "blue";
+      p.color = "#0000ff";
       p.position = formation.players[i].role;
     }
   });
@@ -394,7 +394,7 @@ function setFormation(index) {
       p.formationY = formation.players[i].y;
       p.targetX = 1050 - formation.players[i].x;
       p.targetY = formation.players[i].y;
-      p.color = "red";
+      p.color = "#ff0000";
       p.position = formation.players[i].role;
     }
   });
@@ -425,7 +425,7 @@ async function loadFormations() {
 
 // --- Teams initialisieren (mit Basiswerten für Skill/Trade/Position) ---
 for (let i = 0; i < 11; i++) {
-  const p = new Player(80 + Math.random() * 20, 100 + i * 40, "blue", {
+  const p = new Player(80 + Math.random() * 20, 100 + i * 40, "#0000ff", {
     position: "ST",
     trade: (i === 9 ? "sniper" : null)
   });
@@ -433,7 +433,7 @@ for (let i = 0; i < 11; i++) {
   teamHeim.push(p);
 }
 for (let i = 0; i < 11; i++) {
-  const p = new Player(970 - Math.random() * 20, 100 + i * 40, "red", {
+  const p = new Player(970 - Math.random() * 20, 100 + i * 40, "#ff0000", {
     position: "IV",
     trade: (i === 2 ? "wall" : null)
   });
@@ -441,12 +441,12 @@ for (let i = 0; i < 11; i++) {
   teamGast.push(p);
 }
 for (let i = 0; i < 3; i++) {
-  const p = new Player(-30, -30, "blue", { position: "ST" });
+  const p = new Player(-30, -30, "#0000ff", { position: "ST" });
   p.baseline = { ...p.base };
   benchHeim.push(p);
 }
 for (let i = 0; i < 3; i++) {
-  const p = new Player(-30, -30, "red", { position: "IV" });
+  const p = new Player(-30, -30, "ff0000", { position: "IV" });
   p.baseline = { ...p.base };
   benchGast.push(p);
 }
