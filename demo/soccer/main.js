@@ -22,6 +22,7 @@ let transitionStartTime = null;
 let formations = [];
 let selectedFormationIndex = 0;
 const teamHeim = [], teamGast = [];
+const benchHeim = [], benchGast = [];
 let ball;
 let coach;
 let selectedPlayer = null;
@@ -224,6 +225,16 @@ for (let i = 0; i < 11; i++) {
   p.baseline = { ...p.base };
   teamGast.push(p);
 }
+for (let i = 0; i < 3; i++) {
+  const p = new Player(-30, -30, "blue", { position: "ST" });
+  p.baseline = { ...p.base };
+  benchHeim.push(p);
+}
+for (let i = 0; i < 3; i++) {
+  const p = new Player(-30, -30, "red", { position: "IV" });
+  p.baseline = { ...p.base };
+  benchGast.push(p);
+}
 ball = new Ball(525, 340);
 coach = new Coach([...teamHeim, ...teamGast]);
 
@@ -366,6 +377,41 @@ function resolvePlayerCollisions(players) {
   }
 }
 
+function substitute(team, bench, idx) {
+  if (!bench.length) return;
+  const out = team[idx];
+  const sub = bench.shift();
+  sub.role = out.role;
+  sub.style = out.style;
+  sub.formationX = out.formationX;
+  sub.formationY = out.formationY;
+  sub.targetX = out.targetX;
+  sub.targetY = out.targetY;
+  sub.x = out.x;
+  sub.y = out.y;
+  sub.color = out.color;
+  team[idx] = sub;
+  if (ball.owner === out) ball.owner = sub;
+  logComment(`Wechsel: ${out.role} verlässt das Feld.`);
+  coach.players = [...teamHeim, ...teamGast];
+}
+
+function maybeSubstitute(team, bench) {
+  if (!bench.length) return;
+  for (let i = 0; i < team.length; i++) {
+    const p = team[i];
+    if ((p.stamina ?? 1) < 0.3) {
+      substitute(team, bench, i);
+      break;
+    }
+  }
+}
+
+function checkSubstitutions() {
+  maybeSubstitute(teamHeim, benchHeim);
+  maybeSubstitute(teamGast, benchGast);
+}
+
 function updateUserInput() {
   if (gamepadIndex !== null) {
     const gp = navigator.getGamepads()[gamepadIndex];
@@ -468,6 +514,8 @@ function gameLoop(timestamp) {
       }
     }
   }
+
+  checkSubstitutions();
 
   // 5. Ballphysik & Ballbesitz
   if (!ball.owner) {
