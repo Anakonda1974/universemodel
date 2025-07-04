@@ -287,6 +287,13 @@ function handleOffside(passer, receiver) {
   kicker.currentAction = 'freekick';
 }
 
+function calcPassSpeedForDistance(dist) {
+  const min = 6;
+  const max = 12;
+  const speed = min + (dist / 250) * (max - min);
+  return Math.max(min, Math.min(max, speed));
+}
+
 function passBall(from, to) {
   if (!from || !to) return;
   if (isOffside(from, to)) {
@@ -299,8 +306,9 @@ function passBall(from, to) {
   if (dist === 0) return;
   ball.owner = null;
   ball.isLoose = true;
-  ball.vx = (dx / dist) * 8;
-  ball.vy = (dy / dist) * 8;
+  const speed = calcPassSpeedForDistance(dist);
+  ball.vx = (dx / dist) * speed;
+  ball.vy = (dy / dist) * speed;
   ball.spin = (Math.random() - 0.5) * 0.02;
   from.currentAction = "pass";
   passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
@@ -824,11 +832,20 @@ function gameLoop(timestamp) {
     shotCharging = false;
     shotCharge = 0;
   }
+  let potentialMate = null;
+  if (userInput.passPressed && selectedPlayer && ball.owner === selectedPlayer) {
+    potentialMate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
+    if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
+    if (potentialMate) {
+      passIndicator = { from: { x: selectedPlayer.x, y: selectedPlayer.y }, to: { x: potentialMate.x, y: potentialMate.y }, time: 0.2 };
+    }
+  }
   if (!prevPass && userInput.passPressed && selectedPlayer && ball.owner === selectedPlayer) {
-    let mate = null;
-    mate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
-    if (!mate) mate = findNearestTeammate(selectedPlayer);
-    if (mate) passBall(selectedPlayer, mate);
+    if (!potentialMate) {
+      potentialMate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
+      if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
+    }
+    if (potentialMate) passBall(selectedPlayer, potentialMate);
   }
   if (!prevTackle && userInput.tacklePressed && selectedPlayer) {
     tryTackle(selectedPlayer);
