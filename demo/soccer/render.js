@@ -4,6 +4,9 @@ let fieldCache = null;
 let fieldCacheWidth = 0;
 let fieldCacheHeight = 0;
 
+export function invalidateField() {
+  fieldCache = null;
+}
 function buildFieldCache(width, height) {
   fieldCacheWidth = width;
   fieldCacheHeight = height;
@@ -13,7 +16,8 @@ function buildFieldCache(width, height) {
   const c = fieldCache.getContext('2d');
   c.strokeStyle = 'white';
   c.lineWidth = 2;
-  c.fillStyle = '#065';
+  const fieldColor = window.renderOptions?.fieldColor || '#065';
+  c.fillStyle = fieldColor;
   c.fillRect(0, 0, width, height);
   c.beginPath(); c.moveTo(width/2, 0); c.lineTo(width/2, height); c.stroke();
   c.beginPath(); c.arc(width/2, height/2, 91.5, 0, Math.PI*2); c.stroke();
@@ -292,7 +296,8 @@ export function drawPassIndicator(ctx, indicator) {
 
 export function drawRadar(ctx, players, ball, width, height) {
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = '#065';
+  const fieldColor = window.renderOptions?.fieldColor || '#065';
+  ctx.fillStyle = fieldColor;
   ctx.fillRect(0, 0, width, height);
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 1;
