@@ -353,7 +353,9 @@ function gameLoop(timestamp) {
   drawZones(ctx, allPlayers);
   drawPasses(ctx, allPlayers, ball);
   drawPlayers(ctx, allPlayers, { showFOV: true, showRunDir: true, showHeadDir: true });
+
   drawPerceptionHighlights(ctx, selectedPlayer);
+
   drawBall(ctx, ball);
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"}`, canvas.width);
 
