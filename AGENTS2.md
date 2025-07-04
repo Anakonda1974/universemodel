@@ -257,9 +257,9 @@ https://www.reddit.com/r/howdidtheycodeit/comments/vkjoo9/ai_positioning_in_spor
 Soccer AI - Artificial Intelligence - GameDev.net
 
 ## TODO
-- Grundgerüst und Spielfeld aufbauen
-- Game Loop mit Input verknüpfen
-- Spielerwechsel (manuell/automatisch) implementieren
-- Ballbesitz, Schuss- und Passlogik
-- Tackling und Grätsche unterscheiden
-- KI-Spielerbewegung und Formation
+- [x] Grundgerüst und Spielfeld aufbauen
+- [x] Game Loop mit Input verknüpfen
+- [x] Spielerwechsel (manuell/automatisch) implementieren
+- [x] Ballbesitz, Schuss- und Passlogik
+- [x] Tackling und Grätsche unterscheiden
+- [x] KI-Spielerbewegung und Formation
