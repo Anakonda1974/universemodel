@@ -8,12 +8,7 @@ export const Capabilities = {
     const dx = goalPos.x - player.x;
     const dy = goalPos.y - player.y;
     const dist = Math.hypot(dx, dy) || 1;
-    ball.owner = null;
-    ball.isLoose = true;
-    ball.vx = (dx / dist) * 20;
-    ball.vy = (dy / dist) * 20;
-    ball.x = player.x;
-    ball.y = player.y;
+    ball.kick(player.x, player.y, dx, dy, 20);
     player.currentAction = 'shoot';
   },
 
@@ -26,12 +21,7 @@ export const Capabilities = {
     const dx = tx - player.x;
     const dy = ty - player.y;
     const dist = Math.hypot(dx, dy) || 1;
-    ball.owner = null;
-    ball.isLoose = true;
-    ball.vx = (dx / dist) * 12;
-    ball.vy = (dy / dist) * 12;
-    ball.x = player.x;
-    ball.y = player.y;
+    ball.kick(player.x, player.y, dx, dy, 12);
     player.currentAction = 'pass';
   },
 
@@ -43,12 +33,8 @@ export const Capabilities = {
     const dx = tx - player.x;
     const dy = ty - player.y;
     const dist = Math.hypot(dx, dy) || 1;
-    ball.owner = null;
-    ball.isLoose = true;
-    ball.vx = (dx / dist) * 10;
-    ball.vy = (dy / dist) * 10 - 2; // slight lift
-    ball.x = player.x;
-    ball.y = player.y;
+    ball.kick(player.x, player.y, dx, dy, 10);
+    ball.vy -= 2; // simple lift
     player.currentAction = 'lobPass';
   },
 
