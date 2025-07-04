@@ -30,5 +30,6 @@ export class Referee {
       victim.injuryRecovery = 30;
       logComment(`${victim.role} verletzt sich!`);
     }
+    victim.highlightTimer = 1;
   }
 }

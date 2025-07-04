@@ -1,5 +1,5 @@
 // render.js
-export function drawField(ctx, width, height) {
+export function drawField(ctx, width, height, flashTimer = 0, flashSide = null) {
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.clearRect(0, 0, width, height);
@@ -9,6 +9,16 @@ export function drawField(ctx, width, height) {
     ctx.fillStyle = 'white';
     ctx.fillRect(0, height/2-50, 10, 100); // left goal
     ctx.fillRect(width-10, height/2-50, 10, 100); // right goal
+    if (flashTimer > 0 && flashSide) {
+        ctx.save();
+        ctx.fillStyle = `rgba(255,255,0,${flashTimer})`;
+        if (flashSide === 'left') {
+            ctx.fillRect(0, height/2-60, 15, 120);
+        } else if (flashSide === 'right') {
+            ctx.fillRect(width-15, height/2-60, 15, 120);
+        }
+        ctx.restore();
+    }
 }
 export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false, showHeadDir = false } = {}) {
   players.forEach(p => {
@@ -75,6 +85,14 @@ export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false,
       ctx.fillRect(p.x - p.radius, p.y - p.radius - 6, p.radius * 2 * p.stamina, 3);
     }
 
+    if (p.highlightTimer > 0) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius + 6, 0, Math.PI * 2);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = `rgba(255,0,0,${Math.min(1, p.highlightTimer)})`;
+      ctx.stroke();
+    }
+
     if (p.injured) {
       ctx.fillStyle = "red";
       ctx.font = "bold 14px sans-serif";
@@ -122,6 +140,13 @@ export function drawPasses(ctx, allPlayers, ball) {
 }
 
 export function drawBall(ctx, ball) {
+    if (ball.isLoose) {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = 'orange';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
     ctx.fillStyle = 'white';
@@ -164,7 +189,7 @@ export function drawPerceptionHighlights(ctx, player) {
   // highlight selected player
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.radius + 4, 0, Math.PI * 2);
-  ctx.strokeStyle = "cyan";
+  ctx.strokeStyle = "yellow";
   ctx.stroke();
 
   for (const label in player.perceived) {

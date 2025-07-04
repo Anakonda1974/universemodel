@@ -49,6 +49,9 @@ let shotCharging = false;
 let prevPass = false;
 let prevTackle = false;
 
+let goalFlashTimer = 0;
+let goalFlashSide = null;
+
 let lastBallOwnerTeam = null;
 
 const POIS = [
@@ -480,12 +483,16 @@ function checkGoal(ball) {
     scoreAway++;
     playGoal();
     logComment('Tor für Auswärtsteam!');
+    goalFlashSide = 'left';
+    goalFlashTimer = 1;
     resetKickoff();
   }
   if (ball.x > 1035 && ball.y > 290 && ball.y < 390) {
     scoreHome++;
     playGoal();
     logComment('Tor für Heimteam!');
+    goalFlashSide = 'right';
+    goalFlashTimer = 1;
     resetKickoff();
   }
 }
@@ -783,7 +790,7 @@ function gameLoop(timestamp) {
   }
 
   // 7. RENDER
-  drawField(ctx, canvas.width, canvas.height);
+  drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
   drawZones(ctx, allPlayers);
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
@@ -797,6 +804,10 @@ function gameLoop(timestamp) {
   // 8. Score/Goal Check/Timer
   checkGoal(ball);
   updateScoreboard();
+  if (goalFlashTimer > 0) {
+    goalFlashTimer -= delta;
+    if (goalFlashTimer < 0) goalFlashTimer = 0;
+  }
   if (currentState === GameState.RUNNING && matchTime - lastFormationSwitch > 30) {
     selectedFormationIndex = (selectedFormationIndex + 1) % formations.length;
     setFormation(selectedFormationIndex);
