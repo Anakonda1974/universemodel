@@ -8,7 +8,8 @@ export const Capabilities = {
     const dx = goalPos.x - player.x;
     const dy = goalPos.y - player.y;
     const dist = Math.hypot(dx, dy) || 1;
-    ball.kick(player.x, player.y, dx, dy, 20);
+    const spin = (player.base.technique - 0.5) * 0.1;
+    ball.kick(player.x, player.y, dx, dy, 20, spin);
     player.currentAction = 'shoot';
   },
 
@@ -21,7 +22,8 @@ export const Capabilities = {
     const dx = tx - player.x;
     const dy = ty - player.y;
     const dist = Math.hypot(dx, dy) || 1;
-    ball.kick(player.x, player.y, dx, dy, 12);
+    const spin = (player.base.technique - 0.5) * 0.05;
+    ball.kick(player.x, player.y, dx, dy, 12, spin);
     player.currentAction = 'pass';
   },
 
@@ -33,7 +35,8 @@ export const Capabilities = {
     const dx = tx - player.x;
     const dy = ty - player.y;
     const dist = Math.hypot(dx, dy) || 1;
-    ball.kick(player.x, player.y, dx, dy, 10);
+    const spin = (player.base.technique - 0.5) * 0.05;
+    ball.kick(player.x, player.y, dx, dy, 10, spin);
     ball.vy -= 2; // simple lift
     player.currentAction = 'lobPass';
   },
