@@ -163,15 +163,25 @@ export function initControlPanel({ teams, ball, coach, formations }) {
   const renderSection = document.createElement('details');
   renderSection.innerHTML = `<summary>Rendering Options</summary>
     <label><input id="cp-dark" type="checkbox"> Dark Mode</label><br>
-    <label>Line Alpha <input id="cp-alpha" type="range" min="0" max="1" step="0.1" value="1"></label>`;
+    <label>Line Alpha <input id="cp-alpha" type="range" min="0" max="1" step="0.1" value="1"></label><br>
+    <label>Colour Profile <select id="cp-colors">
+      <option value="default">Default</option>
+      <option value="classic">Classic</option>
+      <option value="highContrast">High Contrast</option>
+    </select></label>`;
   content.appendChild(renderSection);
   renderSection.querySelector('#cp-dark').onchange = e => {
-    document.body.style.background = e.target.checked ? '#111' : '#222';
+    document.documentElement.style.setProperty('--bg-color', e.target.checked ? '#111' : '#222');
   };
   renderSection.querySelector('#cp-alpha').oninput = e => {
     window.renderOptions.lineAlpha = parseFloat(e.target.value);
   };
-  window.renderOptions = { lineAlpha: 1 };
+  renderSection.querySelector('#cp-colors').value = window.renderOptions.colorProfile;
+  renderSection.querySelector('#cp-colors').onchange = e => {
+    window.renderOptions.colorProfile = e.target.value;
+    if (window.applyColorProfile) window.applyColorProfile(e.target.value);
+  };
+  window.renderOptions = { lineAlpha: 1, colorProfile: 'default' };
 
   /* ------ Live Data ------ */
   const liveSection = document.createElement('details');
