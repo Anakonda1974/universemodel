@@ -26,6 +26,15 @@
             box-shadow: 0 4px 20px #0008;
         }
 
+        #commentary {
+            width: 1050px;
+            margin: 0 auto 20px auto;
+            background: #111;
+            padding: 6px 10px;
+            font-family: monospace;
+            min-height: 40px;
+        }
+
         #scoreboard {
   text-align: center;
   font-size: 1.7em;
@@ -61,6 +70,7 @@
 </div>
     <p style="text-align:center;margin-top:4px;">Spieler anklicken und mit Pfeiltasten oder Gamepad steuern</p>
     <canvas id="spielfeld" width="1050" height="680"></canvas>
+    <div id="commentary"></div>
     <script type="module" src="main.js"></script>
 </body>
 </html>

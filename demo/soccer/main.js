@@ -2,6 +2,7 @@
 
 import { Player } from "./player.js";
 import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights } from "./render.js";
+import { logComment } from "./commentary.js";
 
 // ----- Game Setup -----
 const canvas = document.getElementById("spielfeld");
@@ -150,6 +151,7 @@ function setFormation(index) {
   document.getElementById("formationDesc").textContent = formation.description;
   lastFormationSwitch = matchTime;
   playWhistle();
+  logComment(`Formation gewechselt zu ${formation.name}`);
 }
 
 async function loadFormations() {
@@ -254,11 +256,13 @@ function checkGoal(ball) {
   if (ball.x < 15 && ball.y > 290 && ball.y < 390) {
     scoreAway++;
     playGoal();
+    logComment('Tor für Auswärtsteam!');
     resetKickoff();
   }
   if (ball.x > 1035 && ball.y > 290 && ball.y < 390) {
     scoreHome++;
     playGoal();
+    logComment('Tor für Heimteam!');
     resetKickoff();
   }
 }
@@ -270,6 +274,7 @@ function resetKickoff() {
   ball.owner = teamHeim[4]; // oder nach Zufall/Regel
   ball.isLoose = false;
   playWhistle();
+  logComment('Anstoß');
 }
 
 function resetGame() {
@@ -281,6 +286,7 @@ function resetGame() {
   redCards = [];
   resetKickoff();
   updateScoreboard();
+  logComment('Spiel zurückgesetzt');
 }
 
 // --- Ball auf Spielfeld halten
@@ -392,6 +398,7 @@ function gameLoop(timestamp) {
   // 3. PASS LOGIC: Nur Ballbesitzer kann passen
   if (ball.owner && ball.owner.currentAction === "pass") {
     const owner = ball.owner;
+    logComment(`${owner.role} spielt einen Pass`);
     const dx = owner.targetX - ball.x, dy = owner.targetY - ball.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const speed = 8; // Skill-basiert möglich!
