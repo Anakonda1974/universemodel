@@ -328,3 +328,21 @@ export function drawGoalHighlight(ctx, text, timer, width, height) {
   ctx.restore();
 }
 
+
+export function drawBallDebug(ctx, ball) {
+  if (!ball) return;
+  ctx.save();
+  ctx.strokeStyle = 'blue';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(ball.x, ball.y);
+  ctx.lineTo(ball.x + ball.vx * 8, ball.y + ball.vy * 8);
+  ctx.stroke();
+  if (Math.abs(ball.angularVelocity) > 0.001) {
+    ctx.strokeStyle = 'red';
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius + 4, 0, Math.sign(ball.angularVelocity) * Math.min(2*Math.PI, Math.abs(ball.angularVelocity) * 20));
+    ctx.stroke();
+  }
+  ctx.restore();
+}

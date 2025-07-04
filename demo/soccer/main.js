@@ -2,7 +2,8 @@
 
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawSoftZones } from "./render.js";
+import { Ball, FIELD_BOUNDS } from "./ball.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawSoftZones, drawBallDebug } from "./render.js";
 import { logComment } from "./commentary.js";
 import { Referee } from "./referee.js";
 
@@ -200,20 +201,6 @@ let lastFrameTime = null;
 let yellowCards = [], redCards = [];
 let lastFormationSwitch = 0;
 
-// --- Ball-Objekt ---
-class Ball {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.radius = 6;
-    this.isLoose = true;
-    this.owner = null;
-    this.vx = 0;
-    this.vy = 0;
-    this.spin = 0; // einfache Rotation für Effet
-  }
-}
-
 function findNearestTeammate(player) {
   const team = teamHeim.includes(player) ? teamHeim : teamGast;
   let best = null;
@@ -326,9 +313,9 @@ function passBall(from, to) {
   const mis = orientationMisalignment(from, targetAngle);
   const err = (Math.random() - 0.5) * mis * 0.2;
   ({ vx, vy } = applyKickError(vx, vy, err));
-  ball.vx = vx;
-  ball.vy = vy;
-  ball.spin = (Math.random() - 0.5) * 0.02;
+  const spd = Math.hypot(vx, vy);
+  ball.kick(from.x, from.y, vx, vy, spd);
+  ball.angularVelocity = (Math.random() - 0.5) * 0.02;
   from.currentAction = "pass";
   passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
 }
@@ -355,9 +342,9 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   const mis = orientationMisalignment(player, targetAngle);
   const err = (Math.random() - 0.5) * mis * 0.2;
   ({ vx, vy } = applyKickError(vx, vy, err));
-  ball.vx = vx;
-  ball.vy = vy;
-  ball.spin = (Math.random() - 0.5) * 0.04;
+  const speedFinal = Math.hypot(vx, vy);
+  ball.kick(player.x, player.y, vx, vy, speedFinal);
+  ball.angularVelocity = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
 }
 
@@ -684,17 +671,6 @@ function resetGame() {
   logComment('Spiel zurückgesetzt');
 }
 
-// --- Ball auf Spielfeld halten
-function clampBall(ball) {
-  let changed = false;
-  if (ball.x < 15) { ball.x = 15; ball.vx *= -0.7; ball.spin *= 0.5; changed = true; }
-  if (ball.x > 1035) { ball.x = 1035; ball.vx *= -0.7; ball.spin *= 0.5; changed = true; }
-  if (ball.y < 15) { ball.y = 15; ball.vy *= -0.7; ball.spin *= 0.5; changed = true; }
-  if (ball.y > 665) { ball.y = 665; ball.vy *= -0.7; ball.spin *= 0.5; changed = true; }
-  if (changed) {
-    // leichte Dämpfung beim Abprall
-  }
-}
 
 function resolvePlayerCollisions(players) {
   for (let i = 0; i < players.length; i++) {
@@ -820,6 +796,7 @@ function gameLoop(timestamp) {
     drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
     drawPlayers(ctx, allPlayers);
     drawBall(ctx, ball);
+    drawBallDebug(ctx, ball);
     drawOverlay(ctx, `Freistoß: ${freeKickTimer.toFixed(1)}s`, canvas.width);
     updateScoreboard();
     requestAnimationFrame(gameLoop);
@@ -938,9 +915,8 @@ function gameLoop(timestamp) {
     const dx = owner.targetX - ball.x, dy = owner.targetY - ball.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const speed = 8; // Skill-basiert möglich!
-    ball.vx = (dx / dist) * speed;
-    ball.vy = (dy / dist) * speed;
-    ball.spin = (Math.random() - 0.5) * 0.02;
+    ball.kick(ball.x, ball.y, dx, dy, speed);
+    ball.angularVelocity = (Math.random() - 0.5) * 0.02;
     ball.isLoose = true;
     ball.owner = null;
   }
@@ -971,41 +947,7 @@ function gameLoop(timestamp) {
   checkSubstitutions();
 
   // 5. Ballphysik & Ballbesitz
-  if (!ball.owner) {
-    ball.x += ball.vx;
-    ball.y += ball.vy;
-    if (weather.windX || weather.windY) {
-      ball.vx += weather.windX;
-      ball.vy += weather.windY;
-    }
-    if (Math.abs(ball.spin) > 0.0001) {
-      const curve = ball.spin;
-      const ax = -ball.vy * curve;
-      const ay = ball.vx * curve;
-      ball.vx += ax;
-      ball.vy += ay;
-    }
-    ball.vx *= weather.friction;
-    ball.vy *= weather.friction;
-    ball.spin *= 0.985;
-
-    for (const p of allPlayers) {
-      const d = Math.hypot(p.x - ball.x, p.y - ball.y);
-      if (d < p.radius + ball.radius + 2) {
-        ball.owner = p;
-        ball.isLoose = false;
-        ball.vx = 0; ball.vy = 0;
-        ball.x = p.x;
-        ball.y = p.y;
-        break;
-      }
-    }
-    clampBall(ball);
-
-  } else {
-    ball.x = ball.owner.x;
-    ball.y = ball.owner.y;
-  }
+  ball.update(delta, allPlayers, FIELD_BOUNDS, weather);
 
   const currentTeam = teamId(ball.owner);
   const myTeamId = userTeam === teamHeim ? 0 : 1;
@@ -1046,6 +988,7 @@ function gameLoop(timestamp) {
   drawPerceptionHighlights(ctx, selectedPlayer);
 
   drawBall(ctx, ball);
+  drawBallDebug(ctx, ball);
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"} | Wetter: ${weather.type}`, canvas.width);
   drawGoalHighlight(ctx, goalOverlayText, goalOverlayTimer, canvas.width, canvas.height);
   drawRadar(radarCtx, allPlayers, ball, radarCanvas.width, radarCanvas.height);
