@@ -2,7 +2,7 @@
 
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights, drawPassIndicator } from "./render.js";
 import { logComment } from "./commentary.js";
 import { Referee } from "./referee.js";
 
@@ -29,8 +29,16 @@ let coach;
 let referee;
 let selectedPlayer = null;
 let userTeam = teamHeim;
-const userInput = { up: false, down: false, left: false, right: false };
+const userInput = {
+  up: false,
+  down: false,
+  left: false,
+  right: false,
+  passPressed: false,
+  shootPressed: false
+};
 let gamepadIndex = null;
+let passIndicator = null;
 
 let lastBallOwnerTeam = null;
 
@@ -177,6 +185,49 @@ class Ball {
   }
 }
 
+function findNearestTeammate(player) {
+  const team = teamHeim.includes(player) ? teamHeim : teamGast;
+  let best = null;
+  let min = Infinity;
+  for (const mate of team) {
+    if (mate === player) continue;
+    const d = Math.hypot(mate.x - player.x, mate.y - player.y);
+    if (d < min) { min = d; best = mate; }
+  }
+  return best;
+}
+
+function passBall(from, to) {
+  if (!from || !to) return;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist === 0) return;
+  ball.owner = null;
+  ball.isLoose = true;
+  ball.vx = (dx / dist) * 8;
+  ball.vy = (dy / dist) * 8;
+  ball.spin = (Math.random() - 0.5) * 0.02;
+  from.currentAction = "pass";
+  passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
+}
+
+function shootBall(player) {
+  if (!player) return;
+  const goalX = teamHeim.includes(player) ? 1040 : 10;
+  const goalY = 340;
+  const dx = goalX - player.x;
+  const dy = goalY - player.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist === 0) return;
+  ball.owner = null;
+  ball.isLoose = true;
+  ball.vx = (dx / dist) * 12;
+  ball.vy = (dy / dist) * 12;
+  ball.spin = (Math.random() - 0.5) * 0.04;
+  player.currentAction = "shoot";
+}
+
 // --- Formation laden und zuweisen ---
 function setFormation(index) {
   if (index < 0 || index >= formations.length) return;
@@ -310,6 +361,17 @@ window.addEventListener('keydown', e => {
   if (e.code === 'ArrowDown' || e.code === 'KeyS') userInput.down = true;
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = true;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = true;
+  if (e.code === 'Space') {
+    if (selectedPlayer && ball.owner === selectedPlayer) {
+      const mate = findNearestTeammate(selectedPlayer);
+      if (mate) passBall(selectedPlayer, mate);
+    }
+  }
+  if (e.code === 'KeyF') {
+    if (selectedPlayer && ball.owner === selectedPlayer) {
+      shootBall(selectedPlayer);
+    }
+  }
   if (e.code === 'KeyR') resetGame();
   if (e.code === 'KeyP') {
     const level = coach.pressing === 1 ? 1.5 : 1;
@@ -471,6 +533,19 @@ function updateUserInput() {
       userInput.right = gp.axes[0] > threshold;
       userInput.up = gp.axes[1] < -threshold;
       userInput.down = gp.axes[1] > threshold;
+      if (gp.buttons[1] && gp.buttons[1].pressed && !userInput.passPressed) {
+        if (selectedPlayer && ball.owner === selectedPlayer) {
+          const mate = findNearestTeammate(selectedPlayer);
+          if (mate) passBall(selectedPlayer, mate);
+        }
+      }
+      if (gp.buttons[0] && gp.buttons[0].pressed && !userInput.shootPressed) {
+        if (selectedPlayer && ball.owner === selectedPlayer) {
+          shootBall(selectedPlayer);
+        }
+      }
+      userInput.passPressed = gp.buttons[1] && gp.buttons[1].pressed;
+      userInput.shootPressed = gp.buttons[0] && gp.buttons[0].pressed;
     }
   }
 }
@@ -615,6 +690,11 @@ function gameLoop(timestamp) {
   }
   lastBallOwnerTeam = currentTeam;
 
+  if (passIndicator && passIndicator.time > 0) {
+    passIndicator.time -= delta;
+    if (passIndicator.time <= 0) passIndicator = null;
+  }
+
   // 6. Ballschatten rendern (optional)
   if (ball.isLoose && (Math.abs(ball.vx) > 0.5 || Math.abs(ball.vy) > 0.5)) {
     ctx.save();
@@ -630,6 +710,7 @@ function gameLoop(timestamp) {
   drawField(ctx, canvas.width, canvas.height);
   drawZones(ctx, allPlayers);
   drawPasses(ctx, allPlayers, ball);
+  drawPassIndicator(ctx, passIndicator);
   drawPlayers(ctx, allPlayers, { showFOV: true, showRunDir: true, showHeadDir: true });
 
   drawPerceptionHighlights(ctx, selectedPlayer);
