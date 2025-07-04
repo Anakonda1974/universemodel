@@ -69,15 +69,37 @@ export class Ball {
 
     // check collision with players
     for (const p of players) {
-      const d = Math.hypot(p.x - this.x, p.y - this.y);
-      if (d < p.radius + this.radius + 2) {
-        this.owner = p;
-        this.isLoose = false;
-        this.vx = 0;
-        this.vy = 0;
-        this.angularVelocity = 0;
-        this.x = p.x;
-        this.y = p.y;
+      const dx = this.x - p.x;
+      const dy = this.y - p.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = p.radius + this.radius;
+      if (dist < minDist) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const relVel = this.vx * nx + this.vy * ny;
+
+        // reflect velocity if the ball is moving towards the player
+        if (relVel < 0) {
+          this.vx -= 2 * relVel * nx;
+          this.vy -= 2 * relVel * ny;
+          this.vx *= this.restitution;
+          this.vy *= this.restitution;
+        }
+
+        // reposition outside the player
+        this.x = p.x + nx * minDist;
+        this.y = p.y + ny * minDist;
+
+        // if the ball slowed down enough, assume possession
+        if (Math.hypot(this.vx, this.vy) < 0.6) {
+          this.owner = p;
+          this.isLoose = false;
+          this.vx = 0;
+          this.vy = 0;
+          this.angularVelocity = 0;
+          this.x = p.x;
+          this.y = p.y;
+        }
         return;
       }
     }
