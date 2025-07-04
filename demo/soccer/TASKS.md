@@ -17,56 +17,56 @@ following tasks outline the core action nodes that still need dedicated
 implementations.
 
 ### Ball Possession & Offensive Actions
-- [ ] **shoot(goalPos)**: allow a player to attempt a shot on goal.
-- [ ] **pass(targetPlayer/pos)**: execute a ground or lofted pass to a teammate.
-- [ ] **lobPass(targetPlayer/pos)**: play an elevated long pass.
-- [ ] **cross(targetArea)**: deliver a cross into the target zone.
-- [ ] **dribble(targetPos/dir)**: move while controlling the ball.
-- [ ] **holdBall()**: shield the ball and slow the play down.
-- [ ] **fakeShot() / feint()**: perform a body feint or fake shot.
-- [ ] **oneTwo(targetPlayer)**: initiate a quick one-two pass sequence.
-- [ ] **backPass(targetPlayer/pos)**: recycle possession with a back pass.
+- [x] **shoot(goalPos)**: allow a player to attempt a shot on goal.
+- [x] **pass(targetPlayer/pos)**: execute a ground or lofted pass to a teammate.
+- [x] **lobPass(targetPlayer/pos)**: play an elevated long pass.
+- [x] **cross(targetArea)**: deliver a cross into the target zone.
+- [x] **dribble(targetPos/dir)**: move while controlling the ball.
+- [x] **holdBall()**: shield the ball and slow the play down.
+- [x] **fakeShot() / feint()**: perform a body feint or fake shot.
+- [x] **oneTwo(targetPlayer)**: initiate a quick one-two pass sequence.
+- [x] **backPass(targetPlayer/pos)**: recycle possession with a back pass.
 
 ### Off-the-Ball Actions
 - [x] **runToSpace(targetPos)**: move into open space to receive a pass.
 - [x] **requestPass()**: signal a teammate for the ball.
-- [ ] **prepareShot()**: position for a shot attempt.
-- [ ] **screenOpponent(opponent)**: block or screen an opponent.
-- [ ] **overlap(teammate)**: perform an overlapping run.
-- [ ] **delayRun()**: time a run to avoid offside.
+- [x] **prepareShot()**: position for a shot attempt.
+- [x] **screenOpponent(opponent)**: block or screen an opponent.
+- [x] **overlap(teammate)**: perform an overlapping run.
+- [x] **delayRun()**: time a run to avoid offside.
 
 ### Defensive Actions
-- [ ] **tackle(targetPlayer/pos)**: challenge the ball carrier.
-- [ ] **interceptPass(passPath)**: anticipate and intercept a pass.
-- [ ] **markOpponent(opponent)**: apply man marking to an opponent.
-- [ ] **coverZone(targetZone)**: guard a defensive zone.
-- [ ] **trackBack()**: retreat towards the defensive half.
-- [ ] **pressBallCarrier(opponent)**: close down the player with the ball.
-- [ ] **clearBall(targetArea)**: perform a defensive clearance.
-- [ ] **blockShot()**: block an incoming shot.
-- [ ] **delayAttack()**: slow down the opponent without tackling.
+- [x] **tackle(targetPlayer/pos)**: challenge the ball carrier.
+- [x] **interceptPass(passPath)**: anticipate and intercept a pass.
+- [x] **markOpponent(opponent)**: apply man marking to an opponent.
+- [x] **coverZone(targetZone)**: guard a defensive zone.
+- [x] **trackBack()**: retreat towards the defensive half.
+- [x] **pressBallCarrier(opponent)**: close down the player with the ball.
+- [x] **clearBall(targetArea)**: perform a defensive clearance.
+- [x] **blockShot()**: block an incoming shot.
+- [x] **delayAttack()**: slow down the opponent without tackling.
 
 ### Special Role Actions
-- [ ] **goalKick(targetArea)**: goalkeeper performs a goal kick.
-- [ ] **throwIn(targetPlayer/pos)**: take a throw-in.
-- [ ] **takeCorner(targetArea)**: take a corner kick.
-- [ ] **takeFreeKick(targetArea)**: take a free kick.
-- [ ] **commandDefense(action/teammate)**: issue defensive commands.
+- [x] **goalKick(targetArea)**: goalkeeper performs a goal kick.
+- [x] **throwIn(targetPlayer/pos)**: take a throw-in.
+- [x] **takeCorner(targetArea)**: take a corner kick.
+- [x] **takeFreeKick(targetArea)**: take a free kick.
+- [x] **commandDefense(action/teammate)**: issue defensive commands.
 
 ### Communication & Meta Actions
-- [ ] **shoutInstruction(type, urgency, [targetPlayer])**: call out instructions.
-- [ ] **callForMarkSwitch(targetOpponent, targetTeammate)**: signal a mark switch.
-- [ ] **signalOffsideTrap()**: trigger the offside trap.
-- [ ] **signalKeeperOut()**: request the keeper to come out.
+- [x] **shoutInstruction(type, urgency, [targetPlayer])**: call out instructions.
+- [x] **callForMarkSwitch(targetOpponent, targetTeammate)**: signal a mark switch.
+- [x] **signalOffsideTrap()**: trigger the offside trap.
+- [x] **signalKeeperOut()**: request the keeper to come out.
 
 ### Perception & Focus
-- [ ] **turnHeadTo(angle/targetPos)**: deliberately turn the head to scan.
-- [ ] **scanField()**: perform a quick field awareness scan.
-- [ ] **memorizeSituation()**: store the current situation for prediction.
-- [ ] **focusOnObject(object)**: fix attention on a specific object.
+- [x] **turnHeadTo(angle/targetPos)**: deliberately turn the head to scan.
+- [x] **scanField()**: perform a quick field awareness scan.
+- [x] **memorizeSituation()**: store the current situation for prediction.
+- [x] **focusOnObject(object)**: fix attention on a specific object.
 
 ### Utility Actions
-- [ ] **holdFormation()**: maintain the tactical formation.
+- [x] **holdFormation()**: maintain the tactical formation.
 - [x] **recoverStamina()**: slow down to regain stamina.
-- [ ] **simulateInjury()**: feign an injury (for completeness).
+- [x] **simulateInjury()**: feign an injury (for completeness).
 
