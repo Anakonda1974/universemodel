@@ -220,6 +220,26 @@ export function drawZones(ctx, players, offsets = { home: {x:0,y:0}, away: {x:0,
   ctx.restore();
 }
 
+export function drawSoftZones(ctx, players, ball, coach) {
+  ctx.save();
+  players.forEach(p => {
+    const zone = p.constructor.getDynamicTargetZone ?
+      p.constructor.getDynamicTargetZone(p, ball, coach) : null;
+    if (!zone) return;
+    ctx.translate(zone.x, zone.y);
+    ctx.scale(zone.rx, zone.ry);
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    grad.addColorStop(0, `${p.color}66`);
+    grad.addColorStop(1, `${p.color}00`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  });
+  ctx.restore();
+}
+
 export function drawPerceptionHighlights(ctx, player) {
   if (!player) return;
   ctx.save();
@@ -298,3 +318,4 @@ export function drawGoalHighlight(ctx, text, timer, width, height) {
   ctx.fillText(text, width / 2, height / 2 + 16);
   ctx.restore();
 }
+

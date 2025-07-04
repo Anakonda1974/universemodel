@@ -1,5 +1,6 @@
 import { Capabilities } from './capabilities.js';
 import { createPlayerBT } from "./footBallBTs.js";
+import { computeEllipseRadii, getTargetZoneCenter } from "./TacticsHelper.js";
 
 
 const TradeProfiles = {
@@ -164,6 +165,13 @@ export class Player {
       x: Math.max(zone.minX, Math.min(zone.maxX, x)),
       y: Math.max(zone.minY, Math.min(zone.maxY, y)),
     };
+  }
+
+  static getDynamicTargetZone(player, ball, coach) {
+    const pressing = coach ? coach.pressing : 1;
+    const center = getTargetZoneCenter(player, ball, pressing);
+    const radii = computeEllipseRadii(player.role, pressing);
+    return { x: center.x, y: center.y, rx: radii.rx, ry: radii.ry };
   }
 
   // --- Boni/Mali aus Trade-System holen ---
