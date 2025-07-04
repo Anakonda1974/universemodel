@@ -9,7 +9,10 @@ export const Capabilities = {
     const dy = goalPos.y - player.y;
     const dist = Math.hypot(dx, dy) || 1;
     const spin = (player.base.technique - 0.5) * 0.1;
-    ball.kick(player.x, player.y, dx, dy, 20, spin);
+    const offset = player.radius + ball.radius + 2;
+    const startX = player.x + (dx / dist) * offset;
+    const startY = player.y + (dy / dist) * offset;
+    ball.kick(startX, startY, dx, dy, 20, spin);
     player.currentAction = 'shoot';
   },
 
@@ -23,7 +26,10 @@ export const Capabilities = {
     const dy = ty - player.y;
     const dist = Math.hypot(dx, dy) || 1;
     const spin = (player.base.technique - 0.5) * 0.05;
-    ball.kick(player.x, player.y, dx, dy, 12, spin);
+    const offset = player.radius + ball.radius + 2;
+    const startX = player.x + (dx / dist) * offset;
+    const startY = player.y + (dy / dist) * offset;
+    ball.kick(startX, startY, dx, dy, 12, spin);
     player.currentAction = 'pass';
   },
 
@@ -36,7 +42,10 @@ export const Capabilities = {
     const dy = ty - player.y;
     const dist = Math.hypot(dx, dy) || 1;
     const spin = (player.base.technique - 0.5) * 0.05;
-    ball.kick(player.x, player.y, dx, dy, 10, spin);
+    const offset = player.radius + ball.radius + 2;
+    const startX = player.x + (dx / dist) * offset;
+    const startY = player.y + (dy / dist) * offset;
+    ball.kick(startX, startY, dx, dy, 10, spin);
     ball.vy -= 2; // simple lift
     player.currentAction = 'lobPass';
   },

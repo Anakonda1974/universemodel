@@ -9,7 +9,8 @@ export class Ball {
     this.angularVelocity = 0;
     this.radius = 6;
     this.mass = 0.43; // kg
-    this.friction = 0.97;
+    // Slightly lower friction so passes travel further
+    this.friction = 0.98;
     this.spinFriction = 0.985;
     this.restitution = 0.7;
     this.owner = null;
