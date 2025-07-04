@@ -219,10 +219,12 @@ export class Player {
     // --- Basiswerte (roh, meist 0..1) ---
     this.base = {
       athleticism: options.athleticism ?? Math.random(),
+      speed: options.speed ?? Math.random(),
       intelligence: options.intelligence ?? Math.random(),
       technique: options.technique ?? Math.random(),
       mentality: options.mentality ?? Math.random(),
       fitness: options.fitness ?? Math.random(),
+      stamina: options.stamina ?? Math.random(),
       reaction: options.reaction ?? Math.random(),
       vision: options.vision ?? Math.random(),
       workrate: options.workrate ?? Math.random(),
@@ -254,7 +256,7 @@ export class Player {
     this.formationX = x;
     this.formationY = y;
     this.hasBall = false;
-    this.stamina = 1;
+    this.stamina = this.base.stamina ?? 1;
 
     // --- KI / Perception / Memory ---
     this.perceived = {};
@@ -276,8 +278,8 @@ export class Player {
     const b = this.base;
     const t = this.getTradeBonus();
     // Beispielhaft einige abgeleitete Werte:
-    this.derived.acceleration     = b.athleticism * 0.7 + b.fitness * 0.3 + (t.acceleration     ?? 0);
-    this.derived.topSpeed         = b.athleticism * 0.6 + b.fitness * 0.4 + (t.topSpeed         ?? 0);
+    this.derived.acceleration     = b.athleticism * 0.6 + b.fitness * 0.2 + b.speed * 0.2 + (t.acceleration ?? 0);
+    this.derived.topSpeed         = b.athleticism * 0.4 + b.fitness * 0.3 + b.speed * 0.3 + (t.topSpeed ?? 0);
     this.derived.bodyTurnRate     = b.athleticism * 0.3 + b.technique * 0.5 + (t.bodyTurnRate   ?? 0);
     this.derived.headTurnRate     = b.vision * 0.6 + b.reaction * 0.4 + (t.headTurnRate         ?? 0);
     this.derived.shootingPower    = b.technique * 0.5 + b.athleticism * 0.4 + (t.shootingPower  ?? 0);
@@ -391,10 +393,12 @@ export class Player {
       const pos = Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
-      this.stamina = Math.max(0, (this.stamina ?? 1) - step * 0.001);
+      const drain = step * 0.001 * (1.2 - (this.base.stamina ?? 1));
+      this.stamina = Math.max(0, (this.stamina ?? 1) - drain);
       return false;
     }
-    this.stamina = Math.min(1, (this.stamina ?? 1) + 0.0005);
+    const recovery = 0.0005 * (0.5 + (this.base.stamina ?? 1));
+    this.stamina = Math.min(1, (this.stamina ?? 1) + recovery);
     return true;
   }
 

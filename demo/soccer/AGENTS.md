@@ -9,11 +9,11 @@ Projektziel und Vision
 - [x] Einfaches Scoreboard vorhanden
 
 ## Nächste Schritte
-- [ ] Verbesserte Ballphysik mit Spin und realistischeren Abprallern
-- [ ] Kollisionsberechnung für Spieler
-- [ ] Dynamischer Formationswechsel während des Spiels
-- [ ] Erweiterte Spielerattribute wie Ausdauer, Schnelligkeit und Technik
-- [ ] Basis-Soundeffekte für Pfiffe und Torjubel
+- [x] Verbesserte Ballphysik mit Spin und realistischeren Abprallern
+- [x] Kollisionsberechnung für Spieler
+- [x] Dynamischer Formationswechsel während des Spiels
+- [x] Erweiterte Spielerattribute wie Ausdauer, Schnelligkeit und Technik
+- [x] Basis-Soundeffekte für Pfiffe und Torjubel
 
 Das Ziel dieses Projekts ist die Simulation eines dynamischen Fußballspiels mit Fokus auf realitätsnahe taktische und physikalische Abläufe. Im Zentrum steht ein KI-gesteuertes System, das sowohl das Verhalten der Spieler als auch die Ballphysik so authentisch wie möglich nachbildet. Jeder virtuelle Spieler soll realistische Bewegungen ausführen, intelligente Entscheidungen treffen und in einem robusten taktischen Gefüge agieren, das an ein echtes Fußballteam erinnert. Die Vision ist eine Fußballsimulation, in der sich Situationen wie auf einem echten Spielfeld entfalten: Spieler antizipieren Pässe, laufen sich frei, greifen an oder ziehen sich taktisch zurück. Durch authentisches Spieler- und Ballverhalten entsteht ein lebendiges Spielgeschehen. Bewegungen besitzen Schwungmasse und Trägheit, Entscheidungen der KI-Spieler basieren auf Wahrnehmung und Teamtaktik, und das taktische Verhalten der Mannschaft reagiert dynamisch auf Ballbesitzwechsel und Spielphasen. Langfristig soll so ein Fundament geschaffen werden, auf dem später auch erweiterte Features wie 3D-Grafik, komplexe Physik oder Multiplayer aufbauen können.
 Architekturüberblick

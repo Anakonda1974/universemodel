@@ -22,6 +22,22 @@ let selectedFormationIndex = 0;
 const teamHeim = [], teamGast = [];
 let ball;
 
+// --- Soundeffekte ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playBeep(freq, duration = 300) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  gain.gain.setValueAtTime(1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration/1000);
+  osc.stop(audioCtx.currentTime + duration/1000);
+}
+function playWhistle() { playBeep(1200, 500); }
+function playGoal() { playBeep(500, 700); }
+
 // Score, timer, cards, etc.
 let scoreHome = 0, scoreAway = 0;
 let matchTime = 0; // in seconds
@@ -30,6 +46,7 @@ let matchPaused = false;
 let halfLengthMinutes = 45;
 let lastFrameTime = null;
 let yellowCards = [], redCards = [];
+let lastFormationSwitch = 0;
 
 // --- Ball-Objekt ---
 class Ball {
@@ -41,6 +58,7 @@ class Ball {
     this.owner = null;
     this.vx = 0;
     this.vy = 0;
+    this.spin = 0; // einfache Rotation für Effet
   }
 }
 
@@ -78,6 +96,8 @@ function setFormation(index) {
   });
 
   document.getElementById("formationDesc").textContent = formation.description;
+  lastFormationSwitch = matchTime;
+  playWhistle();
 }
 
 async function loadFormations() {
@@ -148,10 +168,12 @@ function toTimeString(seconds) {
 function checkGoal(ball) {
   if (ball.x < 15 && ball.y > 290 && ball.y < 390) {
     scoreAway++;
+    playGoal();
     resetKickoff();
   }
   if (ball.x > 1035 && ball.y > 290 && ball.y < 390) {
     scoreHome++;
+    playGoal();
     resetKickoff();
   }
 }
@@ -162,17 +184,40 @@ function resetKickoff() {
   setFormation(selectedFormationIndex);
   ball.owner = teamHeim[4]; // oder nach Zufall/Regel
   ball.isLoose = false;
+  playWhistle();
 }
 
 // --- Ball auf Spielfeld halten
 function clampBall(ball) {
   let changed = false;
-  if (ball.x < 15) { ball.x = 15; changed = true; }
-  if (ball.x > 1035) { ball.x = 1035; changed = true; }
-  if (ball.y < 15) { ball.y = 15; changed = true; }
-  if (ball.y > 665) { ball.y = 665; changed = true; }
+  if (ball.x < 15) { ball.x = 15; ball.vx *= -0.7; ball.spin *= 0.5; changed = true; }
+  if (ball.x > 1035) { ball.x = 1035; ball.vx *= -0.7; ball.spin *= 0.5; changed = true; }
+  if (ball.y < 15) { ball.y = 15; ball.vy *= -0.7; ball.spin *= 0.5; changed = true; }
+  if (ball.y > 665) { ball.y = 665; ball.vy *= -0.7; ball.spin *= 0.5; changed = true; }
   if (changed) {
-    ball.vx = 0; ball.vy = 0;
+    // leichte Dämpfung beim Abprall
+  }
+}
+
+function resolvePlayerCollisions(players) {
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+      const a = players[i];
+      const b = players[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = a.radius + b.radius;
+      if (dist < minDist && dist > 0) {
+        const overlap = (minDist - dist) / 2;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        a.x -= nx * overlap;
+        a.y -= ny * overlap;
+        b.x += nx * overlap;
+        b.y += ny * overlap;
+      }
+    }
   }
 }
 
@@ -222,12 +267,14 @@ function gameLoop(timestamp) {
     const speed = 8; // Skill-basiert möglich!
     ball.vx = (dx / dist) * speed;
     ball.vy = (dy / dist) * speed;
+    ball.spin = (Math.random() - 0.5) * 0.02;
     ball.isLoose = true;
     ball.owner = null;
   }
 
   // 4. Spieler bewegen
   allPlayers.forEach(p => p.moveToTarget());
+  resolvePlayerCollisions(allPlayers);
   for (const p of allPlayers) {
     if (p.currentAction === "tackle" && ball.owner !== p) {
       const d = Math.hypot(p.x - ball.x, p.y - ball.y);
@@ -246,8 +293,16 @@ function gameLoop(timestamp) {
   if (!ball.owner) {
     ball.x += ball.vx;
     ball.y += ball.vy;
+    if (Math.abs(ball.spin) > 0.0001) {
+      const curve = ball.spin;
+      const ax = -ball.vy * curve;
+      const ay = ball.vx * curve;
+      ball.vx += ax;
+      ball.vy += ay;
+    }
     ball.vx *= 0.97;
     ball.vy *= 0.97;
+    ball.spin *= 0.985;
 
     for (const p of allPlayers) {
       const d = Math.hypot(p.x - ball.x, p.y - ball.y);
@@ -289,6 +344,10 @@ function gameLoop(timestamp) {
   // 8. Score/Goal Check/Timer
   checkGoal(ball);
   updateScoreboard();
+  if (currentState === GameState.RUNNING && matchTime - lastFormationSwitch > 30) {
+    selectedFormationIndex = (selectedFormationIndex + 1) % formations.length;
+    setFormation(selectedFormationIndex);
+  }
   // matchTime update usw. kannst du hier einbauen!
 
   requestAnimationFrame(gameLoop);
