@@ -140,6 +140,13 @@ export function drawPasses(ctx, allPlayers, ball) {
 }
 
 export function drawBall(ctx, ball) {
+    // draw subtle shadow for depth perception
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(ball.x, ball.y + ball.radius * 0.6, ball.radius * 0.9, ball.radius * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
     if (ball.isLoose) {
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.radius + 5, 0, Math.PI * 2);
