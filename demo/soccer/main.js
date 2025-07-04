@@ -294,6 +294,19 @@ function calcPassSpeedForDistance(dist) {
   return Math.max(min, Math.min(max, speed));
 }
 
+function orientationMisalignment(player, angle) {
+  const diffHead = Math.abs(((angle - player.headDirection + 540) % 360) - 180);
+  const diffBody = Math.abs(((angle - player.bodyDirection + 540) % 360) - 180);
+  return Math.max(diffHead, diffBody);
+}
+
+function applyKickError(vx, vy, angleErrorDeg) {
+  const rad = angleErrorDeg * Math.PI / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  return { vx: vx * cos - vy * sin, vy: vx * sin + vy * cos };
+}
+
 function passBall(from, to) {
   if (!from || !to) return;
   if (isOffside(from, to)) {
@@ -307,8 +320,14 @@ function passBall(from, to) {
   ball.owner = null;
   ball.isLoose = true;
   const speed = calcPassSpeedForDistance(dist);
-  ball.vx = (dx / dist) * speed;
-  ball.vy = (dy / dist) * speed;
+  let vx = (dx / dist) * speed;
+  let vy = (dy / dist) * speed;
+  const targetAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const mis = orientationMisalignment(from, targetAngle);
+  const err = (Math.random() - 0.5) * mis * 0.2;
+  ({ vx, vy } = applyKickError(vx, vy, err));
+  ball.vx = vx;
+  ball.vy = vy;
   ball.spin = (Math.random() - 0.5) * 0.02;
   from.currentAction = "pass";
   passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
@@ -330,8 +349,14 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   ball.owner = null;
   ball.isLoose = true;
   const speed = 8 + power * 12;
-  ball.vx = (dx / dist) * speed;
-  ball.vy = (dy / dist) * speed;
+  let vx = (dx / dist) * speed;
+  let vy = (dy / dist) * speed;
+  const targetAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const mis = orientationMisalignment(player, targetAngle);
+  const err = (Math.random() - 0.5) * mis * 0.2;
+  ({ vx, vy } = applyKickError(vx, vy, err));
+  ball.vx = vx;
+  ball.vy = vy;
   ball.spin = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
 }
@@ -922,6 +947,10 @@ function gameLoop(timestamp) {
 
   // 4. Spieler bewegen
   allPlayers.forEach(p => p.moveToTarget());
+  allPlayers.forEach(p => p.updateHead(ball, delta, {
+    teammates: teamHeim.includes(p) ? teamHeim : teamGast,
+    opponents: teamHeim.includes(p) ? teamGast : teamHeim
+  }));
   resolvePlayerCollisions(allPlayers);
   for (const p of allPlayers) {
     if (p.currentAction === "tackle" && ball.owner !== p) {

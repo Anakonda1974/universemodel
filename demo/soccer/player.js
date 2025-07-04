@@ -216,7 +216,7 @@ export class Player {
     const dy = this.targetY - this.y;
     if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
       const desired = (Math.atan2(dy, dx) * 180) / Math.PI;
-      const maxTurn = this.derived.bodyTurnRate ?? 12;
+      const maxTurn = (this.derived.bodyTurnRate ?? 12) * 0.8;
       let delta = ((desired - this.bodyDirection + 540) % 360) - 180;
       if (Math.abs(delta) > maxTurn) {
         this.bodyDirection += Math.sign(delta) * maxTurn;
@@ -225,6 +225,8 @@ export class Player {
       }
       if (this.bodyDirection > 180) this.bodyDirection -= 360;
       if (this.bodyDirection < -180) this.bodyDirection += 360;
+      // anticipate by turning the head slightly ahead of the body
+      this.smoothTurnHeadTo(desired, (this.derived.headTurnRate ?? 12) * 1.2);
     }
   }
 
@@ -296,10 +298,12 @@ export class Player {
         this.perceived[label] = { x: obj.x, y: obj.y, dist, angle: delta };
         if (label === "ball") {
           if (!this.memory.ball) {
-            this.memory.ball = { x: null, y: null, lastSeen: -Infinity, confidence: 0 };
+            this.memory.ball = { x: null, y: null, lastSeen: -Infinity, confidence: 0, vx: 0, vy: 0 };
           }
           this.memory.ball.x = obj.x;
           this.memory.ball.y = obj.y;
+          this.memory.ball.vx = obj.vx ?? 0;
+          this.memory.ball.vy = obj.vy ?? 0;
           this.memory.ball.lastSeen = performance.now();
           this.memory.ball.confidence = 1.0 * (this.derived.vision ?? 1) + 0.5 * (this.derived.awareness ?? 1);
         }
@@ -314,7 +318,9 @@ export class Player {
   predictObjectPosition(label, dt = 0.5) {
     const m = this.memory[label];
     if (!m) return null;
-    return { x: m.x, y: m.y };
+    const vx = m.vx ?? 0;
+    const vy = m.vy ?? 0;
+    return { x: m.x + vx * dt, y: m.y + vy * dt };
   }
 
   // --- Messaging, Head/Körper-Drehung etc. siehe vorherige Posts! ---
@@ -343,6 +349,43 @@ export class Player {
       }
       return true;
     });
+  }
+
+  updateHead(ball, dt = 0.016, world = null) {
+    const now = performance.now ? performance.now() : Date.now();
+    const memory = this.memory.ball;
+    const timeSinceSeen = memory ? now - memory.lastSeen : Infinity;
+    const predicted = memory ? this.predictObjectPosition('ball', 0.3) : null;
+    const ballDist = predicted ? Math.hypot(predicted.x - this.x, predicted.y - this.y) : Infinity;
+    if (predicted && timeSinceSeen < 1000) {
+      const angle = Math.atan2(predicted.y - this.y, predicted.x - this.x) * 180 / Math.PI;
+      this.smoothTurnHeadTo(angle, this.derived.headTurnRate ?? 12);
+      this.scanTimer = 0;
+      return;
+    }
+    this.scanTimer = (this.scanTimer ?? 0) - dt * 1000;
+    if (ballDist > 200 && this.scanTimer <= 0) {
+      const candidates = world ? [...world.teammates, ...world.opponents] : [];
+      const nearby = candidates.filter(o => Math.hypot(o.x - this.x, o.y - this.y) < 220);
+      const target = nearby.length ? nearby[Math.floor(Math.random() * nearby.length)] : null;
+      const angle = target ? Math.atan2(target.y - this.y, target.x - this.x) : Math.random() * 360;
+      this.scanTargetAngle = angle;
+      this.scanTimer = 800 + Math.random() * 600;
+    }
+    if (this.scanTargetAngle !== undefined) {
+      this.smoothTurnHeadTo(this.scanTargetAngle, this.derived.headTurnRate ?? 12);
+      return;
+    }
+    // idle movement
+    const moving = Math.hypot(this.vx, this.vy) > 0.1;
+    this.idleTimer = (this.idleTimer ?? 0) - dt * 1000;
+    if (!moving && this.idleTimer <= 0) {
+      this.idleTargetAngle = this.bodyDirection + (Math.random() - 0.5) * 20;
+      this.idleTimer = 1200 + Math.random() * 800;
+    }
+    if (this.idleTargetAngle !== undefined) {
+      this.smoothTurnHeadTo(this.idleTargetAngle, this.derived.headTurnRate ?? 12);
+    }
   }
 
   updateInjury(delta) {
