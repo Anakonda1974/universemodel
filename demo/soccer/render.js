@@ -10,7 +10,7 @@ export function drawField(ctx, width, height) {
     ctx.fillRect(0, height/2-50, 10, 100); // left goal
     ctx.fillRect(width-10, height/2-50, 10, 100); // right goal
 }
-export function drawPlayers(ctx, players, { showFOV = false } = {}) {
+export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false, showHeadDir = false } = {}) {
   players.forEach(p => {
     // Draw body (circle)
     ctx.save();
@@ -40,6 +40,32 @@ export function drawPlayers(ctx, players, { showFOV = false } = {}) {
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = "#222";
     ctx.stroke();
+
+    // Optional: show run direction
+    if (showRunDir) {
+      const dx = p.targetX - p.x;
+      const dy = p.targetY - p.y;
+      const mag = Math.hypot(dx, dy);
+      if (mag > 1) {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + (dx / mag) * p.radius * 2.2, p.y + (dy / mag) * p.radius * 2.2);
+        ctx.strokeStyle = "orange";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    // Optional: show head/blick direction
+    if (showHeadDir) {
+      const headAngle = p.headDirection * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(headX, headY);
+      ctx.lineTo(headX + Math.cos(headAngle) * p.radius * 1.4, headY + Math.sin(headAngle) * p.radius * 1.4);
+      ctx.strokeStyle = "green";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     // Draw stamina bar
     if (typeof p.stamina === "number") {
@@ -121,5 +147,29 @@ export function drawZones(ctx, players) {
     ctx.fill();
     ctx.globalAlpha = 1.0;
   });
+  ctx.restore();
+}
+
+export function drawPerceptionHighlights(ctx, player) {
+  if (!player) return;
+  ctx.save();
+  ctx.lineWidth = 2;
+  // highlight selected player
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius + 4, 0, Math.PI * 2);
+  ctx.strokeStyle = "cyan";
+  ctx.stroke();
+
+  for (const label in player.perceived) {
+    const obj = player.perceived[label];
+    let color = "yellow";
+    if (label === "ball") color = "orange";
+    else if (label.toLowerCase().includes("goal") || label.toLowerCase().includes("far")) color = "purple";
+
+    ctx.beginPath();
+    ctx.arc(obj.x, obj.y, (obj.radius || 10) + 4, 0, Math.PI * 2);
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
   ctx.restore();
 }

@@ -424,39 +424,43 @@ KI-Aussetzer: Wenn ein Spieler aus irgendeinem Grund mal keine sinnvolle Entsche
 Die Kombination aus designter Fehlertoleranz und systematischem Debugging stellt sicher, dass wir schrittweise die gröbsten Schnitzer ausmerzen. Gerade bei einem so komplexen System muss man iterativ vorgehen: Erst Basisfunktionen (laufen, passen, schießen) stabil hinbekommen, dann taktisches Verhalten, dann Sonderfälle. Dank der debug-Visualisierungen können wir immer überprüfen: Warum hat Spieler X das jetzt gemacht? und die Antwort oft direkt auf dem Bildschirm sehen (z.B. "ah, er hat den Ball nicht gesehen, weil Sichtkegel"). Ziel ist, am Ende ein robustes Spiel zu haben, das auch unter ungewöhnlichen Umständen sinnvoll reagiert, statt abzubrechen. Und falls es doch mal hakt, greifen die beschriebenen Mechanismen, um weiterzumachen.
 Zukünftige Erweiterungen
 Das hier beschriebene Design legt den Grundstein für ein spannendes KI-Fußballspiel. Darüber hinaus gibt es zahlreiche Möglichkeiten, das Projekt in Zukunft zu erweitern und zu verbessern:
-Übergang zu 3D: Eine naheliegende Erweiterung ist, von der 2D-Top-Down-Darstellung in eine 3D-Umgebung zu wechseln. Dies würde erheblich aufwändigere Grafiken und Animationen mit sich bringen, eröffnet aber neue Möglichkeiten:
-3D-Engine und Kamera: Integration einer Engine (Unity, Unreal oder WebGL-basiert) könnte realistisches Stadion, Spieler in 3D-Modellen und dynamische Kamera-Perspektiven bringen.
-3D-Spieleranimationen: Verwendung von echten Bewegungsanimationen (Laufen, Schießen, Grätschen) für bessere Visualisierung. Die KI-Logik bliebe ähnlich, müsste aber eventuell feiner mit Animationsstates synchronisiert werden (z.B. eine Schuss-Entscheidung triggert eine Schussanimation und erst wenn Bein schwingt, bewegt sich der Ball).
-Z-Achse für Ball: Flugbälle, Kopfbälle etc. würden eingeführt. Spieler müssten Timing für Sprünge haben, Kopfball-Duelle, etc.
-Physik-Engine für Ball und Spieler: In 2D haben wir einfache Physik, aber man könnte eine Bibliothek wie Box2D (für 2D) oder PhysX/Bullet (in 3D) einbinden.
-Ballrotation und Effet: Mit einer Physik-Engine ließen sich Effet-Schüsse simulieren – also Bananenflanken, Freistöße mit Unterschnitt, oder Knuckleballs (Bälle ohne Rotation, die flatternd fliegen). Dazu müsste man dem Ball einen Spin-Wert geben und die Physik entsprechend erweitern (Magnus-Effekt in 2D ist schwierig darzustellen, in 3D besser).
-Kollisionsphysik: Spieler und Ball könnten komplexer interagieren (Ball prallt vom Spieler ab, Abfälschen, Zweikampf mit Körperphysik). Dies erhöht Realismus, aber erfordert robustes Handling, damit KI nicht unvorhersehbar wird.
-Verbesserte KI durch Machine Learning: Bisherige Logik ist regelbasiert. In Zukunft könnte man Machine-Learning-Methoden einsetzen:
-Reinforcement Learning: Trainiere KI-Agenten in der Soccer-Simulation wie in der RoboCup 2D Liga. Das wäre ein großes Unterfangen, aber könnte zu sehr menschlich wirkenden Strategien führen.
-Neuroevolution: Evolutionäre Algorithmen zur Optimierung von Entscheidungsparametern (z.B. Feinjustierung, wann passen vs. schießen).
-Behaviour Trees: Um komplexere Handlungsabfolgen zu managen, könnten wir von simplen Entscheidungsbäumen auf Behavior Trees oder Goal-Oriented Action Planning (GOAP) umstellen. Diese sind flexibler, vor allem wenn die Anzahl möglicher Aktionen steigt.
-Multiplayer-Modus: Aktuell steuert die KI beide Teams. Ein zukünftiges Feature wäre, Spieler von Menschen steuern zu lassen:
-Lokaler Multiplayer: Zwei Spieler am selben Rechner, jeder mit einem Gamepad, steuern entweder jeweils einen Spieler (z.B. nur den Stürmer) oder gar das gesamte Team (durch Spielerwechsel wie bei FIFA). Die restlichen Spieler würden von der KI gesteuert bleiben (wie ein Koop-Modus mit der KI).
-Online Multiplayer: Netzwerkfunktion, wo zwei Spieler über Internet gegeneinander spielen. Das erfordert Synchronisation, Prediction etc., eine erhebliche Erweiterung der Architektur.
-Hotseat/Coach: Alternativ könnten Spieler auch in Trainer-Rolle agieren, siehe Coach-KI.
-Gamepad-Integration und manuelle Kontrolle: Auch im Singleplayer könnte man ermöglichen, dass der Nutzer einzelne Spieler selbst steuert:
-Dazu braucht es eine Mechanik zum Umschalten des aktiven Spielers (z.B. derjenige dem Ball am nächsten ist oder per Knopfdruck).
-Die KI würde für den aktiv gesteuerten Spieler aussetzen, während der Nutzer lenkt. Alle anderen KI bleiben wie gehabt.
-Das Input-Handling müsste in main.js oder separat eingebunden werden und dann player.controlledByUser = true für den gewählten Spieler setzen, woraufhin in player.update() bei diesem evtl. nur die vom Controller vorgegebenen Bewegungen ausgeführt werden.
-Ziel ist ein fließendes Zusammenspiel aus KI und menschlichem Einfluss, was dem Spielspaß dient.
-Coach-KI und Taktikmodul: Bisher reagiert die KI eher kurzfristig (pro Spieler-Entscheidungen). Ein Coach-Modul könnte höhere Ebene steuern:
-Taktikanpassung: Je nach Spielverlauf (z.B. Rückstand kurz vor Ende) befiehlt der Coach der KI, offensiver zu stehen (Formation weiter nach vorne schieben, mehr Pressing) oder bei Führung defensiver (alle ziehen sich zurück).
-Wechsel: Coach-KI entscheidet, Spieler auszutauschen (wenn wir einen Kader hätten), z.B. bei Erschöpfung oder taktisch (großer Stürmer rein in Minute 80 für lange Bälle).
-Formation Switch: Dynamisch während des Spiels die Formation ändern (z.B. von 4-4-2 auf 3-4-3 in der Schlussphase).
-Gegneranalyse: Coach-KI könnte erkennen "gegnerische rechte Seite ist schwach" und anweisen, mehr Angriffe über links zu fahren (was dann die Spieler-KI in ihrer Entscheidungsgewichtung berücksichtigen müsste).
-Diese Sachen sind sehr komplex, aber auch schon kleine Elemente (z.B. Pressing-Level hoch/runter je nach Befehl) können das Spiel abwechslungsreicher machen.
-Weitere Regeln und Details: Um näher an echten Fußball zu kommen, könnte man sukzessive weitere Regeln implementieren:
-Abseits: Sehr schwieriges Thema KI-technisch, aber für Realismus eine große Komponente. Man bräuchte Linienrichter-Logik und KI-Spieler müssten Abseitsfallen stellen oder Offensivspieler sich an der Abseitslinie bewegen.
-Injuries (Verletzungen): Spieler könnte sich verletzen bei harten Fouls oder hoher Belastung -> Austausch nötig, Leistungsminderung.
-Wetterbedingungen: Regen (rutschiger Boden, Ball schneller?), Wind (Beeinflusst Ballflug in 3D).
-Schiedsrichter-KI: Ein Referee-Agent, der Fouls pfeift, Vorteil abwartet, Karten gibt. (Aktuell würden wir Fouls automatisch sanktionieren, aber ein Schiri-Agent wäre interessant).
-Audio & Präsentation:
-Hinzufügen von Publikumssound, Stadionatmosphäre. Torjubel, Pfiffe etc.
-Kommentator-KI: Ein System, das das Spielgeschehen in Worte fasst ("Ein wunderschöner Pass in die Tiefe... Schuss... Tooor!").
-Menüs, Einstellungen: Benutzeroberfläche, um Formationen zu wählen, Schwierigkeitsgrade (KI-Stärke via Attributen skalieren), Halbzeitlänge etc.
+- [ ] Übergang zu 3D: Eine naheliegende Erweiterung ist, von der 2D-Top-Down-Darstellung in eine 3D-Umgebung zu wechseln. Dies würde erheblich aufwändigere Grafiken und Animationen mit sich bringen, eröffnet aber neue Möglichkeiten:
+- [ ] 3D-Engine und Kamera: Integration einer Engine (Unity, Unreal oder WebGL-basiert) könnte realistisches Stadion, Spieler in 3D-Modellen und dynamische Kamera-Perspektiven bringen.
+- [ ] 3D-Spieleranimationen: Verwendung von echten Bewegungsanimationen (Laufen, Schießen, Grätschen) für bessere Visualisierung. Die KI-Logik bliebe ähnlich, müsste aber eventuell feiner mit Animationsstates synchronisiert werden (z.B. eine Schuss-Entscheidung triggert eine Schussanimation und erst wenn Bein schwingt, bewegt sich der Ball).
+- [ ] Z-Achse für Ball: Flugbälle, Kopfbälle etc. würden eingeführt. Spieler müssten Timing für Sprünge haben, Kopfball-Duelle, etc.
+- [ ] Physik-Engine für Ball und Spieler: In 2D haben wir einfache Physik, aber man könnte eine Bibliothek wie Box2D (für 2D) oder PhysX/Bullet (in 3D) einbinden.
+- [ ] Ballrotation und Effet: Mit einer Physik-Engine ließen sich Effet-Schüsse simulieren – also Bananenflanken, Freistöße mit Unterschnitt, oder Knuckleballs (Bälle ohne Rotation, die flatternd fliegen). Dazu müsste man dem Ball einen Spin-Wert geben und die Physik entsprechend erweitern (Magnus-Effekt in 2D ist schwierig darzustellen, in 3D besser).
+- [ ] Kollisionsphysik: Spieler und Ball könnten komplexer interagieren (Ball prallt vom Spieler ab, Abfälschen, Zweikampf mit Körperphysik). Dies erhöht Realismus, aber erfordert robustes Handling, damit KI nicht unvorhersehbar wird.
+- [ ] Verbesserte KI durch Machine Learning: Bisherige Logik ist regelbasiert. In Zukunft könnte man Machine-Learning-Methoden einsetzen:
+- [ ] Reinforcement Learning: Trainiere KI-Agenten in der Soccer-Simulation wie in der RoboCup 2D Liga. Das wäre ein großes Unterfangen, aber könnte zu sehr menschlich wirkenden Strategien führen.
+- [ ] Neuroevolution: Evolutionäre Algorithmen zur Optimierung von Entscheidungsparametern (z.B. Feinjustierung, wann passen vs. schießen).
+- [x] Behaviour Trees: Um komplexere Handlungsabfolgen zu managen, könnten wir von simplen Entscheidungsbäumen auf Behavior Trees oder Goal-Oriented Action Planning (GOAP) umstellen. Diese sind flexibler, vor allem wenn die Anzahl möglicher Aktionen steigt.
+- [ ] Multiplayer-Modus: Aktuell steuert die KI beide Teams. Ein zukünftiges Feature wäre, Spieler von Menschen steuern zu lassen:
+- [ ] Lokaler Multiplayer: Zwei Spieler am selben Rechner, jeder mit einem Gamepad, steuern entweder jeweils einen Spieler (z.B. nur den Stürmer) oder gar das gesamte Team (durch Spielerwechsel wie bei FIFA). Die restlichen Spieler würden von der KI gesteuert bleiben (wie ein Koop-Modus mit der KI).
+- [ ] Online Multiplayer: Netzwerkfunktion, wo zwei Spieler über Internet gegeneinander spielen. Das erfordert Synchronisation, Prediction etc., eine erhebliche Erweiterung der Architektur.
+- [ ] Hotseat/Coach: Alternativ könnten Spieler auch in Trainer-Rolle agieren, siehe Coach-KI.
+- [ ] Gamepad-Integration und manuelle Kontrolle: Auch im Singleplayer könnte man ermöglichen, dass der Nutzer einzelne Spieler selbst steuert:
+- [ ] Dazu braucht es eine Mechanik zum Umschalten des aktiven Spielers (z.B. derjenige dem Ball am nächsten ist oder per Knopfdruck).
+- [ ] Die KI würde für den aktiv gesteuerten Spieler aussetzen, während der Nutzer lenkt. Alle anderen KI bleiben wie gehabt.
+- [ ] Das Input-Handling müsste in main.js oder separat eingebunden werden und dann player.controlledByUser = true für den gewählten Spieler setzen, woraufhin in player.update() bei diesem evtl. nur die vom Controller vorgegebenen Bewegungen ausgeführt werden.
+- [ ] Ziel ist ein fließendes Zusammenspiel aus KI und menschlichem Einfluss, was dem Spielspaß dient.
+- [ ] Coach-KI und Taktikmodul: Bisher reagiert die KI eher kurzfristig (pro Spieler-Entscheidungen). Ein Coach-Modul könnte höhere Ebene steuern:
+- [ ] Taktikanpassung: Je nach Spielverlauf (z.B. Rückstand kurz vor Ende) befiehlt der Coach der KI, offensiver zu stehen (Formation weiter nach vorne schieben, mehr Pressing) oder bei Führung defensiver (alle ziehen sich zurück).
+- [ ] Wechsel: Coach-KI entscheidet, Spieler auszutauschen (wenn wir einen Kader hätten), z.B. bei Erschöpfung oder taktisch (großer Stürmer rein in Minute 80 für lange Bälle).
+- [ ] Formation Switch: Dynamisch während des Spiels die Formation ändern (z.B. von 4-4-2 auf 3-4-3 in der Schlussphase).
+- [ ] Gegneranalyse: Coach-KI könnte erkennen "gegnerische rechte Seite ist schwach" und anweisen, mehr Angriffe über links zu fahren (was dann die Spieler-KI in ihrer Entscheidungsgewichtung berücksichtigen müsste).
+- [ ] Kommunikationssystem: Coach-KI sendet taktische Befehle an Spieler
+- [ ] Diese Sachen sind sehr komplex, aber auch schon kleine Elemente (z.B. Pressing-Level hoch/runter je nach Befehl) können das Spiel abwechslungsreicher machen.
+- [ ] Weitere Regeln und Details: Um näher an echten Fußball zu kommen, könnte man sukzessive weitere Regeln implementieren:
+- [ ] Abseits: Sehr schwieriges Thema KI-technisch, aber für Realismus eine große Komponente. Man bräuchte Linienrichter-Logik und KI-Spieler müssten Abseitsfallen stellen oder Offensivspieler sich an der Abseitslinie bewegen.
+- [ ] Injuries (Verletzungen): Spieler könnte sich verletzen bei harten Fouls oder hoher Belastung -> Austausch nötig, Leistungsminderung.
+- [ ] Wetterbedingungen: Regen (rutschiger Boden, Ball schneller?), Wind (Beeinflusst Ballflug in 3D).
+- [ ] Schiedsrichter-KI: Ein Referee-Agent, der Fouls pfeift, Vorteil abwartet, Karten gibt. (Aktuell würden wir Fouls automatisch sanktionieren, aber ein Schiri-Agent wäre interessant).
+- [ ] Audio & Präsentation:
+- [ ] Hinzufügen von Publikumssound, Stadionatmosphäre. Torjubel, Pfiffe etc.
+- [ ] Kommentator-KI: Ein System, das das Spielgeschehen in Worte fasst ("Ein wunderschöner Pass in die Tiefe... Schuss... Tooor!").
+- [ ] Menüs, Einstellungen: Benutzeroberfläche, um Formationen zu wählen, Schwierigkeitsgrade (KI-Stärke via Attributen skalieren), Halbzeitlänge etc.
+- [x] Optionale Debug-Overlays je Spieler: Laufrichtung per Pfeil darstellen
+- [x] Optionale Debug-Overlays je Spieler: Kopf- bzw. Blickrichtung zeigen
+- [x] Behavior Tree weiter ausbauen und feingranulare Knoten hinzufügen
 Die genannten Erweiterungen haben unterschiedliche Schwierigkeitsgrade – einige sind relativ einfach (Gamepad einlesen und Spieler steuern), andere sehr komplex (Abseits, ML-gelernte KI). Das modulare Design des aktuellen Systems soll aber ermöglichen, Stück für Stück solche Features zu integrieren. Wichtig ist, eine stabile Basis zu haben (und die haben wir mit dieser Architektur skizziert), auf der man aufbauen kann, ohne alles umwerfen zu müssen. Zum Abschluss festgehalten: Dieses Design-Dokument bietet eine umfassende Grundlage für die Entwicklung des KI-gesteuerten 2D-Fußballsimulationsspiels. Klar definierte Module, realitätsnahe Annahmen und Mechanismen zur Fehlertoleranz sorgen dafür, dass das Entwicklerteam – jetzt und in Zukunft – das Projekt effizient umsetzen und erweitern kann. Jeder Aspekt, vom Bewegungsverhalten über die KI-Entscheidungsregeln bis hin zur Darstellung und Regelabwicklung, wurde unter dem Gesichtspunkt der Authentizität und Nachvollziehbarkeit ausgearbeitet. Mit diesem Briefing können alle Beteiligten ein gemeinsames Verständnis der Zielsetzung und Herangehensweise entwickeln, um schließlich ein überzeugendes Fußballsimulationserlebnis zu schaffen.

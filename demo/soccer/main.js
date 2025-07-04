@@ -1,7 +1,7 @@
 // main.js
 
 import { Player } from "./player.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights } from "./render.js";
 
 // ----- Game Setup -----
 const canvas = document.getElementById("spielfeld");
@@ -21,6 +21,11 @@ let formations = [];
 let selectedFormationIndex = 0;
 const teamHeim = [], teamGast = [];
 let ball;
+let selectedPlayer = null;
+
+const POIS = [
+  { x: 60, y: 340, role: "farLeft" }
+];
 
 // --- Soundeffekte ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -132,6 +137,19 @@ ball = new Ball(525, 340);
 loadFormations();
 setupMatchControls();
 
+canvas.addEventListener("click", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  selectedPlayer = null;
+  for (const p of [...teamHeim, ...teamGast]) {
+    if (Math.hypot(p.x - x, p.y - y) <= p.radius) {
+      selectedPlayer = p;
+      break;
+    }
+  }
+});
+
 
 
 
@@ -233,7 +251,11 @@ function gameLoop(timestamp) {
   const allPlayers = [...teamHeim, ...teamGast];
 
   // 1. Wahrnehmung (inkl. FOV/Kopf/Memory)
-  allPlayers.forEach(p => p.perceive([...allPlayers, ball]));
+  allPlayers.forEach(p => {
+    const poiGoal = teamHeim.includes(p) ? { x: 1040, y: 340, role: "opponentGoal" }
+                                        : { x: 10, y: 340, role: "opponentGoal" };
+    p.perceive([...allPlayers, ball, poiGoal, ...POIS]);
+  });
 
   // 2. Decision/Behavior Tree (jeder Spieler individuell, Skill-basiertes Timing)
   allPlayers.forEach(p => {
@@ -330,7 +352,8 @@ function gameLoop(timestamp) {
   drawField(ctx, canvas.width, canvas.height);
   drawZones(ctx, allPlayers);
   drawPasses(ctx, allPlayers, ball);
-  drawPlayers(ctx, allPlayers, { showFOV: true });
+  drawPlayers(ctx, allPlayers, { showFOV: true, showRunDir: true, showHeadDir: true });
+  drawPerceptionHighlights(ctx, selectedPlayer);
   drawBall(ctx, ball);
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"}`, canvas.width);
 
