@@ -792,7 +792,7 @@ function gameLoop(timestamp) {
     ball.owner = freeKickTaker;
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-    drawSoftZones(ctx, allPlayers, ball, coach);
+    drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
     drawPlayers(ctx, allPlayers);
     drawBall(ctx, ball);
     drawOverlay(ctx, `Freistoß: ${freeKickTimer.toFixed(1)}s`, canvas.width);
@@ -1004,7 +1004,7 @@ function gameLoop(timestamp) {
 
   // 7. RENDER
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-  drawSoftZones(ctx, allPlayers, ball, coach);
+  drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);

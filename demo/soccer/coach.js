@@ -4,20 +4,20 @@ export class Coach {
     this.pressing = 1;
     this.attackSide = null; // 'left' or 'right'
     this.zoneSettings = {
-      ST: { radius: 160 },
-      LF: { radius: 150 },
-      RF: { radius: 150 },
-      OM: { radius: 130 },
-      ZM: { radius: 130 },
-      LM: { radius: 140 },
-      RM: { radius: 140 },
-      DM: { radius: 110 },
-      IV: { radius: 90 },
-      LIV: { radius: 90 },
-      RIV: { radius: 90 },
-      LV: { radius: 100 },
-      RV: { radius: 100 },
-      TW: { radius: 70 },
+      ST: { rx: 160, ry: 120 },
+      LF: { rx: 150, ry: 110 },
+      RF: { rx: 150, ry: 110 },
+      OM: { rx: 130, ry: 110 },
+      ZM: { rx: 130, ry: 110 },
+      LM: { rx: 140, ry: 120 },
+      RM: { rx: 140, ry: 120 },
+      DM: { rx: 110, ry: 100 },
+      IV: { rx: 90, ry: 80 },
+      LIV: { rx: 90, ry: 80 },
+      RIV: { rx: 90, ry: 80 },
+      LV: { rx: 100, ry: 90 },
+      RV: { rx: 100, ry: 90 },
+      TW: { rx: 70, ry: 60 },
     };
   }
 
@@ -39,9 +39,9 @@ export class Coach {
   }
 
   getZoneParameters(role) {
-    const base = this.zoneSettings[role] || { radius: 120 };
+    const base = this.zoneSettings[role] || { rx: 120, ry: 100 };
     const factor = 1 / this.pressing;
-    return { radius: base.radius * factor };
+    return { rx: base.rx * factor, ry: base.ry * factor };
   }
 }
 

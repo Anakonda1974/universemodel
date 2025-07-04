@@ -169,8 +169,9 @@ export class Player {
 
   static getDynamicTargetZone(player, ball, coach) {
     const pressing = coach ? coach.pressing : 1;
+    const zoneParams = coach ? coach.getZoneParameters(player.role) : null;
     const center = getTargetZoneCenter(player, ball, pressing);
-    const radii = computeEllipseRadii(player.role, pressing);
+    const radii = computeEllipseRadii(player.role, pressing, zoneParams);
     return { x: center.x, y: center.y, rx: radii.rx, ry: radii.ry };
   }
 
