@@ -54,6 +54,9 @@ let prevTackle = false;
 let goalFlashTimer = 0;
 let goalFlashSide = null;
 
+// ----- Confetti particles for goal celebration -----
+let confettiParticles = [];
+
 let freeKickTimer = 0;
 let freeKickTaker = null;
 
@@ -526,6 +529,39 @@ function updatePowerBar() {
   }
 }
 
+function spawnConfetti(side) {
+  const baseX = side === 'left' ? 60 : 990;
+  for (let i = 0; i < 25; i++) {
+    confettiParticles.push({
+      x: baseX + (Math.random() - 0.5) * 40,
+      y: 320 + (Math.random() - 0.5) * 40,
+      vx: (Math.random() - 0.5) * 2,
+      vy: -Math.random() * 3 - 2,
+      color: `hsl(${Math.random() * 360},80%,60%)`,
+      life: 1.5
+    });
+  }
+}
+
+function updateConfetti(delta) {
+  confettiParticles = confettiParticles.filter(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 6 * delta;
+    p.life -= delta;
+    return p.life > 0;
+  });
+}
+
+function drawConfetti(ctx) {
+  ctx.save();
+  confettiParticles.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, 3, 3);
+  });
+  ctx.restore();
+}
+
 function setupMatchControls() {
   const input = document.getElementById("halfLengthInput");
   if (input) {
@@ -548,6 +584,7 @@ function checkGoal(ball) {
     logComment('Tor für Auswärtsteam!');
     goalFlashSide = 'left';
     goalFlashTimer = 1;
+    spawnConfetti('left');
     resetKickoff();
   }
   if (ball.x > 1035 && ball.y > 290 && ball.y < 390) {
@@ -556,6 +593,7 @@ function checkGoal(ball) {
     logComment('Tor für Heimteam!');
     goalFlashSide = 'right';
     goalFlashTimer = 1;
+    spawnConfetti('right');
     resetKickoff();
   }
 }
@@ -754,6 +792,7 @@ function gameLoop(timestamp) {
   prevPass = userInput.passPressed;
   prevTackle = userInput.tacklePressed;
   updatePowerBar();
+  updateConfetti(delta);
 
   if (!matchPaused) {
     matchTime += delta;
@@ -907,6 +946,7 @@ function gameLoop(timestamp) {
   drawZones(ctx, allPlayers, { home: formationOffsetHome, away: formationOffsetAway });
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
+  drawConfetti(ctx);
   drawPlayers(ctx, allPlayers, { showFOV: true, showRunDir: true, showHeadDir: true });
 
   drawPerceptionHighlights(ctx, selectedPlayer);
