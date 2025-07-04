@@ -459,7 +459,7 @@ Das hier beschriebene Design legt den Grundstein für ein spannendes KI-Fußball
 - [ ] Audio & Präsentation:
 - [ ] Hinzufügen von Publikumssound, Stadionatmosphäre. Torjubel, Pfiffe etc.
 - [ ] Kommentator-KI: Ein System, das das Spielgeschehen in Worte fasst ("Ein wunderschöner Pass in die Tiefe... Schuss... Tooor!").
-- [ ] Menüs, Einstellungen: Benutzeroberfläche, um Formationen zu wählen, Schwierigkeitsgrade (KI-Stärke via Attributen skalieren), Halbzeitlänge etc.
+- [x] Menüs, Einstellungen: Benutzeroberfläche, um Formationen zu wählen, Schwierigkeitsgrade (KI-Stärke via Attributen skalieren), Halbzeitlänge etc.
 - [x] Optionale Debug-Overlays je Spieler: Laufrichtung per Pfeil darstellen
 - [x] Optionale Debug-Overlays je Spieler: Kopf- bzw. Blickrichtung zeigen
 - [x] Behavior Tree weiter ausbauen und feingranulare Knoten hinzufügen
