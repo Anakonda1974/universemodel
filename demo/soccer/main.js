@@ -9,6 +9,8 @@ import { Referee } from "./referee.js";
 // ----- Game Setup -----
 const canvas = document.getElementById("spielfeld");
 const ctx = canvas.getContext("2d");
+const powerBarWrapper = document.getElementById("powerBarWrapper");
+const powerBar = document.getElementById("powerBar");
 
 const GameState = {
   FORMATION: "Formation wählen",
@@ -34,12 +36,18 @@ const userInput = {
   down: false,
   left: false,
   right: false,
+  dx: 0,
+  dy: 0,
   passPressed: false,
   shootPressed: false,
   tacklePressed: false
 };
 let gamepadIndex = null;
 let passIndicator = null;
+let shotCharge = 0;
+let shotCharging = false;
+let prevPass = false;
+let prevTackle = false;
 
 let lastBallOwnerTeam = null;
 
@@ -213,7 +221,7 @@ function passBall(from, to) {
   passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
 }
 
-function shootBall(player) {
+function shootBall(player, power = 1) {
   if (!player) return;
   const goalX = teamHeim.includes(player) ? 1040 : 10;
   const goalY = 340;
@@ -223,8 +231,9 @@ function shootBall(player) {
   if (dist === 0) return;
   ball.owner = null;
   ball.isLoose = true;
-  ball.vx = (dx / dist) * 12;
-  ball.vy = (dy / dist) * 12;
+  const speed = 8 + power * 12;
+  ball.vx = (dx / dist) * speed;
+  ball.vy = (dy / dist) * speed;
   ball.spin = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
 }
@@ -399,14 +408,13 @@ window.addEventListener('keydown', e => {
     }
   }
   if (e.code === 'KeyF') {
-    if (selectedPlayer && ball.owner === selectedPlayer) {
-      shootBall(selectedPlayer);
-    }
+    userInput.shootPressed = true;
   }
   if (e.code === 'KeyX') {
     if (selectedPlayer) {
       tryTackle(selectedPlayer);
     }
+    userInput.tacklePressed = true;
   }
   if (e.code === 'KeyR') resetGame();
   if (e.code === 'KeyP') {
@@ -425,6 +433,7 @@ window.addEventListener('keyup', e => {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = false;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = false;
   if (e.code === 'KeyX') userInput.tacklePressed = false;
+  if (e.code === 'KeyF') userInput.shootPressed = false;
 });
 window.addEventListener('gamepadconnected', e => { gamepadIndex = e.gamepad.index; });
 window.addEventListener('gamepaddisconnected', e => { if (gamepadIndex === e.gamepad.index) gamepadIndex = null; });
@@ -438,6 +447,17 @@ function updateScoreboard() {
   document.getElementById("timer").textContent = toTimeString(matchTime);
   document.getElementById("halftime").textContent = halftime === 1 ? "1. Halbzeit" : "2. Halbzeit";
   document.getElementById("cards").textContent = "🟨" + yellowCards.length + " 🟥" + redCards.length;
+}
+
+function updatePowerBar() {
+  if (!powerBarWrapper || !powerBar) return;
+  if (shotCharging) {
+    powerBarWrapper.style.display = "block";
+    powerBar.style.width = `${Math.round(shotCharge * 100)}%`;
+  } else {
+    powerBarWrapper.style.display = "none";
+    powerBar.style.width = "0%";
+  }
 }
 
 function setupMatchControls() {
@@ -562,34 +582,23 @@ function checkSubstitutions() {
 }
 
 function updateUserInput() {
+  let usingGp = false;
   if (gamepadIndex !== null) {
     const gp = navigator.getGamepads()[gamepadIndex];
     if (gp) {
+      usingGp = true;
       const threshold = 0.2;
-      userInput.left = gp.axes[0] < -threshold;
-      userInput.right = gp.axes[0] > threshold;
-      userInput.up = gp.axes[1] < -threshold;
-      userInput.down = gp.axes[1] > threshold;
-      if (gp.buttons[1] && gp.buttons[1].pressed && !userInput.passPressed) {
-        if (selectedPlayer && ball.owner === selectedPlayer) {
-          const mate = findNearestTeammate(selectedPlayer);
-          if (mate) passBall(selectedPlayer, mate);
-        }
-      }
-      if (gp.buttons[0] && gp.buttons[0].pressed && !userInput.shootPressed) {
-        if (selectedPlayer && ball.owner === selectedPlayer) {
-          shootBall(selectedPlayer);
-        }
-      }
-      if (gp.buttons[2] && gp.buttons[2].pressed && !userInput.tacklePressed) {
-        if (selectedPlayer) {
-          tryTackle(selectedPlayer);
-        }
-      }
+      const dz = v => Math.abs(v) < threshold ? 0 : (v - Math.sign(v)*threshold)/(1-threshold);
+      userInput.dx = dz(gp.axes[0]);
+      userInput.dy = dz(gp.axes[1]);
       userInput.passPressed = gp.buttons[1] && gp.buttons[1].pressed;
       userInput.shootPressed = gp.buttons[0] && gp.buttons[0].pressed;
       userInput.tacklePressed = gp.buttons[2] && gp.buttons[2].pressed;
     }
+  }
+  if (!usingGp) {
+    userInput.dx = (userInput.right ? 1 : 0) - (userInput.left ? 1 : 0);
+    userInput.dy = (userInput.down ? 1 : 0) - (userInput.up ? 1 : 0);
   }
 }
 
@@ -600,11 +609,11 @@ function gameLoop(timestamp) {
   lastFrameTime = timestamp;
   updateUserInput();
   if (selectedPlayer) {
-    const active = userInput.up || userInput.down || userInput.left || userInput.right || gamepadIndex !== null;
+    const active = Math.abs(userInput.dx) > 0.01 || Math.abs(userInput.dy) > 0.01;
     selectedPlayer.controlledByUser = active;
     if (active) {
-      let dx = (userInput.right ? 1 : 0) - (userInput.left ? 1 : 0);
-      let dy = (userInput.down ? 1 : 0) - (userInput.up ? 1 : 0);
+      let dx = userInput.dx;
+      let dy = userInput.dy;
       const mag = Math.hypot(dx, dy);
       if (mag > 0) {
         const step = (selectedPlayer.derived.topSpeed ?? 2) * 4;
@@ -615,6 +624,30 @@ function gameLoop(timestamp) {
       }
     }
   }
+
+  if (selectedPlayer && ball.owner === selectedPlayer) {
+    if (userInput.shootPressed) {
+      shotCharging = true;
+      shotCharge = Math.min(1, shotCharge + delta);
+    } else if (shotCharging) {
+      shootBall(selectedPlayer, shotCharge);
+      shotCharging = false;
+      shotCharge = 0;
+    }
+  } else {
+    shotCharging = false;
+    shotCharge = 0;
+  }
+  if (!prevPass && userInput.passPressed && selectedPlayer && ball.owner === selectedPlayer) {
+    const mate = findNearestTeammate(selectedPlayer);
+    if (mate) passBall(selectedPlayer, mate);
+  }
+  if (!prevTackle && userInput.tacklePressed && selectedPlayer) {
+    tryTackle(selectedPlayer);
+  }
+  prevPass = userInput.passPressed;
+  prevTackle = userInput.tacklePressed;
+  updatePowerBar();
 
   if (!matchPaused) {
     matchTime += delta;
