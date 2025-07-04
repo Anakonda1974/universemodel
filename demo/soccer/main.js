@@ -2,7 +2,7 @@
 
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight } from "./render.js";
 import { logComment } from "./commentary.js";
 import { Referee } from "./referee.js";
 
@@ -53,6 +53,9 @@ let prevTackle = false;
 
 let goalFlashTimer = 0;
 let goalFlashSide = null;
+
+let goalOverlayTimer = 0;
+let goalOverlayText = '';
 
 // ----- Confetti particles for goal celebration -----
 let confettiParticles = [];
@@ -606,6 +609,8 @@ function checkGoal(ball) {
     logComment('Tor für Auswärtsteam!');
     goalFlashSide = 'left';
     goalFlashTimer = 1;
+    goalOverlayText = 'Tor für Auswärtsteam!';
+    goalOverlayTimer = 2;
     spawnConfetti('left');
     resetKickoff();
   }
@@ -615,6 +620,8 @@ function checkGoal(ball) {
     logComment('Tor für Heimteam!');
     goalFlashSide = 'right';
     goalFlashTimer = 1;
+    goalOverlayText = 'Tor für Heimteam!';
+    goalOverlayTimer = 2;
     spawnConfetti('right');
     resetKickoff();
   }
@@ -978,6 +985,7 @@ function gameLoop(timestamp) {
 
   drawBall(ctx, ball);
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"} | Wetter: ${weather.type}`, canvas.width);
+  drawGoalHighlight(ctx, goalOverlayText, goalOverlayTimer, canvas.width, canvas.height);
   drawRadar(radarCtx, allPlayers, ball, radarCanvas.width, radarCanvas.height);
 
   // 8. Score/Goal Check/Timer
@@ -986,6 +994,10 @@ function gameLoop(timestamp) {
   if (goalFlashTimer > 0) {
     goalFlashTimer -= delta;
     if (goalFlashTimer < 0) goalFlashTimer = 0;
+  }
+  if (goalOverlayTimer > 0) {
+    goalOverlayTimer -= delta;
+    if (goalOverlayTimer < 0) goalOverlayTimer = 0;
   }
   if (currentState === GameState.RUNNING && matchTime - lastFormationSwitch > 30) {
     selectedFormationIndex = (selectedFormationIndex + 1) % formations.length;
