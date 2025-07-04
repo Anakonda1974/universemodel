@@ -209,8 +209,51 @@ function findNearestTeammate(player) {
   return best;
 }
 
+function getOffsideLine(attackingTeam) {
+  const defenders = attackingTeam === teamHeim ? teamGast : teamHeim;
+  const xs = defenders.map(p => p.x).sort((a, b) => a - b);
+  if (attackingTeam === teamHeim) {
+    return xs[1] ?? xs[0];
+  } else {
+    return xs[xs.length - 2] ?? xs[xs.length - 1];
+  }
+}
+
+function isOffside(passer, receiver) {
+  const team = teamHeim.includes(passer) ? teamHeim : teamGast;
+  const line = getOffsideLine(team);
+  if (team === teamHeim) {
+    return receiver.x > line && receiver.x > passer.x && receiver.x > 525;
+  } else {
+    return receiver.x < line && receiver.x < passer.x && receiver.x < 525;
+  }
+}
+
+function handleOffside(passer, receiver) {
+  playWhistle();
+  logComment('Abseits!');
+  const oppTeam = teamHeim.includes(passer) ? teamGast : teamHeim;
+  const kicker = oppTeam.reduce((best, p) => {
+    const d = Math.hypot(p.x - receiver.x, p.y - receiver.y);
+    return d < best.dist ? { p, dist: d } : best;
+  }, { p: oppTeam[0], dist: Infinity }).p;
+  ball.x = receiver.x;
+  ball.y = receiver.y;
+  ball.vx = 0;
+  ball.vy = 0;
+  ball.owner = kicker;
+  ball.isLoose = false;
+  kicker.x = receiver.x;
+  kicker.y = receiver.y;
+  kicker.currentAction = 'freekick';
+}
+
 function passBall(from, to) {
   if (!from || !to) return;
+  if (isOffside(from, to)) {
+    handleOffside(from, to);
+    return;
+  }
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dist = Math.hypot(dx, dy);
