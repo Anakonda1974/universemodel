@@ -222,3 +222,28 @@ export function drawPassIndicator(ctx, indicator) {
   ctx.setLineDash([]);
   ctx.restore();
 }
+
+export function drawRadar(ctx, players, ball, width, height) {
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#065';
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, width, height);
+  ctx.beginPath();
+  ctx.moveTo(width / 2, 0);
+  ctx.lineTo(width / 2, height);
+  ctx.stroke();
+  const scaleX = width / 1050;
+  const scaleY = height / 680;
+  players.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x * scaleX, p.y * scaleY, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.arc(ball.x * scaleX, ball.y * scaleY, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
