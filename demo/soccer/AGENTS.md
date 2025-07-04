@@ -444,13 +444,13 @@ Das hier beschriebene Design legt den Grundstein für ein spannendes KI-Fußball
 - [x] Die KI würde für den aktiv gesteuerten Spieler aussetzen, während der Nutzer lenkt. Alle anderen KI bleiben wie gehabt.
 - [x] Das Input-Handling müsste in main.js oder separat eingebunden werden und dann player.controlledByUser = true für den gewählten Spieler setzen, woraufhin in player.update() bei diesem evtl. nur die vom Controller vorgegebenen Bewegungen ausgeführt werden.
 - [x] Ziel ist ein fließendes Zusammenspiel aus KI und menschlichem Einfluss, was dem Spielspaß dient.
-- [ ] Coach-KI und Taktikmodul: Bisher reagiert die KI eher kurzfristig (pro Spieler-Entscheidungen). Ein Coach-Modul könnte höhere Ebene steuern:
-- [ ] Taktikanpassung: Je nach Spielverlauf (z.B. Rückstand kurz vor Ende) befiehlt der Coach der KI, offensiver zu stehen (Formation weiter nach vorne schieben, mehr Pressing) oder bei Führung defensiver (alle ziehen sich zurück).
+- [x] Coach-KI und Taktikmodul: Bisher reagiert die KI eher kurzfristig (pro Spieler-Entscheidungen). Ein Coach-Modul könnte höhere Ebene steuern:
+- [x] Taktikanpassung: Je nach Spielverlauf (z.B. Rückstand kurz vor Ende) befiehlt der Coach der KI, offensiver zu stehen (Formation weiter nach vorne schieben, mehr Pressing) oder bei Führung defensiver (alle ziehen sich zurück).
 - [ ] Wechsel: Coach-KI entscheidet, Spieler auszutauschen (wenn wir einen Kader hätten), z.B. bei Erschöpfung oder taktisch (großer Stürmer rein in Minute 80 für lange Bälle).
 - [ ] Formation Switch: Dynamisch während des Spiels die Formation ändern (z.B. von 4-4-2 auf 3-4-3 in der Schlussphase).
 - [ ] Gegneranalyse: Coach-KI könnte erkennen "gegnerische rechte Seite ist schwach" und anweisen, mehr Angriffe über links zu fahren (was dann die Spieler-KI in ihrer Entscheidungsgewichtung berücksichtigen müsste).
-- [ ] Kommunikationssystem: Coach-KI sendet taktische Befehle an Spieler
-- [ ] Diese Sachen sind sehr komplex, aber auch schon kleine Elemente (z.B. Pressing-Level hoch/runter je nach Befehl) können das Spiel abwechslungsreicher machen.
+- [x] Kommunikationssystem: Coach-KI sendet taktische Befehle an Spieler
+- [x] Diese Sachen sind sehr komplex, aber auch schon kleine Elemente (z.B. Pressing-Level hoch/runter je nach Befehl) können das Spiel abwechslungsreicher machen.
 - [ ] Weitere Regeln und Details: Um näher an echten Fußball zu kommen, könnte man sukzessive weitere Regeln implementieren:
 - [ ] Abseits: Sehr schwieriges Thema KI-technisch, aber für Realismus eine große Komponente. Man bräuchte Linienrichter-Logik und KI-Spieler müssten Abseitsfallen stellen oder Offensivspieler sich an der Abseitslinie bewegen.
 - [ ] Injuries (Verletzungen): Spieler könnte sich verletzen bei harten Fouls oder hoher Belastung -> Austausch nötig, Leistungsminderung.

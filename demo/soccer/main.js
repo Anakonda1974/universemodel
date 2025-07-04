@@ -1,6 +1,7 @@
 // main.js
 
 import { Player } from "./player.js";
+import { Coach } from "./coach.js";
 import { drawField, drawPlayers, drawBall, drawOverlay, drawZones, drawPasses, drawPerceptionHighlights } from "./render.js";
 import { logComment } from "./commentary.js";
 
@@ -22,6 +23,7 @@ let formations = [];
 let selectedFormationIndex = 0;
 const teamHeim = [], teamGast = [];
 let ball;
+let coach;
 let selectedPlayer = null;
 const userInput = { up: false, down: false, left: false, right: false };
 let gamepadIndex = null;
@@ -223,6 +225,7 @@ for (let i = 0; i < 11; i++) {
   teamGast.push(p);
 }
 ball = new Ball(525, 340);
+coach = new Coach([...teamHeim, ...teamGast]);
 
 loadFormations();
 setupMatchControls();
@@ -251,6 +254,11 @@ window.addEventListener('keydown', e => {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = true;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = true;
   if (e.code === 'KeyR') resetGame();
+  if (e.code === 'KeyP') {
+    const level = coach.pressing === 1 ? 1.5 : 1;
+    coach.setPressing(level);
+    logComment(level > 1 ? 'Coach: Pressing hoch!' : 'Coach: Pressing normal');
+  }
 });
 window.addEventListener('keyup', e => {
   if (e.code === 'ArrowUp' || e.code === 'KeyW') userInput.up = false;

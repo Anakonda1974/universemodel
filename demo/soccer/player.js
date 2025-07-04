@@ -257,6 +257,8 @@ export class Player {
     this.formationY = y;
     this.hasBall = false;
     this.stamina = this.base.stamina ?? 1;
+    // Taktische Intensität (z.B. Pressing-Level)
+    this.pressing = 1;
 
     // --- KI / Perception / Memory ---
     this.perceived = {};
@@ -356,6 +358,7 @@ export class Player {
   }
 
   maybeDecide(now, world, gameState) {
+    this.processMessages();
     if (this.controlledByUser) return;
     if ((now - this.lastDecision) > this.reactionInterval) {
       this.lastDecision = now;
@@ -389,7 +392,7 @@ export class Player {
     const dy = this.targetY - this.y;
     const dist = Math.hypot(dx, dy);
     if (dist > 1) {
-      const speed = (this.derived.topSpeed ?? 2) * (this.stamina ?? 1);
+      const speed = (this.derived.topSpeed ?? 2) * (this.stamina ?? 1) * (this.pressing ?? 1);
       const step = Math.min(speed, dist);
       this.x += (dx / dist) * step;
       this.y += (dy / dist) * step;
@@ -465,6 +468,16 @@ export class Player {
   }
   sendMessage(targetPlayer, message) { targetPlayer.mailbox.push({ from: this, ...message }); }
   broadcastMessage(team, message) { for (const mate of team) if (mate !== this) this.sendMessage(mate, message); }
+
+  processMessages() {
+    this.mailbox = this.mailbox.filter(msg => {
+      if (msg.type === 'pressing') {
+        this.pressing = msg.level;
+        return false;
+      }
+      return true;
+    });
+  }
 
   toString() {
     return `Player(${this.role}, ${this.x.toFixed(1)}, ${this.y.toFixed(1)})`;
