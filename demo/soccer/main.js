@@ -61,12 +61,29 @@ const userInput = {
   shootPressed: false,
   tacklePressed: false
 };
+let selectedPlayer2 = null;
+let userTeam2 = teamGast;
+const userInput2 = {
+  up: false,
+  down: false,
+  left: false,
+  right: false,
+  dx: 0,
+  dy: 0,
+  passPressed: false,
+  shootPressed: false,
+  tacklePressed: false
+};
 let gamepadIndex = null;
 let passIndicator = null;
 let shotCharge = 0;
 let shotCharging = false;
+let shotCharge2 = 0;
+let shotCharging2 = false;
 let prevPass = false;
 let prevTackle = false;
+let prevPass2 = false;
+let prevTackle2 = false;
 
 let goalFlashTimer = 0;
 let goalFlashSide = null;
@@ -81,6 +98,7 @@ let freeKickTimer = 0;
 let freeKickTaker = null;
 
 let lastBallOwnerTeam = null;
+let lastBallOwnerTeam2 = null;
 
 const POIS = [
   { x: 60, y: 340, role: "farLeft" }
@@ -519,23 +537,29 @@ applyWeather();
 initControlPanel({ teams: { home: teamHeim, away: teamGast }, ball, coach, formations });
 selectedPlayer = teamHeim[0];
 userTeam = teamHeim;
+selectedPlayer2 = teamGast[0];
+userTeam2 = teamGast;
 
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
   if (selectedPlayer) selectedPlayer.controlledByUser = false;
-  selectedPlayer = null;
+  if (selectedPlayer2) selectedPlayer2.controlledByUser = false;
   for (const p of [...teamHeim, ...teamGast]) {
     if (Math.hypot(p.x - x, p.y - y) <= p.radius) {
-      selectedPlayer = p;
-      userTeam = teamHeim.includes(p) ? teamHeim : teamGast;
+      if (teamHeim.includes(p)) {
+        selectedPlayer = p;
+      } else {
+        selectedPlayer2 = p;
+      }
       break;
     }
   }
 });
 
 window.addEventListener('keydown', e => {
+
   if (window.keyBindings.moveUp.includes(e.code)) userInput.up = true;
   if (window.keyBindings.moveDown.includes(e.code)) userInput.down = true;
   if (window.keyBindings.moveLeft.includes(e.code)) userInput.left = true;
@@ -551,6 +575,7 @@ window.addEventListener('keydown', e => {
   }
   if (e.code === window.keyBindings.reset) resetGame();
   if (e.code === window.keyBindings.togglePress) {
+
     const level = coach.pressing === 1 ? 1.5 : 1;
     coach.setPressing(level);
     logComment(level > 1 ? 'Coach: Pressing hoch!' : 'Coach: Pressing normal');
@@ -559,8 +584,13 @@ window.addEventListener('keydown', e => {
     switchToNearestPlayer(userTeam);
     logComment('Spieler gewechselt');
   }
+  if (e.code === 'KeyM') {
+    switchToNearestPlayer(userTeam2);
+    logComment('Spieler 2 gewechselt');
+  }
 });
 window.addEventListener('keyup', e => {
+
   if (window.keyBindings.moveUp.includes(e.code)) userInput.up = false;
   if (window.keyBindings.moveDown.includes(e.code)) userInput.down = false;
   if (window.keyBindings.moveLeft.includes(e.code)) userInput.left = false;
@@ -568,6 +598,7 @@ window.addEventListener('keyup', e => {
   if (e.code === window.keyBindings.tackle) userInput.tacklePressed = false;
   if (e.code === window.keyBindings.shoot) userInput.shootPressed = false;
   if (e.code === window.keyBindings.pass) userInput.passPressed = false;
+
 });
 window.addEventListener('gamepadconnected', e => { gamepadIndex = e.gamepad.index; });
 window.addEventListener('gamepaddisconnected', e => { if (gamepadIndex === e.gamepad.index) gamepadIndex = null; });
@@ -585,9 +616,10 @@ function updateScoreboard() {
 
 function updatePowerBar() {
   if (!powerBarWrapper || !powerBar) return;
-  if (shotCharging) {
+  if (shotCharging || shotCharging2) {
     powerBarWrapper.style.display = "block";
-    powerBar.style.width = `${Math.round(shotCharge * 100)}%`;
+    const val = shotCharging ? shotCharge : shotCharge2;
+    powerBar.style.width = `${Math.round(val * 100)}%`;
   } else {
     powerBarWrapper.style.display = "none";
     powerBar.style.width = "0%";
@@ -768,6 +800,11 @@ function updateUserInput() {
   }
 }
 
+function updateUserInput2() {
+  userInput2.dx = (userInput2.right ? 1 : 0) - (userInput2.left ? 1 : 0);
+  userInput2.dy = (userInput2.down ? 1 : 0) - (userInput2.up ? 1 : 0);
+}
+
 function updateFormationOffsets() {
   const sideShift = (ball.x - 525) / 525 * 30;
   formationOffsetHome.x = sideShift;
@@ -823,6 +860,7 @@ function gameLoop(timestamp) {
     return;
   }
   updateUserInput();
+  updateUserInput2();
   updateFormationOffsets();
   if (selectedPlayer) {
     const active = Math.abs(userInput.dx) > 0.01 || Math.abs(userInput.dy) > 0.01;
@@ -841,6 +879,23 @@ function gameLoop(timestamp) {
     }
   }
 
+  if (selectedPlayer2) {
+    const active2 = Math.abs(userInput2.dx) > 0.01 || Math.abs(userInput2.dy) > 0.01;
+    selectedPlayer2.controlledByUser = active2;
+    if (active2) {
+      let dx = userInput2.dx;
+      let dy = userInput2.dy;
+      const mag = Math.hypot(dx, dy);
+      if (mag > 0) {
+        const step = (selectedPlayer2.derived.topSpeed ?? 2) * 4;
+        dx = (dx / mag) * step;
+        dy = (dy / mag) * step;
+        selectedPlayer2.targetX = selectedPlayer2.x + dx;
+        selectedPlayer2.targetY = selectedPlayer2.y + dy;
+      }
+    }
+  }
+
   if (selectedPlayer && ball.owner === selectedPlayer) {
     if (userInput.shootPressed) {
       shotCharging = true;
@@ -853,6 +908,20 @@ function gameLoop(timestamp) {
   } else {
     shotCharging = false;
     shotCharge = 0;
+  }
+
+  if (selectedPlayer2 && ball.owner === selectedPlayer2) {
+    if (userInput2.shootPressed) {
+      shotCharging2 = true;
+      shotCharge2 = Math.min(1, shotCharge2 + delta);
+    } else if (shotCharging2) {
+      shootBall(selectedPlayer2, shotCharge2, userInput2.dx, userInput2.dy);
+      shotCharging2 = false;
+      shotCharge2 = 0;
+    }
+  } else {
+    shotCharging2 = false;
+    shotCharge2 = 0;
   }
   let potentialMate = null;
   if (userInput.passPressed && selectedPlayer && ball.owner === selectedPlayer) {
@@ -872,8 +941,28 @@ function gameLoop(timestamp) {
   if (!prevTackle && userInput.tacklePressed && selectedPlayer) {
     tryTackle(selectedPlayer);
   }
+  let potentialMate2 = null;
+  if (userInput2.passPressed && selectedPlayer2 && ball.owner === selectedPlayer2) {
+    potentialMate2 = findTeammateInDirection(selectedPlayer2, userInput2.dx, userInput2.dy);
+    if (!potentialMate2) potentialMate2 = findNearestTeammate(selectedPlayer2);
+    if (potentialMate2) {
+      passIndicator = { from: { x: selectedPlayer2.x, y: selectedPlayer2.y }, to: { x: potentialMate2.x, y: potentialMate2.y }, time: 0.2 };
+    }
+  }
+  if (!prevPass2 && userInput2.passPressed && selectedPlayer2 && ball.owner === selectedPlayer2) {
+    if (!potentialMate2) {
+      potentialMate2 = findTeammateInDirection(selectedPlayer2, userInput2.dx, userInput2.dy);
+      if (!potentialMate2) potentialMate2 = findNearestTeammate(selectedPlayer2);
+    }
+    if (potentialMate2) passBall(selectedPlayer2, potentialMate2);
+  }
+  if (!prevTackle2 && userInput2.tacklePressed && selectedPlayer2) {
+    tryTackle(selectedPlayer2);
+  }
   prevPass = userInput.passPressed;
   prevTackle = userInput.tacklePressed;
+  prevPass2 = userInput2.passPressed;
+  prevTackle2 = userInput2.tacklePressed;
   updatePowerBar();
   updateConfetti(delta);
 
@@ -976,6 +1065,12 @@ function gameLoop(timestamp) {
     logComment('Automatischer Spielerwechsel');
   }
   lastBallOwnerTeam = currentTeam;
+  const myTeamId2 = userTeam2 === teamHeim ? 0 : 1;
+  if (lastBallOwnerTeam2 === myTeamId2 && currentTeam !== myTeamId2) {
+    switchToNearestPlayer(userTeam2);
+    logComment('Spieler 2 automatisch gewechselt');
+  }
+  lastBallOwnerTeam2 = currentTeam;
 
   if (passIndicator && passIndicator.time > 0) {
     passIndicator.time -= delta;
@@ -1005,9 +1100,14 @@ function gameLoop(timestamp) {
   if (selectedPlayer) {
     drawPlayers(ctx, [selectedPlayer], { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true });
   }
+  if (selectedPlayer2) {
+    drawPlayers(ctx, [selectedPlayer2], { showFOV: true, showRunDir: true, showHeadDir: true });
+  }
   drawActivePlayer(ctx, selectedPlayer);
+  drawActivePlayer(ctx, selectedPlayer2);
 
   drawPerceptionHighlights(ctx, selectedPlayer);
+  drawPerceptionHighlights(ctx, selectedPlayer2);
 
   drawBall(ctx, ball);
   if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
