@@ -7,6 +7,7 @@ import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPercepti
 import { logComment } from "./commentary.js";
 import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
+import { InputHandler } from "./input.js";
 
 // ----- Game Setup -----
 const canvas = document.getElementById("spielfeld");
@@ -29,6 +30,7 @@ window.keyBindings = {
   togglePress: "KeyP",
   reset: "KeyR"
 };
+const inputHandler = new InputHandler();
 window.debugOptions = { showZones: true, showFOV: true, showBall: true };
 
 const GameState = {
@@ -74,7 +76,6 @@ const userInput2 = {
   shootPressed: false,
   tacklePressed: false
 };
-let gamepadIndex = null;
 let passIndicator = null;
 let shotCharge = 0;
 let shotCharging = false;
@@ -558,50 +559,6 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-window.addEventListener('keydown', e => {
-
-  if (window.keyBindings.moveUp.includes(e.code)) userInput.up = true;
-  if (window.keyBindings.moveDown.includes(e.code)) userInput.down = true;
-  if (window.keyBindings.moveLeft.includes(e.code)) userInput.left = true;
-  if (window.keyBindings.moveRight.includes(e.code)) userInput.right = true;
-  if (e.code === window.keyBindings.pass) {
-    userInput.passPressed = true;
-  }
-  if (e.code === window.keyBindings.shoot) {
-    userInput.shootPressed = true;
-  }
-  if (e.code === window.keyBindings.tackle) {
-    userInput.tacklePressed = true;
-  }
-  if (e.code === window.keyBindings.reset) resetGame();
-  if (e.code === window.keyBindings.togglePress) {
-
-    const level = coach.pressing === 1 ? 1.5 : 1;
-    coach.setPressing(level);
-    logComment(level > 1 ? 'Coach: Pressing hoch!' : 'Coach: Pressing normal');
-  }
-  if (e.code === window.keyBindings.switch) {
-    switchToNearestPlayer(userTeam);
-    logComment('Spieler gewechselt');
-  }
-  if (e.code === 'KeyM') {
-    switchToNearestPlayer(userTeam2);
-    logComment('Spieler 2 gewechselt');
-  }
-});
-window.addEventListener('keyup', e => {
-
-  if (window.keyBindings.moveUp.includes(e.code)) userInput.up = false;
-  if (window.keyBindings.moveDown.includes(e.code)) userInput.down = false;
-  if (window.keyBindings.moveLeft.includes(e.code)) userInput.left = false;
-  if (window.keyBindings.moveRight.includes(e.code)) userInput.right = false;
-  if (e.code === window.keyBindings.tackle) userInput.tacklePressed = false;
-  if (e.code === window.keyBindings.shoot) userInput.shootPressed = false;
-  if (e.code === window.keyBindings.pass) userInput.passPressed = false;
-
-});
-window.addEventListener('gamepadconnected', e => { gamepadIndex = e.gamepad.index; });
-window.addEventListener('gamepaddisconnected', e => { if (gamepadIndex === e.gamepad.index) gamepadIndex = null; });
 
 
 
@@ -779,24 +736,21 @@ function checkSubstitutions() {
   maybeSubstitute(teamGast, benchGast);
 }
 
-function updateUserInput() {
-  let usingGp = false;
-  if (gamepadIndex !== null) {
-    const gp = navigator.getGamepads()[gamepadIndex];
-    if (gp) {
-      usingGp = true;
-      const threshold = 0.2;
-      const dz = v => Math.abs(v) < threshold ? 0 : (v - Math.sign(v)*threshold)/(1-threshold);
-      userInput.dx = dz(gp.axes[0]);
-      userInput.dy = dz(gp.axes[1]);
-      userInput.passPressed = gp.buttons[1] && gp.buttons[1].pressed;
-      userInput.shootPressed = gp.buttons[0] && gp.buttons[0].pressed;
-      userInput.tacklePressed = gp.buttons[2] && gp.buttons[2].pressed;
-    }
+function updateUserInput(delta) {
+  const state = inputHandler.sample(delta);
+  userInput.dx = state.direction.x;
+  userInput.dy = state.direction.y;
+  userInput.passPressed = state.pass;
+  userInput.shootPressed = state.shoot;
+  userInput.tacklePressed = state.slide;
+  if (state.switch) {
+    switchToNearestPlayer(userTeam);
+    logComment('Spieler gewechselt');
+    inputHandler.triggerCooldown('pass'); // small neutral cooldown
   }
-  if (!usingGp) {
-    userInput.dx = (userInput.right ? 1 : 0) - (userInput.left ? 1 : 0);
-    userInput.dy = (userInput.down ? 1 : 0) - (userInput.up ? 1 : 0);
+  if (state.cancel) {
+    shotCharging = false;
+    shotCharge = 0;
   }
 }
 
@@ -859,7 +813,7 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
     return;
   }
-  updateUserInput();
+  updateUserInput(delta);
   updateUserInput2();
   updateFormationOffsets();
   if (selectedPlayer) {
@@ -900,10 +854,11 @@ function gameLoop(timestamp) {
     if (userInput.shootPressed) {
       shotCharging = true;
       shotCharge = Math.min(1, shotCharge + delta);
-    } else if (shotCharging) {
+    } else if (shotCharging && inputHandler.can('shoot')) {
       shootBall(selectedPlayer, shotCharge, userInput.dx, userInput.dy);
       shotCharging = false;
       shotCharge = 0;
+      inputHandler.triggerCooldown('shoot');
     }
   } else {
     shotCharging = false;
@@ -931,15 +886,19 @@ function gameLoop(timestamp) {
       passIndicator = { from: { x: selectedPlayer.x, y: selectedPlayer.y }, to: { x: potentialMate.x, y: potentialMate.y }, time: 0.2 };
     }
   }
-  if (!prevPass && userInput.passPressed && selectedPlayer && ball.owner === selectedPlayer) {
+  if (!prevPass && userInput.passPressed && selectedPlayer && ball.owner === selectedPlayer && inputHandler.can('pass')) {
     if (!potentialMate) {
       potentialMate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
       if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
     }
-    if (potentialMate) passBall(selectedPlayer, potentialMate);
+    if (potentialMate) {
+      passBall(selectedPlayer, potentialMate);
+      inputHandler.triggerCooldown('pass');
+    }
   }
-  if (!prevTackle && userInput.tacklePressed && selectedPlayer) {
+  if (!prevTackle && userInput.tacklePressed && selectedPlayer && inputHandler.can('slide')) {
     tryTackle(selectedPlayer);
+    inputHandler.triggerCooldown('slide');
   }
   let potentialMate2 = null;
   if (userInput2.passPressed && selectedPlayer2 && ball.owner === selectedPlayer2) {
