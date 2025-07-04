@@ -378,7 +378,10 @@ function passBall(from, to, power = 1) {
   const err = (Math.random() - 0.5) * mis * 0.2;
   ({ vx, vy } = applyKickError(vx, vy, err));
   const spd = Math.hypot(vx, vy);
-  ball.kick(from.x, from.y, vx, vy, spd);
+  const offset = from.radius + ball.radius + 2;
+  const startX = from.x + (dx / dist) * offset;
+  const startY = from.y + (dy / dist) * offset;
+  ball.kick(startX, startY, vx, vy, spd);
   ball.angularVelocity = (Math.random() - 0.5) * 0.02;
   from.currentAction = "pass";
   passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
@@ -407,7 +410,10 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   const err = (Math.random() - 0.5) * mis * 0.2;
   ({ vx, vy } = applyKickError(vx, vy, err));
   const speedFinal = Math.hypot(vx, vy);
-  ball.kick(player.x, player.y, vx, vy, speedFinal);
+  const offset = player.radius + ball.radius + 2;
+  const startX = player.x + (dx / dist) * offset;
+  const startY = player.y + (dy / dist) * offset;
+  ball.kick(startX, startY, vx, vy, speedFinal);
   ball.angularVelocity = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
 }
@@ -1055,7 +1061,10 @@ function gameLoop(timestamp) {
     const dx = owner.targetX - ball.x, dy = owner.targetY - ball.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const speed = 8; // Skill-basiert möglich!
-    ball.kick(ball.x, ball.y, dx, dy, speed);
+    const offset = owner.radius + ball.radius + 2;
+    const startX = ball.x + (dx / dist) * offset;
+    const startY = ball.y + (dy / dist) * offset;
+    ball.kick(startX, startY, dx, dy, speed);
     ball.angularVelocity = (Math.random() - 0.5) * 0.02;
     ball.isLoose = true;
     ball.owner = null;
