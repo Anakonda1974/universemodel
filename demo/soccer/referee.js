@@ -1,3 +1,5 @@
+import { logComment } from './commentary.js';
+
 export class Referee {
   constructor(onCardCallback) {
     this.onCard = onCardCallback;
@@ -23,5 +25,10 @@ export class Referee {
     const chance = Math.random();
     const card = chance > 0.8 ? "red" : "yellow";
     if (this.onCard) this.onCard(player, card);
+    if (Math.random() < 0.3) {
+      victim.injured = true;
+      victim.injuryRecovery = 30;
+      logComment(`${victim.role} verletzt sich!`);
+    }
   }
 }
