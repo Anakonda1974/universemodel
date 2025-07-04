@@ -22,6 +22,8 @@ let selectedFormationIndex = 0;
 const teamHeim = [], teamGast = [];
 let ball;
 let selectedPlayer = null;
+const userInput = { up: false, down: false, left: false, right: false };
+let gamepadIndex = null;
 
 const POIS = [
   { x: 60, y: 340, role: "farLeft" }
@@ -178,6 +180,7 @@ canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
+  if (selectedPlayer) selectedPlayer.controlledByUser = false;
   selectedPlayer = null;
   for (const p of [...teamHeim, ...teamGast]) {
     if (Math.hypot(p.x - x, p.y - y) <= p.radius) {
@@ -186,6 +189,21 @@ canvas.addEventListener("click", (e) => {
     }
   }
 });
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') userInput.up = true;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') userInput.down = true;
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = true;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = true;
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') userInput.up = false;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') userInput.down = false;
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') userInput.left = false;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') userInput.right = false;
+});
+window.addEventListener('gamepadconnected', e => { gamepadIndex = e.gamepad.index; });
+window.addEventListener('gamepaddisconnected', e => { if (gamepadIndex === e.gamepad.index) gamepadIndex = null; });
 
 
 
@@ -269,11 +287,41 @@ function resolvePlayerCollisions(players) {
   }
 }
 
+function updateUserInput() {
+  if (gamepadIndex !== null) {
+    const gp = navigator.getGamepads()[gamepadIndex];
+    if (gp) {
+      const threshold = 0.2;
+      userInput.left = gp.axes[0] < -threshold;
+      userInput.right = gp.axes[0] > threshold;
+      userInput.up = gp.axes[1] < -threshold;
+      userInput.down = gp.axes[1] > threshold;
+    }
+  }
+}
+
 // ----- GAME LOOP -----
 function gameLoop(timestamp) {
   if (lastFrameTime === null) lastFrameTime = timestamp;
   const delta = (timestamp - lastFrameTime) / 1000;
   lastFrameTime = timestamp;
+  updateUserInput();
+  if (selectedPlayer) {
+    const active = userInput.up || userInput.down || userInput.left || userInput.right || gamepadIndex !== null;
+    selectedPlayer.controlledByUser = active;
+    if (active) {
+      let dx = (userInput.right ? 1 : 0) - (userInput.left ? 1 : 0);
+      let dy = (userInput.down ? 1 : 0) - (userInput.up ? 1 : 0);
+      const mag = Math.hypot(dx, dy);
+      if (mag > 0) {
+        const step = (selectedPlayer.derived.topSpeed ?? 2) * 4;
+        dx = (dx / mag) * step;
+        dy = (dy / mag) * step;
+        selectedPlayer.targetX = selectedPlayer.x + dx;
+        selectedPlayer.targetY = selectedPlayer.y + dy;
+      }
+    }
+  }
 
   if (!matchPaused) {
     matchTime += delta;
