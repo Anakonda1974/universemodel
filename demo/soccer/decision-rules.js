@@ -108,7 +108,7 @@ export function decidePlayerAction(player, world, gameState) {
       if (d < minDist) { minDist = d; closest = p; }
     }
     if (closest === player) {
-      return boundedIntent(player, "chase", world.ball.x, world.ball.y, world);
+      return boundedIntent(player, "chase", world.ball.x, world.ball.y, world, true);
     }
   }
 
@@ -119,12 +119,12 @@ export function decidePlayerAction(player, world, gameState) {
 
     // If defender is "touching distance" (i.e. within 18px): Tackle
     if (dist < 18) {
-      return boundedIntent(player, "tackle", ballHolder.x, ballHolder.y, world);
+      return boundedIntent(player, "tackle", ballHolder.x, ballHolder.y, world, true);
     }
 
     // If within "swarm/press" radius (up to 40px): press (not just closest!)
     if (dist < 40) {
-      return boundedIntent(player, "press", ballHolder.x, ballHolder.y, world);
+      return boundedIntent(player, "press", ballHolder.x, ballHolder.y, world, true);
     }
 
     // (Optional) The closest "DM/IV/LV/RV" defender can be even more aggressive:
@@ -136,7 +136,7 @@ export function decidePlayerAction(player, world, gameState) {
     }
     if (closest === player && dist < 70) {
       // Closest central defender: always closes down!
-      return boundedIntent(player, "close_down", ballHolder.x, ballHolder.y, world);
+      return boundedIntent(player, "close_down", ballHolder.x, ballHolder.y, world, true);
     }
 
     // If within "intercept" radius (up to 130px): try to cut off lane to goal
@@ -144,7 +144,7 @@ export function decidePlayerAction(player, world, gameState) {
     if (dist < 130) {
       const px = 0.68 * ballHolder.x + 0.32 * goal.x;
       const py = 0.68 * ballHolder.y + 0.32 * goal.y;
-      return boundedIntent(player, "press", px, py, world);
+      return boundedIntent(player, "press", px, py, world, true);
     }
     // Not in range: cover formation
   }
@@ -189,14 +189,14 @@ function decideBallOwnerAction(player, world) {
 }
 
 // ---- Intent Resolver (bounds action to zone) ----
-function boundedIntent(player, intent, tx, ty, world) {
+function boundedIntent(player, intent, tx, ty, world, allowOutside = false) {
   const zone = getAllowedZone(player, world);
-  const clamped = clampToZone(tx, ty, zone);
-  player.targetX = clamped.x;
-  player.targetY = clamped.y;
+  const target = allowOutside ? { x: tx, y: ty } : clampToZone(tx, ty, zone);
+  player.targetX = target.x;
+  player.targetY = target.y;
   player.currentAction = intent;
   avoidTeammateClumping(player, world.teammates, 18);
-  return { type: intent, targetX: clamped.x, targetY: clamped.y };
+  return { type: intent, targetX: target.x, targetY: target.y };
 }
 
 // ---- Smarter Passing: Only to open/less-marked players ----

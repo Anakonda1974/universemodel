@@ -8,6 +8,11 @@ export function gaussianFalloff(dist, radius) {
   return Math.exp(-0.5 * norm * norm);
 }
 
+export function alphaHex(v) {
+  const clamped = Math.max(0, Math.min(1, v));
+  return Math.round(clamped * 255).toString(16).padStart(2, '0');
+}
+
 const baseRadii = {
   TW: { rx: 70, ry: 60 },
   IV: { rx: 90, ry: 80 },
@@ -25,8 +30,14 @@ const baseRadii = {
   ST: { rx: 160, ry: 120 }
 };
 
-export function computeEllipseRadii(role, pressing = 1) {
-  const base = baseRadii[role] || { rx: 120, ry: 100 };
+export function computeEllipseRadii(role, pressing = 1, custom = null) {
+  let base = baseRadii[role] || { rx: 120, ry: 100 };
+  if (custom) {
+    base = {
+      rx: custom.rx ?? custom.radius ?? base.rx,
+      ry: custom.ry ?? custom.radius ?? base.ry,
+    };
+  }
   const factor = 1 / pressing; // higher pressing => smaller zones
   return { rx: base.rx * factor, ry: base.ry * factor };
 }

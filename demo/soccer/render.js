@@ -1,4 +1,5 @@
 // render.js
+import { gaussianFalloff, alphaHex } from "./TacticsHelper.js";
 let fieldCache = null;
 let fieldCacheWidth = 0;
 let fieldCacheHeight = 0;
@@ -220,7 +221,8 @@ export function drawZones(ctx, players, offsets = { home: {x:0,y:0}, away: {x:0,
   ctx.restore();
 }
 
-export function drawSoftZones(ctx, players, ball, coach) {
+export function drawSoftZones(ctx, players, ball, coach, options = {}) {
+  const { heatmap = false } = options;
   ctx.save();
   players.forEach(p => {
     const zone = p.constructor.getDynamicTargetZone ?
@@ -229,8 +231,15 @@ export function drawSoftZones(ctx, players, ball, coach) {
     ctx.translate(zone.x, zone.y);
     ctx.scale(zone.rx, zone.ry);
     const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-    grad.addColorStop(0, `${p.color}66`);
-    grad.addColorStop(1, `${p.color}00`);
+    if (heatmap) {
+      const mid = alphaHex(gaussianFalloff(0.6, 1));
+      grad.addColorStop(0, `${p.color}aa`);
+      grad.addColorStop(0.6, `${p.color}${mid}`);
+      grad.addColorStop(1, `${p.color}00`);
+    } else {
+      grad.addColorStop(0, `${p.color}66`);
+      grad.addColorStop(1, `${p.color}00`);
+    }
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(0, 0, 1, 0, Math.PI * 2);
