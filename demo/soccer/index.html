@@ -45,6 +45,18 @@
   border-bottom: 1.5px solid #444;
 }
 #scoreboard span { margin: 0 0.3em; }
+        #powerBarWrapper {
+            width: 150px;
+            height: 10px;
+            background: #333;
+            margin: 6px auto;
+            display: none;
+        }
+        #powerBar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(green, red);
+        }
     </style>
 </head>
 <body>
@@ -74,6 +86,7 @@
   <span id="halftime">1. Halbzeit</span> &nbsp; | &nbsp;
   <span id="cards"></span>
 </div>
+    <div id="powerBarWrapper"><div id="powerBar"></div></div>
     <p style="text-align:center;margin-top:4px;">Spieler anklicken und mit Pfeiltasten oder Gamepad steuern</p>
     <canvas id="spielfeld" width="1050" height="680"></canvas>
     <div id="commentary"></div>
