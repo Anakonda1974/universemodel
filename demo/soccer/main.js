@@ -4,6 +4,7 @@ import { Player } from "./player.js";
 import { Coach } from "./coach.js";
 import { Ball, FIELD_BOUNDS } from "./ball.js";
 import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawZones, drawBallDebug, drawFormationDebug } from "./render.js";
+import { DebugManager } from "./debugManager.js";
 import { logComment } from "./commentary.js";
 import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
@@ -14,6 +15,9 @@ import { analyzePlayerPerformance, evaluateFootUse } from "./analyze.js";
 // ----- Game Setup -----
 const canvas = document.getElementById("spielfeld");
 const ctx = canvas.getContext("2d");
+const debugCanvas = document.getElementById("debugCanvas");
+const debugCtx = debugCanvas.getContext("2d");
+const inspectorDiv = document.getElementById("inspector");
 const powerBarWrapper = document.getElementById("powerBarWrapper");
 const powerBar = document.getElementById("powerBar");
 const radarCanvas = document.getElementById("radar");
@@ -33,7 +37,9 @@ window.keyBindings = {
   reset: "KeyR",
 };
 const inputHandler = new InputHandler();
+
 window.debugOptions = { showZones: true, showFOV: true, showBall: true, showFormation: false, showTargets: false };
+
 
 window.colorProfiles = {
   default: { field: "#065", home: "#0000ff", away: "#ff0000", background: "#222" },
@@ -683,6 +689,7 @@ applyWeather();
 applyColorProfile(window.renderOptions.colorProfile);
 initControlPanel({ teams: { home: teamHeim, away: teamGast }, ball, coach, formations });
 selectedPlayer = teamHeim[0];
+debugManager.setSelectedPlayer(selectedPlayer);
 userTeam = teamHeim;
 selectedPlayer2 = teamGast[0];
 userTeam2 = teamGast;
@@ -700,6 +707,7 @@ canvas.addEventListener("click", (e) => {
       } else {
         selectedPlayer2 = p;
       }
+      debugManager.setSelectedPlayer(p);
       break;
     }
   }
@@ -1315,6 +1323,7 @@ function gameLoop(timestamp) {
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"} | Wetter: ${weather.type}`, canvas.width);
   drawGoalHighlight(ctx, goalOverlayText, goalOverlayTimer, canvas.width, canvas.height);
   drawRadar(radarCtx, allPlayers, ball, radarCanvas.width, radarCanvas.height);
+  debugManager.draw({ players: allPlayers, ball, tactic: coach?.pressing > 1 ? "pressing" : null });
   if (matchPaused) {
     drawOverlay(ctx, "Spiel beendet", canvas.width);
   

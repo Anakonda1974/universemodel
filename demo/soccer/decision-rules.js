@@ -156,6 +156,7 @@ export function getDynamicZone(player, world) {
     offsetY *= 0.6;
   }
 
+
   // modify by team phase
   if (world.phase === 'offense') {
     zoneWidth *= 1.1;
