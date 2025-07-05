@@ -1,5 +1,6 @@
 // render.js
 import { gaussianFalloff, alphaHex } from "./TacticsHelper.js";
+import { getDynamicZone } from "./decision-rules.js";
 let fieldCache = null;
 let fieldCacheWidth = 0;
 let fieldCacheHeight = 0;
@@ -204,19 +205,18 @@ export function drawOverlay(ctx, text, width) {
     ctx.fillText(text, 20, 28);
 }
 
-export function drawZones(ctx, players, offsets = { home: {x:0,y:0}, away: {x:0,y:0} }) {
+export function drawZones(ctx, players, world, offsets = { home: {x:0,y:0}, away: {x:0,y:0} }) {
   ctx.save();
   players.forEach(p => {
-    // Use the same getAllowedZone logic as in player.js/decision-rules.js!
-    const zone = p.constructor.getAllowedZone ? p.constructor.getAllowedZone(p) : getAllowedZone(p);
+    const zone = getDynamicZone(p, world);
     const off = (p.color === '#0000ff') ? offsets.home : offsets.away;
-    zone.minX += off.x; zone.maxX += off.x; zone.minY += off.y; zone.maxY += off.y;
+    zone.x += off.x; zone.y += off.y;
     ctx.globalAlpha = 0.15 * (window.renderOptions?.lineAlpha ?? 1);
     ctx.strokeStyle = p.color;
     ctx.fillStyle = p.color;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.rect(zone.minX, zone.minY, zone.maxX - zone.minX, zone.maxY - zone.minY);
+    ctx.rect(zone.x, zone.y, zone.width, zone.height);
     ctx.stroke();
     ctx.globalAlpha = 0.08 * (window.renderOptions?.lineAlpha ?? 1);
     ctx.fill();
