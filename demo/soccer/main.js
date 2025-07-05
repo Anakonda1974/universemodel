@@ -3,7 +3,7 @@
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
 import { Ball, FIELD_BOUNDS } from "./ball.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawZones, drawBallDebug } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawZones, drawBallDebug, drawFormationDebug } from "./render.js";
 import { logComment } from "./commentary.js";
 import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
@@ -31,7 +31,7 @@ window.keyBindings = {
   reset: "KeyR"
 };
 const inputHandler = new InputHandler();
-window.debugOptions = { showZones: true, showFOV: true, showBall: true };
+window.debugOptions = { showZones: true, showFOV: true, showBall: true, showFormation: false };
 
 window.colorProfiles = {
   default: { field: '#065', home: '#0000ff', away: '#ff0000', background: '#222' },
@@ -930,6 +930,9 @@ function gameLoop(timestamp) {
       drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? 'pressing' : null });
     }
     drawPlayers(ctx, allPlayers);
+    if (window.debugOptions.showFormation) {
+      drawFormationDebug(ctx, allPlayers);
+    }
     drawBall(ctx, ball);
     if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
     drawOverlay(ctx, `${restartType}: ${restartTimer.toFixed(1)}s`, canvas.width);
@@ -950,6 +953,9 @@ function gameLoop(timestamp) {
       drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? 'pressing' : null });
     }
     drawPlayers(ctx, allPlayers);
+    if (window.debugOptions.showFormation) {
+      drawFormationDebug(ctx, allPlayers);
+    }
     drawBall(ctx, ball);
     if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
     drawOverlay(ctx, `Freistoß: ${freeKickTimer.toFixed(1)}s`, canvas.width);
@@ -1244,6 +1250,9 @@ function gameLoop(timestamp) {
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);
   drawPlayers(ctx, allPlayers, { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true });
+  if (window.debugOptions.showFormation) {
+    drawFormationDebug(ctx, allPlayers);
+  }
   if (selectedPlayer) {
     drawPlayers(ctx, [selectedPlayer], { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true });
   }
