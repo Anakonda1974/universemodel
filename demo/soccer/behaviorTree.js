@@ -1,7 +1,13 @@
 // behaviorTree.js
 
 export class BTNode {
-  tick(agent, world) { throw new Error("Not implemented."); }
+  tick(agent, world) {
+    // Base behavior tree nodes simply succeed by default. Concrete
+    // nodes like Selector or Sequence override this to provide their
+    // own behaviour. Returning `true` here prevents errors when a
+    // leaf node forgets to implement `tick`.
+    return true;
+  }
 }
 
 // Selector: Erster Kind-Knoten, der true zurückgibt, wird ausgeführt
