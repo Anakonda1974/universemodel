@@ -590,14 +590,23 @@ function handleCard(player, card) {
   playWhistle();
 }
 
-function handleFoul(fouler, victim) {
-  freeKickTimer = 2;
-  freeKickTaker = victim;
-  ball.owner = victim;
-  ball.isLoose = false;
+function handleFoul(fouler, victim, restart) {
+  if (restart && restart.type === "penalty") {
+    restartTimer = 2;
+    restartType = "Elfmeter";
+    ball.owner = victim;
+    ball.isLoose = false;
+    ball.x = victim.side === "home" ? 165 : 885;
+    ball.y = 340;
+  } else {
+    freeKickTimer = 2;
+    freeKickTaker = victim;
+    ball.owner = victim;
+    ball.isLoose = false;
+    ball.x = victim.x;
+    ball.y = victim.y;
+  }
   setLastTouch(victim);
-  ball.x = victim.x;
-  ball.y = victim.y;
   logComment(`Foul an ${victim.role}`);
   playWhistle();
 }

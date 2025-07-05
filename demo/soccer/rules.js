@@ -27,3 +27,21 @@ export function restartTypeForOut(ball, lastTouchTeam) {
   }
   return { type: 'goalKick', side };
 }
+
+export const PENALTY_BOX = {
+  home: { x1: 15, x2: 165, y1: 215, y2: 465 },
+  away: { x1: 885, x2: 1035, y1: 215, y2: 465 },
+};
+
+export function inPenaltyBox(x, y, defendingSide) {
+  const box = defendingSide === 'home' ? PENALTY_BOX.home : PENALTY_BOX.away;
+  return x >= box.x1 && x <= box.x2 && y >= box.y1 && y <= box.y2;
+}
+
+export function restartTypeForFoul(victim, fouler) {
+  const defendingSide = victim.side;
+  if (inPenaltyBox(victim.x, victim.y, defendingSide)) {
+    return { type: 'penalty', side: defendingSide };
+  }
+  return { type: 'freeKick', side: defendingSide };
+}

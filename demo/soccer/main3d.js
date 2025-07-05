@@ -1,6 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.156.1/build/three.module.js';
 import { Player3D } from './player3d.js';
 import { Ball3D } from './ball3d.js';
+import { initMultiplayer } from './multiplayer.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -46,6 +47,8 @@ players.forEach(p => { p.addTo(scene); });
 const ball = new Ball3D(0, 0, 0.11);
 ball.addTo(scene);
 
+const mp = initMultiplayer(players[0], players[1], ball) || { sendState: () => {}, sendKick: () => {} };
+
 function updateCamera(snap = false) {
   const target = ball.position.clone().add(cameraOffset);
   if (snap) {
@@ -80,8 +83,10 @@ function updatePlayerControls(dt) {
     const dir = ball.position.clone().sub(p.position);
     if (dir.length() < 1.5) {
       ball.kick(dir, 5);
+      mp.sendKick(dir.x, dir.y, 5);
     }
   }
+  mp.sendState();
 }
 
 

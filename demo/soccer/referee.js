@@ -1,5 +1,5 @@
 import { logComment } from './commentary.js';
-import { isOffside, restartTypeForOut } from './rules.js';
+import { isOffside, restartTypeForOut, restartTypeForFoul } from './rules.js';
 
 export class Referee {
   constructor(onCardCallback, onFoulCallback, onOffsideCallback) {
@@ -45,7 +45,8 @@ export class Referee {
     }
     victim.highlightTimer = 1;
     if (this.onFoul) {
-      this.onFoul(player, victim);
+      const restart = restartTypeForFoul(victim, player);
+      this.onFoul(player, victim, restart);
     }
   }
 }
