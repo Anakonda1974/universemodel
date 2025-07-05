@@ -32,4 +32,15 @@ const spawned = spawnPlayers(formations[0], 'home');
 assert.equal(spawned.length, 11);
 assert.equal(spawned[0].formationX, formations[0].players[0].x);
 
+const zoneHome = getDynamicZone({ formationX: 100, formationY: 200, role: 'ST', side: 'home' }, world);
+const zoneAway = getDynamicZone({ formationX: 100, formationY: 200, role: 'ST', side: 'away' }, world);
+assert(zoneHome.x > zoneAway.x, 'away zone should mirror x-offset');
+
+const zoneFallback = getDynamicZone(player, { ball: null });
+const expected = player.formationX + DEFAULT_ROLE_CONFIG.ST.offsetX - DEFAULT_ROLE_CONFIG.ST.width / 2;
+assert.equal(zoneFallback.x, expected);
+
+const spawnedAway = spawnPlayers(formations[0], 'away');
+assert.equal(spawnedAway[0].formationX, 1050 - formations[0].players[0].x);
+
 console.log('tests passed');
