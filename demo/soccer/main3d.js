@@ -39,6 +39,13 @@ players.forEach(p => { p.addTo(scene); });
 const ball = new Ball3D(0, 0, 0.11);
 ball.addTo(scene);
 
+// HUD elements
+const scoreEl = document.getElementById('score');
+const timerEl = document.getElementById('timer');
+let scoreHome = 0;
+let scoreAway = 0;
+let matchTime = 0;
+
 const keys = {};
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
@@ -76,6 +83,36 @@ function handleCollisions() {
   }
 }
 
+function toTimeString(sec) {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+
+function updateHUD() {
+  if (scoreEl) scoreEl.textContent = `${scoreHome} : ${scoreAway}`;
+  if (timerEl) timerEl.textContent = toTimeString(matchTime);
+}
+
+function resetKickoff() {
+  ball.position.set(0, 0, ball.radius);
+  ball.velocity.set(0, 0, 0);
+  players[0].position.set(-2, 0, 0);
+  players[1].position.set(2, 0, 0);
+  players.forEach(p => p.velocity.set(0, 0, 0));
+  updateHUD();
+}
+
+function checkGoals() {
+  if (ball.position.x < -9.5 && Math.abs(ball.position.y) < 1.5 && ball.position.z < ball.radius * 2) {
+    scoreAway++;
+    resetKickoff();
+  } else if (ball.position.x > 9.5 && Math.abs(ball.position.y) < 1.5 && ball.position.z < ball.radius * 2) {
+    scoreHome++;
+    resetKickoff();
+  }
+}
+
 let last = performance.now();
 function loop(now) {
   const dt = (now - last) / 1000;
@@ -85,6 +122,9 @@ function loop(now) {
   players.forEach(p => p.update(dt));
   ball.update(dt);
   handleCollisions();
+  checkGoals();
+  matchTime += dt;
+  updateHUD();
 
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
