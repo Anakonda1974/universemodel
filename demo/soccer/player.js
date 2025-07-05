@@ -1,6 +1,7 @@
 import { Capabilities } from './capabilities.js';
 import { createPlayerBT } from "./footBallBTs.js";
 import { computeEllipseRadii, getTargetZoneCenter } from "./TacticsHelper.js";
+import { allowedZone } from "./decision-rules.js";
 
 
 const TradeProfiles = {
@@ -175,55 +176,7 @@ export class Player {
     };
   }
 
-  static getDynamicZone(player, world) {
-    const { ball } = world;
-    const centerX = ball ? ball.x : player.formationX;
-    const centerY = ball ? ball.y : player.formationY;
 
-    let zoneWidth = 200;
-    let zoneHeight = 200;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    switch (player.role) {
-      case "TW":
-        zoneWidth = 100; zoneHeight = 150;
-        offsetX = player.color === "blue" ? -300 : 300;
-        break;
-      case "IV": case "LIV": case "RIV":
-        zoneWidth = 140; zoneHeight = 200;
-        offsetX = player.color === "blue" ? -150 : 150;
-        break;
-      case "DM":
-        zoneWidth = 180; zoneHeight = 240;
-        offsetX = player.color === "blue" ? -80 : 80;
-        break;
-      case "ZM": case "OM":
-        zoneWidth = 250; zoneHeight = 250;
-        offsetX = 0;
-        break;
-      case "LM": case "RM":
-        zoneWidth = 200; zoneHeight = 300;
-        offsetY = (player.role === "LM" ? -150 : 150);
-        break;
-      case "LF": case "RF":
-        zoneWidth = 200; zoneHeight = 180;
-        offsetX = player.color === "blue" ? 100 : -100;
-        offsetY = (player.role === "LF" ? -80 : 80);
-        break;
-      case "ST":
-        zoneWidth = 180; zoneHeight = 150;
-        offsetX = player.color === "blue" ? 160 : -160;
-        break;
-    }
-
-    return {
-      x: centerX + offsetX - zoneWidth / 2,
-      y: centerY + offsetY - zoneHeight / 2,
-      width: zoneWidth,
-      height: zoneHeight,
-    };
-  }
 
   static getDynamicTargetZone(player, ball, coach) {
     const pressing = coach ? coach.pressing : 1;
@@ -292,7 +245,9 @@ export class Player {
     if (this.sliding) {
       this.x += this.slideDirX * this.slideSpeed;
       this.y += this.slideDirY * this.slideSpeed;
-      const zone = world ? Player.getDynamicZone(this, world) : Player.getAllowedZone(this);
+
+      const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+
       const pos = world ? Player.clampToRect(this.x, this.y, zone) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
@@ -307,7 +262,9 @@ export class Player {
     }
 
     this.updateDirectionTowardsTarget();
-    const zoneMove = world ? Player.getDynamicZone(this, world) : Player.getAllowedZone(this);
+
+    const zoneMove = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+
     this.targetX = world ? Math.max(zoneMove.x, Math.min(zoneMove.x + zoneMove.width, this.targetX)) : this.targetX;
     this.targetY = world ? Math.max(zoneMove.y, Math.min(zoneMove.y + zoneMove.height, this.targetY)) : this.targetY;
     const dx = this.targetX - this.x;
@@ -323,7 +280,9 @@ export class Player {
       this.vy = this.vy + (desiredVy - this.vy) * smooth;
       this.x += this.vx;
       this.y += this.vy;
-      const zone = world ? Player.getDynamicZone(this, world) : Player.getAllowedZone(this);
+
+      const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+
       const pos = world ? Player.clampToRect(this.x, this.y, zone) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
