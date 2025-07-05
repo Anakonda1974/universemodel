@@ -350,8 +350,8 @@ function handleOffside(passer, receiver) {
 
 function calcPassSpeedForDistance(dist) {
   // Increase base speed range so long passes don't stall
-  const min = 8;
-  const max = 18;
+  const min = 10;
+  const max = 22;
   const speed = min + (dist / 250) * (max - min);
   return Math.max(min, Math.min(max, speed));
 }
@@ -383,7 +383,7 @@ function passBall(from, to, power = 1) {
   ball.owner = null;
   ball.isLoose = true;
   const baseSpeed = calcPassSpeedForDistance(dist);
-  const speed = baseSpeed * (0.5 + power * 0.5);
+  const speed = baseSpeed * (0.7 + power * 0.8);
   let vx = (dx / dist) * speed;
   let vy = (dy / dist) * speed;
   const targetAngle = Math.atan2(dy, dx) * 180 / Math.PI;
@@ -439,7 +439,7 @@ function tryTackle(player) {
   const dx = target.x - player.x;
   const dy = target.y - player.y;
   const dist = Math.hypot(dx, dy);
-  const tackleRadius = 18;
+  const tackleRadius = 25;
   const slideRadius = 40;
   if (dist < tackleRadius) {
     ball.owner = player;
