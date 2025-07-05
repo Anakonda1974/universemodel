@@ -114,6 +114,11 @@ let confettiParticles = [];
 let freeKickTimer = 0;
 let freeKickTaker = null;
 
+let lastTouchTeam = null; // 0 = home, 1 = away
+let restartTimer = 0;
+let restartTaker = null;
+let restartType = '';
+
 let lastBallOwnerTeam = null;
 let lastBallOwnerTeam2 = null;
 
@@ -135,6 +140,10 @@ window.weather = { type: "clear", windX: 0, windY: 0, friction: 0.998 };
 const weather = window.weather;
 
 let lastAnalysis = 0;
+
+function setLastTouch(player) {
+  lastTouchTeam = teamHeim.includes(player) ? 0 : 1;
+}
 
 function applyWeather() {
   switch (weather.type) {
@@ -333,6 +342,7 @@ function handleOffside(passer, receiver) {
   ball.vy = 0;
   ball.owner = kicker;
   ball.isLoose = false;
+  setLastTouch(kicker);
   kicker.x = receiver.x;
   kicker.y = receiver.y;
   kicker.currentAction = 'freekick';
@@ -365,6 +375,7 @@ function passBall(from, to, power = 1) {
     handleOffside(from, to);
     return;
   }
+  setLastTouch(from);
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dist = Math.hypot(dx, dy);
@@ -383,7 +394,7 @@ function passBall(from, to, power = 1) {
   const offset = from.radius + ball.radius + 2;
   const startX = from.x + (dx / dist) * offset;
   const startY = from.y + (dy / dist) * offset;
-  ball.kick(startX, startY, vx, vy, spd);
+  ball.kick(startX, startY, vx, vy, spd, from);
   ball.angularVelocity = (Math.random() - 0.5) * 0.02;
   from.currentAction = "pass";
   passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
@@ -402,6 +413,7 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   }
   const dist = Math.hypot(dx, dy);
   if (dist === 0) return;
+  setLastTouch(player);
   ball.owner = null;
   ball.isLoose = true;
   const speed = 8 + power * 12;
@@ -415,7 +427,7 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   const offset = player.radius + ball.radius + 2;
   const startX = player.x + (dx / dist) * offset;
   const startY = player.y + (dy / dist) * offset;
-  ball.kick(startX, startY, vx, vy, speedFinal);
+  ball.kick(startX, startY, vx, vy, speedFinal, player);
   ball.angularVelocity = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
 }
@@ -432,6 +444,7 @@ function tryTackle(player) {
   if (dist < tackleRadius) {
     ball.owner = player;
     ball.isLoose = false;
+    setLastTouch(player);
     ball.vx = 0;
     ball.vy = 0;
     ball.x = player.x;
@@ -558,10 +571,67 @@ function handleFoul(fouler, victim) {
   freeKickTaker = victim;
   ball.owner = victim;
   ball.isLoose = false;
+  setLastTouch(victim);
   ball.x = victim.x;
   ball.y = victim.y;
   logComment(`Foul an ${victim.role}`);
   playWhistle();
+}
+
+function startThrowIn(side) {
+  restartTimer = 2;
+  restartType = 'Einwurf';
+  const team = lastTouchTeam === 0 ? teamGast : teamHeim;
+  const taker = team.reduce((b, p) => {
+    const d = Math.hypot(p.x - ball.x, p.y - ball.y);
+    return d < b.d ? { p, d } : b;
+  }, { p: team[0], d: Infinity }).p;
+  restartTaker = taker;
+  ball.owner = taker;
+  ball.isLoose = false;
+  ball.x = Math.min(FIELD_BOUNDS.maxX - 5, Math.max(FIELD_BOUNDS.minX + 5, ball.x));
+  ball.y = side === 'top' ? FIELD_BOUNDS.minY : FIELD_BOUNDS.maxY;
+  taker.x = ball.x;
+  taker.y = side === 'top' ? ball.y + 5 : ball.y - 5;
+  playWhistle();
+  logComment('Einwurf');
+}
+
+function startGoalRestart(side) {
+  const defending = side === 'left' ? teamHeim : teamGast;
+  const attacking = side === 'left' ? teamGast : teamHeim;
+  if (lastTouchTeam === (side === 'left' ? 0 : 1)) {
+    restartType = 'Ecke';
+    const cornerX = side === 'left' ? FIELD_BOUNDS.minX : FIELD_BOUNDS.maxX;
+    const cornerY = ball.y < 340 ? FIELD_BOUNDS.minY : FIELD_BOUNDS.maxY;
+    const taker = attacking.reduce((b, p) => {
+      const d = Math.hypot(p.x - cornerX, p.y - cornerY);
+      return d < b.d ? { p, d } : b;
+    }, { p: attacking[0], d: Infinity }).p;
+    restartTaker = taker;
+    restartTimer = 2;
+    ball.owner = taker;
+    ball.isLoose = false;
+    ball.x = cornerX;
+    ball.y = cornerY;
+    taker.x = cornerX;
+    taker.y = cornerY;
+    playWhistle();
+    logComment('Ecke');
+  } else {
+    restartType = 'Abstoß';
+    const keeper = defending.find(p => p.role === 'TW') || defending[0];
+    restartTaker = keeper;
+    restartTimer = 2;
+    ball.owner = keeper;
+    ball.isLoose = false;
+    ball.x = side === 'left' ? FIELD_BOUNDS.minX + 5 : FIELD_BOUNDS.maxX - 5;
+    ball.y = 340;
+    keeper.x = ball.x;
+    keeper.y = 340;
+    playWhistle();
+    logComment('Abstoß');
+  }
 }
 referee = new Referee(handleCard, handleFoul);
 
@@ -703,6 +773,7 @@ function resetKickoff() {
   setFormation(selectedFormationIndex);
   ball.owner = teamHeim[4]; // oder nach Zufall/Regel
   ball.isLoose = false;
+  setLastTouch(teamHeim[4]);
   playWhistle();
   logComment('Anstoß');
 }
@@ -845,6 +916,26 @@ function gameLoop(timestamp) {
   if (timestamp - lastAnalysis > 5000) {
     coach.analyzeOpponents(ball, teamHeim, teamGast);
     lastAnalysis = timestamp;
+  }
+  if (restartTimer > 0) {
+    restartTimer -= delta;
+    ball.x = restartTaker.x;
+    ball.y = restartTaker.y;
+    ball.vx = 0;
+    ball.vy = 0;
+    ball.owner = restartTaker;
+    const allPlayers = [...teamHeim, ...teamGast];
+    drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
+    if (window.debugOptions.showZones) {
+      drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
+    }
+    drawPlayers(ctx, allPlayers);
+    drawBall(ctx, ball);
+    if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
+    drawOverlay(ctx, `${restartType}: ${restartTimer.toFixed(1)}s`, canvas.width);
+    updateScoreboard();
+    requestAnimationFrame(gameLoop);
+    return;
   }
   if (freeKickTimer > 0) {
     freeKickTimer -= delta;
@@ -1104,6 +1195,15 @@ function gameLoop(timestamp) {
 
   // 5. Ballphysik & Ballbesitz
   ball.update(delta, allPlayers, FIELD_BOUNDS, weather);
+  if (ball.lastTouch) setLastTouch(ball.lastTouch);
+  if (ball.outOfBounds && restartTimer <= 0 && freeKickTimer <= 0) {
+    if (ball.outOfBounds === 'top' || ball.outOfBounds === 'bottom') {
+      startThrowIn(ball.outOfBounds);
+    } else {
+      startGoalRestart(ball.outOfBounds);
+    }
+    ball.outOfBounds = null;
+  }
 
   const currentTeam = teamId(ball.owner);
   const myTeamId = userTeam === teamHeim ? 0 : 1;

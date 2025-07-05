@@ -15,12 +15,15 @@ export class Ball {
     this.restitution = 0.7;
     this.owner = null;
     this.isLoose = true;
+    this.lastTouch = null;
+    this.outOfBounds = null;
   }
 
-  kick(startX, startY, dirX, dirY, speed, spin = 0) {
+  kick(startX, startY, dirX, dirY, speed, spin = 0, kicker = null) {
     const dist = Math.hypot(dirX, dirY) || 1;
     this.owner = null;
     this.isLoose = true;
+    this.lastTouch = kicker;
     this.vx = (dirX / dist) * speed;
     this.vy = (dirY / dist) * speed;
     this.angularVelocity = spin;
@@ -29,13 +32,20 @@ export class Ball {
   }
 
   clampToField(bounds = FIELD_BOUNDS) {
-    if (this.x < bounds.minX) { this.x = bounds.minX; this.vx *= -this.restitution; }
-    if (this.x > bounds.maxX) { this.x = bounds.maxX; this.vx *= -this.restitution; }
-    if (this.y < bounds.minY) { this.y = bounds.minY; this.vy *= -this.restitution; }
-    if (this.y > bounds.maxY) { this.y = bounds.maxY; this.vy *= -this.restitution; }
+    this.outOfBounds = null;
+    if (this.x < bounds.minX) { this.x = bounds.minX; this.outOfBounds = 'left'; }
+    if (this.x > bounds.maxX) { this.x = bounds.maxX; this.outOfBounds = 'right'; }
+    if (this.y < bounds.minY) { this.y = bounds.minY; this.outOfBounds = 'top'; }
+    if (this.y > bounds.maxY) { this.y = bounds.maxY; this.outOfBounds = 'bottom'; }
+    if (this.outOfBounds) {
+      this.vx = 0;
+      this.vy = 0;
+      this.angularVelocity = 0;
+    }
   }
 
   update(delta, players = [], bounds = FIELD_BOUNDS, weather = {windX:0, windY:0, friction:this.friction}) {
+    this.outOfBounds = null;
     if (this.owner) {
       // Ball follows owner (dribbling)
       const ang = this.owner.bodyDirection * Math.PI / 180;
@@ -97,6 +107,7 @@ export class Ball {
         if (Math.hypot(this.vx, this.vy) < 0.6) {
           this.owner = p;
           this.isLoose = false;
+          this.lastTouch = p;
           this.vx = 0;
           this.vy = 0;
           this.angularVelocity = 0;

@@ -12,7 +12,7 @@ export const Capabilities = {
     const offset = player.radius + ball.radius + 2;
     const startX = player.x + (dx / dist) * offset;
     const startY = player.y + (dy / dist) * offset;
-    ball.kick(startX, startY, dx, dy, 20, spin);
+    ball.kick(startX, startY, dx, dy, 20, spin, player);
     player.currentAction = 'shoot';
   },
 
@@ -29,7 +29,7 @@ export const Capabilities = {
     const offset = player.radius + ball.radius + 2;
     const startX = player.x + (dx / dist) * offset;
     const startY = player.y + (dy / dist) * offset;
-    ball.kick(startX, startY, dx, dy, 12, spin);
+    ball.kick(startX, startY, dx, dy, 12, spin, player);
     player.currentAction = 'pass';
   },
 
@@ -45,7 +45,7 @@ export const Capabilities = {
     const offset = player.radius + ball.radius + 2;
     const startX = player.x + (dx / dist) * offset;
     const startY = player.y + (dy / dist) * offset;
-    ball.kick(startX, startY, dx, dy, 10, spin);
+    ball.kick(startX, startY, dx, dy, 10, spin, player);
     ball.vy -= 2; // simple lift
     player.currentAction = 'lobPass';
   },
