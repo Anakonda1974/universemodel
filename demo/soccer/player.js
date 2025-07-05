@@ -1,6 +1,6 @@
 import { Capabilities } from "./capabilities.js";
 import { createPlayerBT } from "./footBallBTs.js";
-import { computeEllipseRadii, getTargetZoneCenter } from "./TacticsHelper.js";
+import { computeEllipseRadii, getTargetZoneCenter, interpolate } from "./TacticsHelper.js";
 import { getDynamicZone } from "./decision-rules.js";
 import { FIELD_BOUNDS } from "./ball.js";
 
@@ -81,6 +81,7 @@ export class Player {
     this.stamina = this.base.stamina ?? 1;
     // Taktische Intensität (z.B. Pressing-Level)
     this.pressing = 1;
+    this.phase = 'neutral';
 
     // --- KI / Perception / Memory ---
     this.perceived = {};
@@ -234,8 +235,13 @@ export class Player {
   static getDynamicTargetZone(player, ball, coach) {
     const pressing = coach ? coach.pressing : 1;
     const zoneParams = coach ? coach.getZoneParameters(player.role) : null;
-    const center = getTargetZoneCenter(player, ball, pressing);
+    const awareness = player.derived?.awareness ?? 0.5;
+    const base = { x: player.formationX, y: player.formationY };
+    const center = ball
+      ? interpolate(base, { x: ball.x, y: ball.y }, 0.1 + 0.1 * awareness)
+      : base;
     const radii = computeEllipseRadii(player.role, pressing, zoneParams);
+    if ((player.derived?.dribblingSkill ?? 0) > 0.7) radii.rx *= 1.2;
     return { x: center.x, y: center.y, rx: radii.rx, ry: radii.ry };
   }
 
@@ -424,6 +430,10 @@ export class Player {
     this.mailbox = this.mailbox.filter((msg) => {
       if (msg.type === "pressing") {
         this.pressing = msg.level;
+        return false;
+      }
+      if (msg.type === "phase") {
+        this.phase = msg.phase;
         return false;
       }
       return true;

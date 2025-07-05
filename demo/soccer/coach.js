@@ -2,6 +2,7 @@ export class Coach {
   constructor(players) {
     this.players = players;
     this.pressing = 1;
+    this.phase = 'neutral';
     this.attackSide = null; // 'left' or 'right'
     this.zoneSettings = {
       ST: { rx: 160, ry: 120 },
@@ -25,6 +26,13 @@ export class Coach {
     this.pressing = level;
     this.players.forEach(p => {
       p.mailbox.push({ from: 'coach', type: 'pressing', level });
+    });
+  }
+
+  setPhase(phase) {
+    this.phase = phase;
+    this.players.forEach(p => {
+      p.mailbox.push({ from: 'coach', type: 'phase', phase });
     });
   }
 
