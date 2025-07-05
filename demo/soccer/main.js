@@ -74,7 +74,10 @@ const userInput = {
   shootUp: false,
   tacklePressed: false,
   tackleDown: false,
-  tackleUp: false
+  tackleUp: false,
+  resetPressed: false,
+  resetDown: false,
+  resetUp: false
 };
 let selectedPlayer2 = null;
 let userTeam2 = teamGast;
@@ -788,6 +791,7 @@ function resetGame() {
   resetKickoff();
   updateScoreboard();
   logComment('Spiel zurückgesetzt');
+  matchPaused = false;
 }
 
 
@@ -862,6 +866,9 @@ function updateUserInput(delta) {
   userInput.tacklePressed = state.slide;
   userInput.tackleDown = state.slideDown;
   userInput.tackleUp = state.slideUp;
+  userInput.resetPressed = state.reset;
+  userInput.resetDown = state.resetDown;
+  userInput.resetUp = state.resetUp;
 
   if (state.switch) {
     switchToNearestPlayer(userTeam);
@@ -965,6 +972,10 @@ function gameLoop(timestamp) {
   }
   updateUserInput(delta);
   updateUserInput2();
+  if (userInput.resetDown) {
+    resetGame();
+    matchPaused = false;
+  }
   updateFormationOffsets();
   if (selectedPlayer) {
     const active = Math.abs(userInput.dx) > 0.01 || Math.abs(userInput.dy) > 0.01;
@@ -1270,6 +1281,9 @@ function gameLoop(timestamp) {
   drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"} | Wetter: ${weather.type}`, canvas.width);
   drawGoalHighlight(ctx, goalOverlayText, goalOverlayTimer, canvas.width, canvas.height);
   drawRadar(radarCtx, allPlayers, ball, radarCanvas.width, radarCanvas.height);
+  if (matchPaused) {
+    drawOverlay(ctx, 'Spiel beendet', canvas.width);
+  }
 
   // 8. Score/Goal Check/Timer
   checkGoal(ball);
