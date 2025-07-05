@@ -275,6 +275,12 @@ export const Capabilities = {
     player.stamina = Math.min(1, (player.stamina ?? 1) + 0.005);
   },
 
+  rest(player) {
+    player.targetX = player.formationX;
+    player.targetY = player.formationY;
+    player.currentAction = 'rest';
+  },
+
   simulateInjury(player) {
     player.injured = true;
     player.injuryRecovery = 60;

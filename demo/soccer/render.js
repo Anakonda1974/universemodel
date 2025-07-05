@@ -44,7 +44,7 @@ export function drawField(ctx, width, height, flashTimer = 0, flashSide = null) 
     ctx.restore();
   }
 }
-export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false, showHeadDir = false } = {}) {
+export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false, showHeadDir = false, showTargets = false } = {}) {
   players.forEach(p => {
     // Draw body (circle)
     ctx.save();
@@ -99,6 +99,19 @@ export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false,
       ctx.strokeStyle = "green";
       ctx.lineWidth = 2;
       ctx.stroke();
+    }
+
+    // Draw target indicator
+    if (showTargets) {
+      ctx.save();
+      ctx.strokeStyle = 'red';
+      ctx.beginPath();
+      ctx.moveTo(p.targetX - 4, p.targetY);
+      ctx.lineTo(p.targetX + 4, p.targetY);
+      ctx.moveTo(p.targetX, p.targetY - 4);
+      ctx.lineTo(p.targetX, p.targetY + 4);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // Draw stamina bar
