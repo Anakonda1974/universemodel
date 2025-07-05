@@ -1073,7 +1073,12 @@ function gameLoop(timestamp) {
   }
 
   // 4. Spieler bewegen
-  allPlayers.forEach(p => p.moveToTarget());
+  allPlayers.forEach(p => {
+    const myTeam = teamHeim.includes(p) ? teamHeim : teamGast;
+    const otherTeam = teamHeim.includes(p) ? teamGast : teamHeim;
+    const world = { ball, teammates: myTeam, opponents: otherTeam };
+    p.moveToTarget(world);
+  });
   allPlayers.forEach(p => p.updateHead(ball, delta, {
     teammates: teamHeim.includes(p) ? teamHeim : teamGast,
     opponents: teamHeim.includes(p) ? teamGast : teamHeim
