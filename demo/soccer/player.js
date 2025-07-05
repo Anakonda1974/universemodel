@@ -1,7 +1,7 @@
 import { Capabilities } from './capabilities.js';
 import { createPlayerBT } from "./footBallBTs.js";
 import { computeEllipseRadii, getTargetZoneCenter } from "./TacticsHelper.js";
-import { allowedZone } from "./decision-rules.js";
+import { getDynamicZone } from "./decision-rules.js";
 
 
 const TradeProfiles = {
@@ -246,7 +246,7 @@ export class Player {
       this.x += this.slideDirX * this.slideSpeed;
       this.y += this.slideDirY * this.slideSpeed;
 
-      const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+      const zone = world ? getDynamicZone(this, world) : Player.getAllowedZone(this);
 
       const pos = world ? Player.clampToRect(this.x, this.y, zone, 20) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
@@ -263,7 +263,7 @@ export class Player {
 
     this.updateDirectionTowardsTarget();
 
-    const zoneMove = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+    const zoneMove = world ? getDynamicZone(this, world) : Player.getAllowedZone(this);
 
     this.targetX = world ? Math.max(zoneMove.x, Math.min(zoneMove.x + zoneMove.width, this.targetX)) : this.targetX;
     this.targetY = world ? Math.max(zoneMove.y, Math.min(zoneMove.y + zoneMove.height, this.targetY)) : this.targetY;
@@ -281,7 +281,7 @@ export class Player {
       this.x += this.vx;
       this.y += this.vy;
 
-      const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+      const zone = world ? getDynamicZone(this, world) : Player.getAllowedZone(this);
 
       const pos = world ? Player.clampToRect(this.x, this.y, zone, 20) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;

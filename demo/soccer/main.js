@@ -3,7 +3,7 @@
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
 import { Ball, FIELD_BOUNDS } from "./ball.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawSoftZones, drawBallDebug } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawZones, drawBallDebug } from "./render.js";
 import { logComment } from "./commentary.js";
 import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
@@ -927,7 +927,7 @@ function gameLoop(timestamp) {
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
     if (window.debugOptions.showZones) {
-      drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
+      drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? 'pressing' : null });
     }
     drawPlayers(ctx, allPlayers);
     drawBall(ctx, ball);
@@ -947,7 +947,7 @@ function gameLoop(timestamp) {
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
     if (window.debugOptions.showZones) {
-      drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
+      drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? 'pressing' : null });
     }
     drawPlayers(ctx, allPlayers);
     drawBall(ctx, ball);
@@ -1238,7 +1238,7 @@ function gameLoop(timestamp) {
   // 7. RENDER
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
   if (window.debugOptions.showZones) {
-    drawSoftZones(ctx, allPlayers, ball, coach, { heatmap: true });
+    drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? 'pressing' : null });
   }
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);

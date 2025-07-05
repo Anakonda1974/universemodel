@@ -92,10 +92,10 @@ function clampToZone(x, y, zone) {
 }
 
 // --- New dynamic allowed zone relative to the ball ---
-export function allowedZone(player, world) {
-  const { ball } = world;
-  const centerX = ball ? ball.x * 0.6 + player.formationX * 0.4 : player.formationX;
-  const centerY = ball ? ball.y * 0.6 + player.formationY * 0.4 : player.formationY;
+export function getDynamicZone(player, world) {
+  const { ball, tactic } = world;
+  const centerX = ball ? ball.x : player.formationX;
+  const centerY = ball ? ball.y : player.formationY;
 
   let zoneWidth = 200;
   let zoneHeight = 200;
@@ -132,6 +132,20 @@ export function allowedZone(player, world) {
       zoneWidth = 180; zoneHeight = 150;
       offsetX = player.color === "blue" ? 160 : -160;
       break;
+  }
+
+  // adjust width/height and offsets by tactical state / pressing
+  const pressing = player.pressing ?? 1;
+  if (tactic === 'pressing') {
+    zoneWidth *= 1 / pressing;
+    zoneHeight *= 1 / pressing;
+    offsetX *= pressing;
+    offsetY *= pressing;
+  } else if (tactic === 'zurückgezogen') {
+    zoneWidth *= 1.2;
+    zoneHeight *= 1.2;
+    offsetX *= 0.6;
+    offsetY *= 0.6;
   }
 
   return {
