@@ -1,6 +1,7 @@
 import { Capabilities } from './capabilities.js';
 import { createPlayerBT } from "./footBallBTs.js";
 import { computeEllipseRadii, getTargetZoneCenter } from "./TacticsHelper.js";
+import { allowedZone } from "./decision-rules.js";
 
 
 const TradeProfiles = {
@@ -168,6 +169,14 @@ export class Player {
     };
   }
 
+  static clampToRect(x, y, zone) {
+    return {
+      x: Math.max(zone.x, Math.min(zone.x + zone.width, x)),
+      y: Math.max(zone.y, Math.min(zone.y + zone.height, y)),
+    };
+  }
+
+
   static getDynamicTargetZone(player, ball, coach) {
     const pressing = coach ? coach.pressing : 1;
     const zoneParams = coach ? coach.getZoneParameters(player.role) : null;
@@ -231,12 +240,12 @@ export class Player {
     }
   }
 
-  moveToTarget() {
+  moveToTarget(world = null) {
     if (this.sliding) {
       this.x += this.slideDirX * this.slideSpeed;
       this.y += this.slideDirY * this.slideSpeed;
-      const zone = Player.getAllowedZone(this);
-      const pos = Player.clampToZone(this.x, this.y, zone);
+      const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+      const pos = world ? Player.clampToRect(this.x, this.y, zone) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
       this.slideTimer--;
@@ -250,6 +259,9 @@ export class Player {
     }
 
     this.updateDirectionTowardsTarget();
+    const zoneMove = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+    this.targetX = world ? Math.max(zoneMove.x, Math.min(zoneMove.x + zoneMove.width, this.targetX)) : this.targetX;
+    this.targetY = world ? Math.max(zoneMove.y, Math.min(zoneMove.y + zoneMove.height, this.targetY)) : this.targetY;
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
     const dist = Math.hypot(dx, dy);
@@ -263,8 +275,8 @@ export class Player {
       this.vy = this.vy + (desiredVy - this.vy) * smooth;
       this.x += this.vx;
       this.y += this.vy;
-      const zone = Player.getAllowedZone(this);
-      const pos = Player.clampToZone(this.x, this.y, zone);
+      const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+      const pos = world ? Player.clampToRect(this.x, this.y, zone) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
       const movement = Math.hypot(this.vx, this.vy);

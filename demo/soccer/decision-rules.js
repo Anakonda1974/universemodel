@@ -91,6 +91,57 @@ function clampToZone(x, y, zone) {
   };
 }
 
+// --- New dynamic allowed zone relative to the ball ---
+export function allowedZone(player, world) {
+  const { ball } = world;
+  const centerX = ball ? ball.x : player.formationX;
+  const centerY = ball ? ball.y : player.formationY;
+
+  let zoneWidth = 200;
+  let zoneHeight = 200;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  switch (player.role) {
+    case "TW":
+      zoneWidth = 100; zoneHeight = 150;
+      offsetX = player.color === "blue" ? -300 : 300;
+      break;
+    case "IV": case "LIV": case "RIV":
+      zoneWidth = 140; zoneHeight = 200;
+      offsetX = player.color === "blue" ? -150 : 150;
+      break;
+    case "DM":
+      zoneWidth = 180; zoneHeight = 240;
+      offsetX = player.color === "blue" ? -80 : 80;
+      break;
+    case "ZM": case "OM":
+      zoneWidth = 250; zoneHeight = 250;
+      offsetX = 0;
+      break;
+    case "LM": case "RM":
+      zoneWidth = 200; zoneHeight = 300;
+      offsetY = (player.role === "LM" ? -150 : 150);
+      break;
+    case "LF": case "RF":
+      zoneWidth = 200; zoneHeight = 180;
+      offsetX = player.color === "blue" ? 100 : -100;
+      offsetY = (player.role === "LF" ? -80 : 80);
+      break;
+    case "ST":
+      zoneWidth = 180; zoneHeight = 150;
+      offsetX = player.color === "blue" ? 160 : -160;
+      break;
+  }
+
+  return {
+    x: centerX + offsetX - zoneWidth / 2,
+    y: centerY + offsetY - zoneHeight / 2,
+    width: zoneWidth,
+    height: zoneHeight
+  };
+}
+
 
 
 export function decidePlayerAction(player, world, gameState) {
