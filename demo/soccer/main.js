@@ -348,48 +348,29 @@ function findTeammateInDirection(player, dx, dy, maxAngle = 60) {
   return best;
 }
 
-function getOffsideLine(attackingTeam) {
-  const defenders = attackingTeam === teamHeim ? teamGast : teamHeim;
-  const xs = defenders.map((p) => p.x).sort((a, b) => a - b);
-  if (attackingTeam === teamHeim) {
-    return xs[1] ?? xs[0];
-  } else {
-    return xs[xs.length - 2] ?? xs[xs.length - 1];
-  }
-}
-
-function isOffside(passer, receiver) {
-  const team = teamHeim.includes(passer) ? teamHeim : teamGast;
-  const line = getOffsideLine(team);
-  if (team === teamHeim) {
-    return receiver.x > line && receiver.x > passer.x && receiver.x > 525;
-  } else {
-    return receiver.x < line && receiver.x < passer.x && receiver.x < 525;
-  }
-}
-
-function handleOffside(passer, receiver) {
+function handleOffside(player) {
   playWhistle();
   logComment("Abseits!");
-  const oppTeam = teamHeim.includes(passer) ? teamGast : teamHeim;
+  const oppTeam = teamHeim.includes(player) ? teamGast : teamHeim;
   const kicker = oppTeam.reduce(
     (best, p) => {
-      const d = Math.hypot(p.x - receiver.x, p.y - receiver.y);
+      const d = Math.hypot(p.x - player.x, p.y - player.y);
       return d < best.dist ? { p, dist: d } : best;
     },
     { p: oppTeam[0], dist: Infinity }
   ).p;
-  ball.x = receiver.x;
-  ball.y = receiver.y;
+  ball.x = player.x;
+  ball.y = player.y;
   ball.vx = 0;
   ball.vy = 0;
   ball.owner = kicker;
   ball.isLoose = false;
   setLastTouch(kicker);
-  kicker.x = receiver.x;
-  kicker.y = receiver.y;
+  kicker.x = player.x;
+  kicker.y = player.y;
   kicker.currentAction = "freekick";
 }
+
 
 function calcPassSpeedForDistance(dist) {
   // Increase base speed range so long passes don't stall
@@ -414,10 +395,7 @@ function applyKickError(vx, vy, angleErrorDeg) {
 
 function passBall(from, to, power = 1) {
   if (!from || !to) return;
-  if (isOffside(from, to)) {
-    handleOffside(from, to);
-    return;
-  }
+  if (referee) referee.handlePass(from, to, [...teamHeim, ...teamGast]);
   setLastTouch(from);
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -685,7 +663,7 @@ function startGoalRestart(side) {
     logComment("Abstoß");
   }
 }
-referee = new Referee(handleCard, handleFoul);
+referee = new Referee(handleCard, handleFoul, handleOffside);
 
 loadFormations();
 setupMatchControls();
@@ -1182,6 +1160,7 @@ function gameLoop(timestamp) {
       teammates: myTeam,
       opponents: otherTeam,
       ball,
+      referee,
       opponentGoal: teamHeim.includes(p) ? { x: 1040, y: 340 } : { x: 10, y: 340 },
       farLeft: { x: 60, y: 340 },
     };
@@ -1224,7 +1203,7 @@ function gameLoop(timestamp) {
   allPlayers.forEach((p) => {
     const myTeam = teamHeim.includes(p) ? teamHeim : teamGast;
     const otherTeam = teamHeim.includes(p) ? teamGast : teamHeim;
-    const world = { ball, teammates: myTeam, opponents: otherTeam };
+    const world = { ball, teammates: myTeam, opponents: otherTeam, referee };
     p.moveToTarget(world);
   });
   allPlayers.forEach((p) =>
@@ -1256,10 +1235,12 @@ function gameLoop(timestamp) {
   ball.update(delta, allPlayers, FIELD_BOUNDS, weather);
   if (ball.lastTouch) setLastTouch(ball.lastTouch);
   if (ball.outOfBounds && restartTimer <= 0 && freeKickTimer <= 0) {
-    if (ball.outOfBounds === "top" || ball.outOfBounds === "bottom") {
-      startThrowIn(ball.outOfBounds);
-    } else {
-      startGoalRestart(ball.outOfBounds);
+    const info = referee.checkRestart(ball, lastTouchTeam);
+    if (info) {
+      if (info.type === "throwIn") startThrowIn(info.side);
+      else if (info.type === "corner" || info.type === "goalKick") {
+        startGoalRestart(info.side);
+      }
     }
     ball.outOfBounds = null;
   }
