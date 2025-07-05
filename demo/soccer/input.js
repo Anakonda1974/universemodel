@@ -11,6 +11,7 @@ export const defaultBindings = {
   cancel: ["KeyC"],
   switchPlayer: ["Tab"],
   slide: ["KeyX"],
+  reset: ["KeyR"],
 };
 
 function arr(val) {
@@ -36,8 +37,11 @@ export class InputHandler {
       slideUp: false,
       cancel: false,
       switch: false,
+      reset: false,
+      resetDown: false,
+      resetUp: false,
     };
-    this.prevButtons = { pass: false, shoot: false, slide: false };
+    this.prevButtons = { pass: false, shoot: false, slide: false, reset: false };
     this.cooldowns = { pass: 0, shoot: 0, slide: 0 };
 
     window.addEventListener("keydown", e => this.onKeyDown(e));
@@ -79,6 +83,7 @@ export class InputHandler {
       cancel: arr(kb.cancel || this.bindings.cancel),
       switchPlayer: arr(kb.switch || this.bindings.switchPlayer),
       slide: arr(kb.tackle || this.bindings.slide),
+      reset: arr(kb.reset || this.bindings.reset),
     };
 
     // Direction from keyboard
@@ -95,6 +100,7 @@ export class InputHandler {
     let sprint = this._isPressed(b.sprint);
     let cancel = this._isPressed(b.cancel);
     let sw = this._isPressed(b.switchPlayer);
+    let rst = this._isPressed(b.reset);
 
     // Gamepad overrides
     if (this.gamepadIndex !== null) {
@@ -119,6 +125,10 @@ export class InputHandler {
     s.sprint = sprint;
     s.cancel = cancel;
     s.switch = sw;
+    s.resetDown = !this.prevButtons.reset && rst;
+    s.resetUp = this.prevButtons.reset && !rst;
+    s.reset = rst;
+    this.prevButtons.reset = rst;
 
     s.passDown = !this.prevButtons.pass && pass;
     s.passUp = this.prevButtons.pass && !pass;
