@@ -169,10 +169,10 @@ export class Player {
     };
   }
 
-  static clampToRect(x, y, zone) {
+  static clampToRect(x, y, zone, margin = 0) {
     return {
-      x: Math.max(zone.x, Math.min(zone.x + zone.width, x)),
-      y: Math.max(zone.y, Math.min(zone.y + zone.height, y)),
+      x: Math.max(zone.x - margin, Math.min(zone.x + zone.width + margin, x)),
+      y: Math.max(zone.y - margin, Math.min(zone.y + zone.height + margin, y)),
     };
   }
 
@@ -248,7 +248,7 @@ export class Player {
 
       const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
 
-      const pos = world ? Player.clampToRect(this.x, this.y, zone) : Player.clampToZone(this.x, this.y, zone);
+      const pos = world ? Player.clampToRect(this.x, this.y, zone, 20) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
       this.slideTimer--;
@@ -283,7 +283,7 @@ export class Player {
 
       const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
 
-      const pos = world ? Player.clampToRect(this.x, this.y, zone) : Player.clampToZone(this.x, this.y, zone);
+      const pos = world ? Player.clampToRect(this.x, this.y, zone, 20) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
       const movement = Math.hypot(this.vx, this.vy);

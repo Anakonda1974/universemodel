@@ -94,8 +94,8 @@ function clampToZone(x, y, zone) {
 // --- New dynamic allowed zone relative to the ball ---
 export function allowedZone(player, world) {
   const { ball } = world;
-  const centerX = ball ? ball.x : player.formationX;
-  const centerY = ball ? ball.y : player.formationY;
+  const centerX = ball ? ball.x * 0.6 + player.formationX * 0.4 : player.formationX;
+  const centerY = ball ? ball.y * 0.6 + player.formationY * 0.4 : player.formationY;
 
   let zoneWidth = 200;
   let zoneHeight = 200;
