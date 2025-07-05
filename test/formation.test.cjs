@@ -10,7 +10,7 @@ const {
 
 const json = fs.readFileSync('demo/soccer/formations.json', 'utf-8');
 const formations = loadFormations(json);
-assert(formations.length >= 11, 'expected at least 11 formations');
+assert(formations.length >= 13, 'expected at least 13 formations');
 formations.forEach(f => assert.equal(f.players.length, 11));
 
 for (const f of formations) {

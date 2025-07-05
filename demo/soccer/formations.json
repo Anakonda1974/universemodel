@@ -202,5 +202,39 @@
       { "x": 570, "y": 260, "role": "LS",  "style": "attacking" },
       { "x": 570, "y": 420, "role": "RS",  "style": "attacking" }
     ]
+  },
+  {
+    "name": "4-3-2-1",
+    "description": "Christmas Tree narrow attack",
+    "players": [
+      { "x": 80, "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 350, "y": 200, "role": "ZM",  "style": "holding" },
+      { "x": 350, "y": 340, "role": "DM",  "style": "holding" },
+      { "x": 350, "y": 480, "role": "ZM",  "style": "holding" },
+      { "x": 480, "y": 280, "role": "OM",  "style": "creative" },
+      { "x": 480, "y": 400, "role": "OM",  "style": "creative" },
+      { "x": 570, "y": 340, "role": "ST",  "style": "attacking" }
+    ]
+  },
+  {
+    "name": "4-2-4",
+    "description": "Breit angelegte Offensive",
+    "players": [
+      { "x": 80, "y": 340, "role": "TW",  "style": "defensive" },
+      { "x": 220, "y": 100, "role": "LV",  "style": "support" },
+      { "x": 220, "y": 220, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 460, "role": "IV",  "style": "defensive" },
+      { "x": 220, "y": 580, "role": "RV",  "style": "support" },
+      { "x": 360, "y": 260, "role": "ZM",  "style": "holding" },
+      { "x": 360, "y": 420, "role": "ZM",  "style": "holding" },
+      { "x": 500, "y": 160, "role": "LM",  "style": "attacking" },
+      { "x": 500, "y": 520, "role": "RM",  "style": "attacking" },
+      { "x": 570, "y": 260, "role": "LS",  "style": "attacking" },
+      { "x": 570, "y": 420, "role": "RS",  "style": "attacking" }
+    ]
   }
 ]
