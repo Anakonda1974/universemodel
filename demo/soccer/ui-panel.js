@@ -149,15 +149,18 @@ export function initControlPanel({ teams, ball, coach, formations }) {
   debugSection.innerHTML = `<summary>Debugging</summary>
     <label><input id="cp-zones" type="checkbox"> Zones</label><br>
     <label><input id="cp-fov" type="checkbox"> FOV</label><br>
-    <label><input id="cp-ballvec" type="checkbox"> Ball Vectors</label>`;
+    <label><input id="cp-ballvec" type="checkbox"> Ball Vectors</label><br>
+    <label><input id="cp-formation" type="checkbox"> Formation Pos</label>`;
   content.appendChild(debugSection);
   const dbg = window.debugOptions;
   debugSection.querySelector('#cp-zones').checked = dbg.showZones;
   debugSection.querySelector('#cp-fov').checked = dbg.showFOV;
   debugSection.querySelector('#cp-ballvec').checked = dbg.showBall;
+  debugSection.querySelector('#cp-formation').checked = dbg.showFormation;
   debugSection.querySelector('#cp-zones').onchange = e => { dbg.showZones = e.target.checked; };
   debugSection.querySelector('#cp-fov').onchange = e => { dbg.showFOV = e.target.checked; };
   debugSection.querySelector('#cp-ballvec').onchange = e => { dbg.showBall = e.target.checked; };
+  debugSection.querySelector('#cp-formation').onchange = e => { dbg.showFormation = e.target.checked; };
 
   /* ------ Rendering Options ------ */
   const renderSection = document.createElement('details');

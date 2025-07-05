@@ -351,3 +351,27 @@ export function drawBallDebug(ctx, ball) {
   }
   ctx.restore();
 }
+
+export function drawFormationDebug(ctx, players) {
+  if (!players) return;
+  ctx.save();
+  ctx.strokeStyle = 'cyan';
+  ctx.fillStyle = 'cyan';
+  ctx.font = '11px Arial';
+  players.forEach(p => {
+    const fx = p.formationX;
+    const fy = p.formationY;
+    ctx.beginPath();
+    ctx.moveTo(fx - 4, fy);
+    ctx.lineTo(fx + 4, fy);
+    ctx.moveTo(fx, fy - 4);
+    ctx.lineTo(fx, fy + 4);
+    ctx.stroke();
+    const dist = Math.hypot(p.x - fx, p.y - fy);
+    if (dist > 2) {
+      const txt = `${dist.toFixed(0)} | ${p.currentAction || 'none'}`;
+      ctx.fillText(txt, p.x + 8, p.y - 8);
+    }
+  });
+  ctx.restore();
+}
