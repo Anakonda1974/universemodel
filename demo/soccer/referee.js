@@ -1,9 +1,11 @@
 import { logComment } from './commentary.js';
+import { isOffside, restartTypeForOut } from './rules.js';
 
 export class Referee {
-  constructor(onCardCallback, onFoulCallback) {
+  constructor(onCardCallback, onFoulCallback, onOffsideCallback) {
     this.onCard = onCardCallback;
     this.onFoul = onFoulCallback;
+    this.onOffside = onOffsideCallback;
   }
 
   update(players, ball) {
@@ -20,6 +22,16 @@ export class Referee {
         }
       }
     }
+  }
+
+  handlePass(passer, receiver, players) {
+    if (isOffside(passer, receiver, players) && this.onOffside) {
+      this.onOffside(receiver);
+    }
+  }
+
+  checkRestart(ball, lastTouchTeam) {
+    return restartTypeForOut(ball, lastTouchTeam);
   }
 
   callFoul(player, victim) {

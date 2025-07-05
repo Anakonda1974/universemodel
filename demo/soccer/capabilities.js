@@ -31,6 +31,7 @@ export const Capabilities = {
     const startY = player.y + (dy / dist) * offset;
     ball.kick(startX, startY, dx, dy, 12, spin, player);
     player.currentAction = 'pass';
+    if (world.referee) world.referee.handlePass(player, target, world.players);
   },
 
   lobPass(player, world, target) {
@@ -48,11 +49,13 @@ export const Capabilities = {
     ball.kick(startX, startY, dx, dy, 10, spin, player);
     ball.vy -= 2; // simple lift
     player.currentAction = 'lobPass';
+    if (world.referee) world.referee.handlePass(player, target, world.players);
   },
 
   cross(player, world, targetArea) {
     this.lobPass(player, world, targetArea || world.opponentGoal);
     player.currentAction = 'cross';
+    if (world.referee) world.referee.handlePass(player, targetArea, world.players);
   },
 
  dribble(player, world, direction) {
@@ -91,11 +94,13 @@ export const Capabilities = {
     if (!mate) return;
     this.pass(player, world, mate);
     mate.sendMessage(player, { type: 'oneTwoReturn' });
+    if (world.referee) world.referee.handlePass(player, mate, world.players);
   },
 
   backPass(player, world, target) {
     this.pass(player, world, target);
     player.currentAction = 'backPass';
+    if (world.referee) world.referee.handlePass(player, target, world.players);
   },
 
   // Off-the-ball actions
