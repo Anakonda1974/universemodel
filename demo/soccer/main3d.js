@@ -11,8 +11,15 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x222222);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, -15, 10);
+const cameraOffset = new THREE.Vector3(0, -15, 10);
+camera.position.copy(cameraOffset);
 camera.lookAt(0, 0, 0);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
 // lighting
 const ambient = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
@@ -38,6 +45,16 @@ players.forEach(p => { p.addTo(scene); });
 
 const ball = new Ball3D(0, 0, 0.11);
 ball.addTo(scene);
+
+function updateCamera(snap = false) {
+  const target = ball.position.clone().add(cameraOffset);
+  if (snap) {
+    camera.position.copy(target);
+  } else {
+    camera.position.lerp(target, 0.1);
+  }
+  camera.lookAt(ball.position);
+}
 
 // HUD elements
 const scoreEl = document.getElementById('score');
@@ -101,6 +118,7 @@ function resetKickoff() {
   players[1].position.set(2, 0, 0);
   players.forEach(p => p.velocity.set(0, 0, 0));
   updateHUD();
+  updateCamera(true);
 }
 
 function checkGoals() {
@@ -121,6 +139,7 @@ function loop(now) {
   updatePlayerControls(dt);
   players.forEach(p => p.update(dt));
   ball.update(dt);
+  updateCamera();
   handleCollisions();
   checkGoals();
   matchTime += dt;
