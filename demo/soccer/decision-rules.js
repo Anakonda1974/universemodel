@@ -1,5 +1,7 @@
 // decision-rules.js
 import { FIELD_BOUNDS } from './ball.js';
+import { interpolate, computeEllipseRadii } from './TacticsHelper.js';
+import { computeShootRadius, shouldAttemptRiskyPass, staminaOK } from './SkillHelpers.js';
 
 export function canPass(player, world) {
     if (!world.ball || world.ball.isLoose) return false;
@@ -22,7 +24,7 @@ export function canShoot(player, world) {
         let dx = world.opponentGoal.x - player.x;
         let dy = world.opponentGoal.y - player.y;
         let dist = Math.hypot(dx, dy);
-        return dist < 70; // Can shoot if within 70px of goal
+        return dist < computeShootRadius(player);
     }
     return false;
 }
@@ -94,9 +96,15 @@ function clampToZone(x, y, zone) {
 
 // --- New dynamic allowed zone relative to the ball ---
 export function getDynamicZone(player, world) {
-  const { ball, tactic } = world;
-  const centerX = ball ? ball.x : player.formationX;
-  const centerY = ball ? ball.y : player.formationY;
+  const { ball, tactic, coach } = world;
+  const awareness = player.derived?.awareness ?? 0.5;
+  const press = coach ? coach.pressing : player.pressing ?? 1;
+  const baseCenter = { x: player.formationX, y: player.formationY };
+  const ballPos = ball ? { x: ball.x, y: ball.y } : baseCenter;
+  const interp = 0.1 + 0.1 * awareness;
+  const c = interpolate(baseCenter, ballPos, interp);
+  let centerX = c.x;
+  let centerY = c.y;
 
   let zoneWidth = 200;
   let zoneHeight = 200;
@@ -136,18 +144,32 @@ export function getDynamicZone(player, world) {
   }
 
   // adjust width/height and offsets by tactical state / pressing
-  const pressing = player.pressing ?? 1;
   if (tactic === 'pressing') {
-    zoneWidth *= 1 / pressing;
-    zoneHeight *= 1 / pressing;
-    offsetX *= pressing;
-    offsetY *= pressing;
+    zoneWidth *= 1 / press;
+    zoneHeight *= 1 / press;
+    offsetX *= press;
+    offsetY *= press;
   } else if (tactic === 'zurückgezogen') {
     zoneWidth *= 1.2;
     zoneHeight *= 1.2;
     offsetX *= 0.6;
     offsetY *= 0.6;
   }
+
+  // modify by team phase
+  if (world.phase === 'offense') {
+    zoneWidth *= 1.1;
+    offsetX += player.color === 'blue' ? 20 : -20;
+  } else if (world.phase === 'defense') {
+    zoneWidth *= 0.9;
+    offsetX += player.color === 'blue' ? -20 : 20;
+  }
+
+  const zoneParams = coach ? coach.getZoneParameters(player.role) : null;
+  const radii = computeEllipseRadii(player.role, press, zoneParams);
+  if ((player.derived?.dribblingSkill ?? 0) > 0.7) radii.rx *= 1.2;
+  zoneWidth = radii.rx * 2;
+  zoneHeight = radii.ry * 2;
 
   let x = centerX + offsetX - zoneWidth / 2;
   let y = centerY + offsetY - zoneHeight / 2;
@@ -161,6 +183,10 @@ export function getDynamicZone(player, world) {
 
 export function decidePlayerAction(player, world, gameState) {
   if (gameState !== "Spiel läuft") return;
+
+  if (!staminaOK(player)) {
+    return boundedIntent(player, "rest", player.formationX, player.formationY, world);
+  }
 
   // --- 1. Ballbesitz/Offense ---
   if (player.hasBall || (world.ball.owner && world.ball.owner === player)) {
@@ -242,12 +268,12 @@ export function decidePlayerAction(player, world, gameState) {
 // ---- Ball Owner Behavior ----
 function decideBallOwnerAction(player, world) {
   // 1. If can shoot, sometimes shoot
-  if (canShoot(player, world) && Math.random() < 0.5) {
+  if (canShoot(player, world) && Math.random() < (0.3 + (player.derived.shootingAccuracy ?? 0.5) * 0.4)) {
     return boundedIntent(player, "shoot", world.opponentGoal.x, world.opponentGoal.y, world);
   }
   // 2. Pass to open teammate, prefer if pressured
   const mate = findBestPass(player, world.teammates, world);
-  if (mate && Math.random() < 0.7) {
+  if (mate && shouldAttemptRiskyPass(player)) {
     return boundedIntent(player, "pass", mate.x, mate.y, world);
   }
   // 3. Otherwise: Dribble to open space towards goal
@@ -257,7 +283,7 @@ function decideBallOwnerAction(player, world) {
 
 // ---- Intent Resolver (bounds action to zone) ----
 function boundedIntent(player, intent, tx, ty, world, allowOutside = false) {
-  const zone = getAllowedZone(player, world);
+  const zone = getDynamicZone(player, world);
   let target = allowOutside ? { x: tx, y: ty } : clampToZone(tx, ty, zone);
   target.x = Math.max(FIELD_BOUNDS.minX, Math.min(FIELD_BOUNDS.maxX, target.x));
   target.y = Math.max(FIELD_BOUNDS.minY, Math.min(FIELD_BOUNDS.maxY, target.y));
@@ -299,7 +325,7 @@ function findOpenSpaceNearGoal(player, world) {
     let angle = baseAngle + (i * Math.PI / steps);
     let tx = player.x + Math.cos(angle) * RADIUS;
     let ty = player.y + Math.sin(angle) * RADIUS;
-    let zone = getAllowedZone(player, world);
+    let zone = getDynamicZone(player, world);
     const { x: cx, y: cy } = clampToZone(tx, ty, zone);
     let minOpponentDist = Math.min(
       ...world.opponents.map(opp => Math.hypot(cx - opp.x, cy - opp.y))
@@ -314,7 +340,7 @@ function findOpenSpaceNearGoal(player, world) {
   return best;
 }
 function findLastLineSpace(player, world) {
-  let zone = getAllowedZone(player, world);
+  let zone = getDynamicZone(player, world);
   let x = Math.max(zone.minX, Math.min(zone.maxX, world.opponentGoal.x - 35));
   let y = Math.max(zone.minY, Math.min(zone.maxY, player.y));
   return { x, y };

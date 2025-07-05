@@ -33,7 +33,7 @@ window.keyBindings = {
   reset: "KeyR",
 };
 const inputHandler = new InputHandler();
-window.debugOptions = { showZones: true, showFOV: true, showBall: true, showFormation: false };
+window.debugOptions = { showZones: true, showFOV: true, showBall: true, showFormation: false, showTargets: false };
 
 window.colorProfiles = {
   default: { field: "#065", home: "#0000ff", away: "#ff0000", background: "#222" },
@@ -963,9 +963,9 @@ function gameLoop(timestamp) {
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
     if (window.debugOptions.showZones) {
-      drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? "pressing" : null });
+      drawZones(ctx, allPlayers, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
     }
-    drawPlayers(ctx, allPlayers);
+    drawPlayers(ctx, allPlayers, { showTargets: window.debugOptions.showTargets });
     if (window.debugOptions.showFormation) {
       drawFormationDebug(ctx, allPlayers);
     }
@@ -986,9 +986,9 @@ function gameLoop(timestamp) {
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
     if (window.debugOptions.showZones) {
-      drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? "pressing" : null });
+      drawZones(ctx, allPlayers, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
     }
-    drawPlayers(ctx, allPlayers);
+    drawPlayers(ctx, allPlayers, { showTargets: window.debugOptions.showTargets });
     if (window.debugOptions.showFormation) {
       drawFormationDebug(ctx, allPlayers);
     }
@@ -1170,6 +1170,8 @@ function gameLoop(timestamp) {
       opponents: otherTeam,
       ball,
       referee,
+      coach,
+      phase: coach?.phase,
       opponentGoal: teamHeim.includes(p) ? { x: 1040, y: 340 } : { x: 10, y: 340 },
       farLeft: { x: 60, y: 340 },
     };
@@ -1212,7 +1214,7 @@ function gameLoop(timestamp) {
   allPlayers.forEach((p) => {
     const myTeam = teamHeim.includes(p) ? teamHeim : teamGast;
     const otherTeam = teamHeim.includes(p) ? teamGast : teamHeim;
-    const world = { ball, teammates: myTeam, opponents: otherTeam, referee };
+    const world = { ball, teammates: myTeam, opponents: otherTeam, referee, coach, phase: coach?.phase };
     p.moveToTarget(world);
   });
   allPlayers.forEach((p) =>
@@ -1287,20 +1289,20 @@ function gameLoop(timestamp) {
   // 7. RENDER
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
   if (window.debugOptions.showZones) {
-    drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? "pressing" : null });
+    drawZones(ctx, allPlayers, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
   }
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);
-  drawPlayers(ctx, allPlayers, { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true });
+  drawPlayers(ctx, allPlayers, { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
   if (window.debugOptions.showFormation) {
     drawFormationDebug(ctx, allPlayers);
   }
   if (selectedPlayer) {
-    drawPlayers(ctx, [selectedPlayer], { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true });
+    drawPlayers(ctx, [selectedPlayer], { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
   }
   if (selectedPlayer2) {
-    drawPlayers(ctx, [selectedPlayer2], { showFOV: true, showRunDir: true, showHeadDir: true });
+    drawPlayers(ctx, [selectedPlayer2], { showFOV: true, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
   }
   drawActivePlayer(ctx, selectedPlayer);
   drawActivePlayer(ctx, selectedPlayer2);
