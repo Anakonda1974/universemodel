@@ -1,37 +1,46 @@
 // footballBTs.js
 
 import { Selector, Sequence, Condition, Action } from "./behaviorTree.js";
-import {  playerIsClosestToBall, canPass, canShoot, findBestPass } from "./decision-rules.js";
+import { 
+  playerIsClosestToBall, 
+  canPass, 
+  canShoot, 
+  findBestPass 
+} from "./decision-rules.js";
 
-// Beispiel: Decision-Tree für Feldspieler
+// Behavior Tree für einen Fußballspieler
 export function createPlayerBT() {
   return new Selector(
-    // 0. Bei niedriger Ausdauer: in Position bleiben und Energie sparen
+
+    // 0. Erschöpft? → Ruhen in Formation
     new Sequence(
-      new Condition((a, w) => (a.stamina ?? 1) < 0.3),
-      new Action((a, w) => {
-        a.targetX = a.formationX;
-        a.targetY = a.formationY;
-        a.currentAction = "rest";
+      new Condition((agent, world) => (agent.stamina ?? 1) < 0.3),
+      new Action((agent, world) => {
+        agent.targetX = agent.formationX;
+        agent.targetY = agent.formationY;
+        agent.currentAction = "rest";
       })
     ),
-    // 1. Ballbesitz? → Shoot/Pass/Dribble
+
+    // 1. Ballbesitz → Entscheidung: Schuss > Pass > Dribbling
     new Sequence(
       new Condition((agent, world) => agent.hasBall),
       new Selector(
+        // 1.1 Kann schießen?
         new Sequence(
-          new Condition((agent, world) => canShoot(agent, world)),
+          new Condition(canShoot),
           new Action((agent, world) => {
-            // z. B. setze Ziel auf Tor, führe Schuss aus:
             agent.targetX = world.opponentGoal.x;
             agent.targetY = world.opponentGoal.y;
             agent.currentAction = "shoot";
           })
         ),
+
+        // 1.2 Kann passen?
         new Sequence(
-          new Condition((agent, world) => canPass(agent, world)),
+          new Condition(canPass),
           new Action((agent, world) => {
-            let mate = findBestPass(agent, world.teammates);
+            const mate = findBestPass(agent, world.teammates);
             if (mate) {
               agent.targetX = mate.x;
               agent.targetY = mate.y;
@@ -39,24 +48,29 @@ export function createPlayerBT() {
             }
           })
         ),
-        // Kein Pass/Schuss → Dribble
+
+        // 1.3 Dribble als letzter Ausweg
         new Action((agent, world) => {
-          agent.targetX = agent.x + Math.cos(agent.bodyDirection * Math.PI / 180) * 22;
-          agent.targetY = agent.y + Math.sin(agent.bodyDirection * Math.PI / 180) * 22;
+          const angleRad = agent.bodyDirection * Math.PI / 180;
+          const speed = 12 + Math.random() * 10; // leicht variabel
+          agent.targetX = agent.x + Math.cos(angleRad) * speed;
+          agent.targetY = agent.y + Math.sin(angleRad) * speed;
           agent.currentAction = "dribble";
         })
       )
     ),
-    // 2. Nächster am Ball? → Hingehen
+
+    // 2. Nächster am Ball? → Verfolge Ball
     new Sequence(
-      new Condition((agent, world) => playerIsClosestToBall(agent, world)),
+      new Condition(playerIsClosestToBall),
       new Action((agent, world) => {
         agent.targetX = world.ball.x;
         agent.targetY = world.ball.y;
         agent.currentAction = "chase";
       })
     ),
-    // 3. Standard-Rollenverhalten (Formation halten, Markieren…)
+
+    // 3. Standardverhalten: Position halten
     new Action((agent, world) => {
       agent.targetX = agent.formationX;
       agent.targetY = agent.formationY;
@@ -64,7 +78,3 @@ export function createPlayerBT() {
     })
   );
 }
-
-// --- Helper-Funktionen wie gehabt ---
-// canShoot, canPass, findBestPass, playerIsClosestToBall
-// Du kannst sie aus deinen bisherigen Decision-Rules übernehmen!
