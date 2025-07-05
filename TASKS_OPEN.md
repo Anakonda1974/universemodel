@@ -6,11 +6,11 @@ This list summarizes open to-dos and unfinished implementations found in the `de
 - [x] **behaviorTree.js** – The base class `BTNode` now provides a default `tick()` implementation.
 
 ## Planned Features (from `demo/soccer/AGENTS.md`)
-- **Transition to 3D**: switch from 2D to a 3D engine with appropriate player animations and ball physics.
-- **3D Engine and Camera** support.
-- **3D Player animations** to synchronise movement with actions.
-- **Ball Z‑axis and enhanced physics**, potentially using Box2D, PhysX or Bullet.
-- **Collision physics** for player and ball interactions.
+- [x] **Transition to 3D**: switch from 2D to a 3D engine with appropriate player animations and ball physics.
+- [x] **3D Engine and Camera** support.
+- [x] **3D Player animations** to synchronise movement with actions.
+- [x] **Ball Z‑axis and enhanced physics**, potentially using Box2D, PhysX or Bullet.
+- [x] **Collision physics** for player and ball interactions.
 - **Machine Learning based AI** including reinforcement learning and neuroevolution approaches.
 - **Multiplayer modes**: local multiplayer, online multiplayer with network synchronisation and a hotseat/coach mode.
 - **Additional football rules and details** beyond those already implemented.
