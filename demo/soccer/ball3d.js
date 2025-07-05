@@ -1,5 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.156.1/build/three.module.js';
 
+export const GROUND_FRICTION = 0.998;
+
 export class Ball3D {
   constructor(x=0, y=0, z=0) {
     this.position = new THREE.Vector3(x, y, z);
@@ -28,15 +30,16 @@ export class Ball3D {
     if (this.position.z < this.radius) {
       this.position.z = this.radius;
       if (this.velocity.z < 0) this.velocity.z = -this.velocity.z * this.restitution;
-      // friction on ground
-      this.velocity.x *= 0.98;
-      this.velocity.y *= 0.98;
+      // friction on ground (scale with dt for consistent slowdown)
+      const fric = Math.pow(GROUND_FRICTION, dt * 60);
+      this.velocity.x *= fric;
+      this.velocity.y *= fric;
     }
 
     this.mesh.position.copy(this.position);
   }
 
-  kick(dir, power=8) {
+  kick(dir, power=12) {
     const impulse = dir.clone().normalize().multiplyScalar(power);
     this.velocity.add(impulse);
   }
