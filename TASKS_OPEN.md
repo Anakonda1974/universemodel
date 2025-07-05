@@ -3,7 +3,7 @@
 This list summarizes open to-dos and unfinished implementations found in the `demo/soccer` project.
 
 ## Unfinished Code
-- **behaviorTree.js** – The base class `BTNode` contains an abstract `tick()` method that throws `"Not implemented."` and lacks an implementation.
+- [x] **behaviorTree.js** – The base class `BTNode` now provides a default `tick()` implementation.
 
 ## Planned Features (from `demo/soccer/AGENTS.md`)
 - **Transition to 3D**: switch from 2D to a 3D engine with appropriate player animations and ball physics.
