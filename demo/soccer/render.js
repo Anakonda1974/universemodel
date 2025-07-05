@@ -238,6 +238,25 @@ export function drawZones(ctx, players, world, offsets = { home: {x:0,y:0}, away
   ctx.restore();
 }
 
+export function drawIntents(ctx, players) {
+  if (!players) return;
+  ctx.save();
+  ctx.strokeStyle = 'yellow';
+  ctx.fillStyle = 'yellow';
+  ctx.lineWidth = 1;
+  ctx.font = '11px Arial';
+  players.forEach(p => {
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.targetX, p.targetY);
+    ctx.stroke();
+    if (p.currentAction) {
+      ctx.fillText(p.currentAction, p.x + 6, p.y - 6);
+    }
+  });
+  ctx.restore();
+}
+
 export function drawSoftZones(ctx, players, ball, coach, options = {}) {
   const { heatmap = false } = options;
   ctx.save();
