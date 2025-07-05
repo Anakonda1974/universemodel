@@ -177,6 +177,7 @@ export class Player {
   }
 
 
+
   static getDynamicTargetZone(player, ball, coach) {
     const pressing = coach ? coach.pressing : 1;
     const zoneParams = coach ? coach.getZoneParameters(player.role) : null;
@@ -244,7 +245,9 @@ export class Player {
     if (this.sliding) {
       this.x += this.slideDirX * this.slideSpeed;
       this.y += this.slideDirY * this.slideSpeed;
+
       const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+
       const pos = world ? Player.clampToRect(this.x, this.y, zone) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
@@ -259,7 +262,9 @@ export class Player {
     }
 
     this.updateDirectionTowardsTarget();
+
     const zoneMove = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+
     this.targetX = world ? Math.max(zoneMove.x, Math.min(zoneMove.x + zoneMove.width, this.targetX)) : this.targetX;
     this.targetY = world ? Math.max(zoneMove.y, Math.min(zoneMove.y + zoneMove.height, this.targetY)) : this.targetY;
     const dx = this.targetX - this.x;
@@ -275,7 +280,9 @@ export class Player {
       this.vy = this.vy + (desiredVy - this.vy) * smooth;
       this.x += this.vx;
       this.y += this.vy;
+
       const zone = world ? allowedZone(this, world) : Player.getAllowedZone(this);
+
       const pos = world ? Player.clampToRect(this.x, this.y, zone) : Player.clampToZone(this.x, this.y, zone);
       this.x = pos.x;
       this.y = pos.y;
