@@ -55,19 +55,27 @@ export const Capabilities = {
     player.currentAction = 'cross';
   },
 
-  dribble(player, world, direction) {
-    let dx = direction?.x;
-    let dy = direction?.y;
-    if (dx === undefined || dy === undefined) {
-      const ang = player.bodyDirection * Math.PI / 180;
-      dx = Math.cos(ang);
-      dy = Math.sin(ang);
-    }
-    const mag = Math.hypot(dx, dy) || 1;
-    player.targetX = player.x + (dx / mag) * 20;
-    player.targetY = player.y + (dy / mag) * 20;
-    player.currentAction = 'dribble';
-  },
+ dribble(player, world, direction) {
+  let dx = direction?.x;
+  let dy = direction?.y;
+  if (dx === undefined || dy === undefined) {
+    const ang = player.bodyDirection * Math.PI / 180;
+    dx = Math.cos(ang);
+    dy = Math.sin(ang);
+  }
+  const mag = Math.hypot(dx, dy) || 1;
+
+  // Seitenwechsel abhängig von Flüssigkeit
+  const fluidity = player.fluidity ?? 0.5;
+  const prefersLeft = player.preferredFoot === "left";
+  const wrongChance = 1 - fluidity;
+  const newSide = Math.random() < wrongChance ? (prefersLeft ? "right" : "left") : player.preferredFoot;
+  player.dribbleSide = newSide;
+
+  player.targetX = player.x + (dx / mag) * 20;
+  player.targetY = player.y + (dy / mag) * 20;
+  player.currentAction = 'dribble';
+},
 
   holdBall(player) {
     player.targetX = player.x;

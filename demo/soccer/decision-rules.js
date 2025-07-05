@@ -2,7 +2,7 @@
 import { FIELD_BOUNDS } from './ball.js';
 
 export function canPass(player, world) {
-    if (!world.ball || !world.ball.isLoose) return false;
+    if (!world.ball || world.ball.isLoose) return false;
     if (player.hasBall || (world.ball.owner && world.ball.owner === player)) {
         // Check if there are open teammates to pass to
         let openTeammates = world.teammates.filter(mate => {
@@ -17,7 +17,7 @@ export function canPass(player, world) {
 }
 
 export function canShoot(player, world) {
-    if (!world.ball || !world.ball.isLoose) return false;
+    if (!world.ball || world.ball.isLoose) return false;
     if (player.hasBall || (world.ball.owner && world.ball.owner === player)) {
         let dx = world.opponentGoal.x - player.x;
         let dy = world.opponentGoal.y - player.y;
@@ -321,7 +321,7 @@ function findLastLineSpace(player, world) {
 }
 
 // ---- Marking/Support/Helpers ----
-function avoidTeammateClumping(player, teammates, minDist = 18) {
+export function avoidTeammateClumping(player, teammates, minDist = 18) {
   for (const mate of teammates) {
     if (mate === player) continue;
     let d = Math.hypot(player.x - mate.x, player.y - mate.y);

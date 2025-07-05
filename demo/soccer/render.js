@@ -375,3 +375,18 @@ export function drawFormationDebug(ctx, players) {
   });
   ctx.restore();
 }
+
+export function drawDribbleSide(ctx, player) {
+  if (!player.hasBall) return;
+  const offset = 10;
+  const angleRad = player.bodyDirection * Math.PI / 180;
+  const sign = player.dribbleSide === "left" ? -1 : 1;
+
+  const sideX = player.x + Math.cos(angleRad + sign * Math.PI / 2) * offset;
+  const sideY = player.y + Math.sin(angleRad + sign * Math.PI / 2) * offset;
+
+  ctx.beginPath();
+  ctx.arc(sideX, sideY, 4, 0, Math.PI * 2);
+  ctx.fillStyle = "orange";
+  ctx.fill();
+}

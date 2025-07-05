@@ -9,6 +9,8 @@ import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
 import { InputHandler } from "./input.js";
 
+import { analyzePlayerPerformance, evaluateFootUse } from "./analyze.js";
+
 // ----- Game Setup -----
 const canvas = document.getElementById("spielfeld");
 const ctx = canvas.getContext("2d");
@@ -28,17 +30,17 @@ window.keyBindings = {
   tackle: "KeyX",
   switch: "KeyC",
   togglePress: "KeyP",
-  reset: "KeyR"
+  reset: "KeyR",
 };
 const inputHandler = new InputHandler();
 window.debugOptions = { showZones: true, showFOV: true, showBall: true, showFormation: false };
 
 window.colorProfiles = {
-  default: { field: '#065', home: '#0000ff', away: '#ff0000', background: '#222' },
-  classic: { field: '#060', home: '#006400', away: '#ff8c00', background: '#333' },
-  highContrast: { field: '#022', home: '#ffff00', away: '#ff00ff', background: '#000' }
+  default: { field: "#065", home: "#0000ff", away: "#ff0000", background: "#222" },
+  classic: { field: "#060", home: "#006400", away: "#ff8c00", background: "#333" },
+  highContrast: { field: "#022", home: "#ffff00", away: "#ff00ff", background: "#000" },
 };
-window.renderOptions = { lineAlpha: 1, colorProfile: 'default', fieldColor: '#065' };
+window.renderOptions = { lineAlpha: 1, colorProfile: "default", fieldColor: "#065" };
 
 const GameState = {
   FORMATION: "Formation wählen",
@@ -52,8 +54,10 @@ let transitionStartTime = null;
 
 let formations = [];
 let selectedFormationIndex = 0;
-const teamHeim = [], teamGast = [];
-const benchHeim = [], benchGast = [];
+const teamHeim = [],
+  teamGast = [];
+const benchHeim = [],
+  benchGast = [];
 let ball;
 let coach;
 let referee;
@@ -77,7 +81,7 @@ const userInput = {
   tackleUp: false,
   resetPressed: false,
   resetDown: false,
-  resetUp: false
+  resetUp: false,
 };
 let selectedPlayer2 = null;
 let userTeam2 = teamGast;
@@ -90,7 +94,7 @@ const userInput2 = {
   dy: 0,
   passPressed: false,
   shootPressed: false,
-  tacklePressed: false
+  tacklePressed: false,
 };
 let passIndicator = null;
 let passCharge = 0;
@@ -109,7 +113,7 @@ let goalFlashTimer = 0;
 let goalFlashSide = null;
 
 let goalOverlayTimer = 0;
-let goalOverlayText = '';
+let goalOverlayText = "";
 
 // ----- Confetti particles for goal celebration -----
 let confettiParticles = [];
@@ -120,14 +124,12 @@ let freeKickTaker = null;
 let lastTouchTeam = null; // 0 = home, 1 = away
 let restartTimer = 0;
 let restartTaker = null;
-let restartType = '';
+let restartType = "";
 
 let lastBallOwnerTeam = null;
 let lastBallOwnerTeam2 = null;
 
-const POIS = [
-  { x: 60, y: 340, role: "farLeft" }
-];
+const POIS = [{ x: 60, y: 340, role: "farLeft" }];
 
 // --- Dynamic formation offsets ---
 let formationOffsetHome = { x: 0, y: 0 };
@@ -139,7 +141,7 @@ const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
 
 // --- Weather ---
 // Higher friction values closer to 1 mean less slowdown per frame
-window.weather = { type: "clear", windX: 0, windY: 0, friction: 0.998 };
+window.weather = { type: "clear", windX: 0, windY: 0, friction: 1 };
 const weather = window.weather;
 
 let lastAnalysis = 0;
@@ -163,7 +165,7 @@ function applyWeather() {
     default:
       weather.windX = 0;
       weather.windY = 0;
-      weather.friction = 0.998;
+      weather.friction = 1;
   }
 }
 
@@ -178,9 +180,32 @@ function setupWeatherControls() {
   }
 }
 
+function showAnalysis(players) {
+  const table = document.getElementById("analysisTable");
+  const panel = document.getElementById("analysisPanel");
+  if (!table || !panel) return;
+
+  const header = `
+    <table><thead><tr>
+      <th>Rolle</th><th>Distanz</th><th>Stamina ⛽</th>
+      <th>Workrate</th><th>Präf. Fuß</th><th>Falsche Fußnutzung</th>
+    </tr></thead><tbody>`;
+  const rows = players.map(p => {
+    const perf = analyzePlayerPerformance(p);
+    const foot = evaluateFootUse(p);
+    return `<tr>
+      <td>${perf.role}</td><td>${perf.distance}</td>
+      <td>${perf.usedStamina}</td><td>${perf.readinessScore}</td>
+      <td>${perf.preferredFoot}</td><td>${foot.wrongFootRate}</td>
+    </tr>`;
+  }).join("\n");
+  table.innerHTML = header + rows + "</tbody></table>";
+  panel.style.display = "block";
+}
+
 function applyDifficulty() {
   const mult = difficultyMultipliers[difficulty] || 1;
-  [...teamHeim, ...teamGast].forEach(p => {
+  [...teamHeim, ...teamGast].forEach((p) => {
     if (!p.baseline) p.baseline = { ...p.base };
     p.base = { ...p.baseline };
     if (typeof p.base.speed === "number") p.base.speed *= mult;
@@ -190,27 +215,27 @@ function applyDifficulty() {
   });
 }
 
-  function setupDifficultyControls() {
-    const select = document.getElementById("difficultySelect");
-    if (select) {
-      select.value = difficulty;
-      select.onchange = () => {
-        difficulty = select.value;
-        applyDifficulty();
-      };
-    }
+function setupDifficultyControls() {
+  const select = document.getElementById("difficultySelect");
+  if (select) {
+    select.value = difficulty;
+    select.onchange = () => {
+      difficulty = select.value;
+      applyDifficulty();
+    };
   }
+}
 
-  function applyColorProfile(name) {
-    const profile = window.colorProfiles[name] || window.colorProfiles.default;
-    window.renderOptions.fieldColor = profile.field;
-    document.documentElement.style.setProperty('--bg-color', profile.background);
-    document.documentElement.style.setProperty('--field-color', profile.field);
-    [...teamHeim, ...benchHeim].forEach(p => p.color = profile.home);
-    [...teamGast, ...benchGast].forEach(p => p.color = profile.away);
-    if (window.invalidateField) window.invalidateField();
-  }
-  window.applyColorProfile = applyColorProfile;
+function applyColorProfile(name) {
+  const profile = window.colorProfiles[name] || window.colorProfiles.default;
+  window.renderOptions.fieldColor = profile.field;
+  document.documentElement.style.setProperty("--bg-color", profile.background);
+  document.documentElement.style.setProperty("--field-color", profile.field);
+  [...teamHeim, ...benchHeim].forEach((p) => (p.color = profile.home));
+  [...teamGast, ...benchGast].forEach((p) => (p.color = profile.away));
+  if (window.invalidateField) window.invalidateField();
+}
+window.applyColorProfile = applyColorProfile;
 
 function teamId(player) {
   if (!player) return null;
@@ -227,7 +252,10 @@ function switchToNearestPlayer(team) {
   const by = ball.y;
   for (const p of team) {
     const d = Math.hypot(p.x - bx, p.y - by);
-    if (d < minDist) { minDist = d; nearest = p; }
+    if (d < minDist) {
+      minDist = d;
+      nearest = p;
+    }
   }
   if (selectedPlayer) selectedPlayer.controlledByUser = false;
   selectedPlayer = nearest;
@@ -261,20 +289,26 @@ function playBeep(freq, duration = 300) {
   gain.connect(audioCtx.destination);
   osc.start();
   gain.gain.setValueAtTime(1, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration/1000);
-  osc.stop(audioCtx.currentTime + duration/1000);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration / 1000);
+  osc.stop(audioCtx.currentTime + duration / 1000);
 }
-function playWhistle() { playBeep(1200, 500); }
-function playGoal() { playBeep(500, 700); }
+function playWhistle() {
+  playBeep(1200, 500);
+}
+function playGoal() {
+  playBeep(500, 700);
+}
 
 // Score, timer, cards, etc.
-let scoreHome = 0, scoreAway = 0;
+let scoreHome = 0,
+  scoreAway = 0;
 let matchTime = 0; // in seconds
 let halftime = 1;
 let matchPaused = false;
 let halfLengthMinutes = 45;
 let lastFrameTime = null;
-let yellowCards = [], redCards = [];
+let yellowCards = [],
+  redCards = [];
 let lastFormationSwitch = 0;
 
 function findNearestTeammate(player) {
@@ -284,7 +318,10 @@ function findNearestTeammate(player) {
   for (const mate of team) {
     if (mate === player) continue;
     const d = Math.hypot(mate.x - player.x, mate.y - player.y);
-    if (d < min) { min = d; best = mate; }
+    if (d < min) {
+      min = d;
+      best = mate;
+    }
   }
   return best;
 }
@@ -302,7 +339,7 @@ function findTeammateInDirection(player, dx, dy, maxAngle = 60) {
     const dist = Math.hypot(mx, my);
     if (dist === 0) continue;
     const dot = (mx * dx + my * dy) / (dist * mag);
-    const ang = Math.acos(Math.max(-1, Math.min(1, dot))) * 180 / Math.PI;
+    const ang = (Math.acos(Math.max(-1, Math.min(1, dot))) * 180) / Math.PI;
     if (ang <= bestAng) {
       bestAng = ang;
       best = mate;
@@ -313,7 +350,7 @@ function findTeammateInDirection(player, dx, dy, maxAngle = 60) {
 
 function getOffsideLine(attackingTeam) {
   const defenders = attackingTeam === teamHeim ? teamGast : teamHeim;
-  const xs = defenders.map(p => p.x).sort((a, b) => a - b);
+  const xs = defenders.map((p) => p.x).sort((a, b) => a - b);
   if (attackingTeam === teamHeim) {
     return xs[1] ?? xs[0];
   } else {
@@ -333,12 +370,15 @@ function isOffside(passer, receiver) {
 
 function handleOffside(passer, receiver) {
   playWhistle();
-  logComment('Abseits!');
+  logComment("Abseits!");
   const oppTeam = teamHeim.includes(passer) ? teamGast : teamHeim;
-  const kicker = oppTeam.reduce((best, p) => {
-    const d = Math.hypot(p.x - receiver.x, p.y - receiver.y);
-    return d < best.dist ? { p, dist: d } : best;
-  }, { p: oppTeam[0], dist: Infinity }).p;
+  const kicker = oppTeam.reduce(
+    (best, p) => {
+      const d = Math.hypot(p.x - receiver.x, p.y - receiver.y);
+      return d < best.dist ? { p, dist: d } : best;
+    },
+    { p: oppTeam[0], dist: Infinity }
+  ).p;
   ball.x = receiver.x;
   ball.y = receiver.y;
   ball.vx = 0;
@@ -348,7 +388,7 @@ function handleOffside(passer, receiver) {
   setLastTouch(kicker);
   kicker.x = receiver.x;
   kicker.y = receiver.y;
-  kicker.currentAction = 'freekick';
+  kicker.currentAction = "freekick";
 }
 
 function calcPassSpeedForDistance(dist) {
@@ -366,7 +406,7 @@ function orientationMisalignment(player, angle) {
 }
 
 function applyKickError(vx, vy, angleErrorDeg) {
-  const rad = angleErrorDeg * Math.PI / 180;
+  const rad = (angleErrorDeg * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
   return { vx: vx * cos - vy * sin, vy: vx * sin + vy * cos };
@@ -389,7 +429,7 @@ function passBall(from, to, power = 1) {
   const speed = baseSpeed * (0.7 + power * 0.8);
   let vx = (dx / dist) * speed;
   let vy = (dy / dist) * speed;
-  const targetAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const targetAngle = (Math.atan2(dy, dx) * 180) / Math.PI;
   const mis = orientationMisalignment(from, targetAngle);
   const err = (Math.random() - 0.5) * mis * 0.2;
   ({ vx, vy } = applyKickError(vx, vy, err));
@@ -397,7 +437,8 @@ function passBall(from, to, power = 1) {
   const offset = from.radius + ball.radius + 2;
   const startX = from.x + (dx / dist) * offset;
   const startY = from.y + (dy / dist) * offset;
-  ball.kick(startX, startY, vx, vy, spd, from);
+  //ball.kick(startX, startY, vx, vy, spd, from);
+  ball.kickVelocity(startX, startY, vx, vy, from);
   ball.angularVelocity = (Math.random() - 0.5) * 0.02;
   from.currentAction = "pass";
   passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
@@ -422,7 +463,7 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   const speed = 8 + power * 12;
   let vx = (dx / dist) * speed;
   let vy = (dy / dist) * speed;
-  const targetAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const targetAngle = (Math.atan2(dy, dx) * 180) / Math.PI;
   const mis = orientationMisalignment(player, targetAngle);
   const err = (Math.random() - 0.5) * mis * 0.2;
   ({ vx, vy } = applyKickError(vx, vy, err));
@@ -430,7 +471,9 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   const offset = player.radius + ball.radius + 2;
   const startX = player.x + (dx / dist) * offset;
   const startY = player.y + (dy / dist) * offset;
-  ball.kick(startX, startY, vx, vy, speedFinal, player);
+  //ball.kick(startX, startY, vx, vy, speedFinal, player);
+  ball.kickVelocity(startX, startY, vx, vy, player);
+  
   ball.angularVelocity = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
 }
@@ -506,7 +549,7 @@ function setFormation(index) {
 }
 
 async function loadFormations() {
-  formations = await fetch("formations.json").then(res => res.json());
+  formations = await fetch("formations.json").then((res) => res.json());
   const select = document.getElementById("formationSelect");
   select.innerHTML = "";
   formations.forEach((f, i) => {
@@ -515,7 +558,7 @@ async function loadFormations() {
     opt.textContent = f.name;
     select.appendChild(opt);
   });
-  select.onchange = e => {
+  select.onchange = (e) => {
     selectedFormationIndex = +e.target.value;
     setFormation(selectedFormationIndex);
   };
@@ -527,7 +570,7 @@ async function loadFormations() {
 for (let i = 0; i < 11; i++) {
   const p = new Player(80 + Math.random() * 20, 100 + i * 40, window.colorProfiles[window.renderOptions.colorProfile].home, {
     position: "ST",
-    trade: (i === 9 ? "sniper" : null)
+    trade: i === 9 ? "sniper" : null,
   });
   p.baseline = { ...p.base };
   teamHeim.push(p);
@@ -535,7 +578,7 @@ for (let i = 0; i < 11; i++) {
 for (let i = 0; i < 11; i++) {
   const p = new Player(970 - Math.random() * 20, 100 + i * 40, window.colorProfiles[window.renderOptions.colorProfile].away, {
     position: "IV",
-    trade: (i === 2 ? "wall" : null)
+    trade: i === 2 ? "wall" : null,
   });
   p.baseline = { ...p.base };
   teamGast.push(p);
@@ -583,34 +626,40 @@ function handleFoul(fouler, victim) {
 
 function startThrowIn(side) {
   restartTimer = 2;
-  restartType = 'Einwurf';
+  restartType = "Einwurf";
   const team = lastTouchTeam === 0 ? teamGast : teamHeim;
-  const taker = team.reduce((b, p) => {
-    const d = Math.hypot(p.x - ball.x, p.y - ball.y);
-    return d < b.d ? { p, d } : b;
-  }, { p: team[0], d: Infinity }).p;
+  const taker = team.reduce(
+    (b, p) => {
+      const d = Math.hypot(p.x - ball.x, p.y - ball.y);
+      return d < b.d ? { p, d } : b;
+    },
+    { p: team[0], d: Infinity }
+  ).p;
   restartTaker = taker;
   ball.owner = taker;
   ball.isLoose = false;
   ball.x = Math.min(FIELD_BOUNDS.maxX - 5, Math.max(FIELD_BOUNDS.minX + 5, ball.x));
-  ball.y = side === 'top' ? FIELD_BOUNDS.minY : FIELD_BOUNDS.maxY;
+  ball.y = side === "top" ? FIELD_BOUNDS.minY : FIELD_BOUNDS.maxY;
   taker.x = ball.x;
-  taker.y = side === 'top' ? ball.y + 5 : ball.y - 5;
+  taker.y = side === "top" ? ball.y + 5 : ball.y - 5;
   playWhistle();
-  logComment('Einwurf');
+  logComment("Einwurf");
 }
 
 function startGoalRestart(side) {
-  const defending = side === 'left' ? teamHeim : teamGast;
-  const attacking = side === 'left' ? teamGast : teamHeim;
-  if (lastTouchTeam === (side === 'left' ? 0 : 1)) {
-    restartType = 'Ecke';
-    const cornerX = side === 'left' ? FIELD_BOUNDS.minX : FIELD_BOUNDS.maxX;
+  const defending = side === "left" ? teamHeim : teamGast;
+  const attacking = side === "left" ? teamGast : teamHeim;
+  if (lastTouchTeam === (side === "left" ? 0 : 1)) {
+    restartType = "Ecke";
+    const cornerX = side === "left" ? FIELD_BOUNDS.minX : FIELD_BOUNDS.maxX;
     const cornerY = ball.y < 340 ? FIELD_BOUNDS.minY : FIELD_BOUNDS.maxY;
-    const taker = attacking.reduce((b, p) => {
-      const d = Math.hypot(p.x - cornerX, p.y - cornerY);
-      return d < b.d ? { p, d } : b;
-    }, { p: attacking[0], d: Infinity }).p;
+    const taker = attacking.reduce(
+      (b, p) => {
+        const d = Math.hypot(p.x - cornerX, p.y - cornerY);
+        return d < b.d ? { p, d } : b;
+      },
+      { p: attacking[0], d: Infinity }
+    ).p;
     restartTaker = taker;
     restartTimer = 2;
     ball.owner = taker;
@@ -620,20 +669,20 @@ function startGoalRestart(side) {
     taker.x = cornerX;
     taker.y = cornerY;
     playWhistle();
-    logComment('Ecke');
+    logComment("Ecke");
   } else {
-    restartType = 'Abstoß';
-    const keeper = defending.find(p => p.role === 'TW') || defending[0];
+    restartType = "Abstoß";
+    const keeper = defending.find((p) => p.role === "TW") || defending[0];
     restartTaker = keeper;
     restartTimer = 2;
     ball.owner = keeper;
     ball.isLoose = false;
-    ball.x = side === 'left' ? FIELD_BOUNDS.minX + 5 : FIELD_BOUNDS.maxX - 5;
+    ball.x = side === "left" ? FIELD_BOUNDS.minX + 5 : FIELD_BOUNDS.maxX - 5;
     ball.y = 340;
     keeper.x = ball.x;
     keeper.y = 340;
     playWhistle();
-    logComment('Abstoß');
+    logComment("Abstoß");
   }
 }
 referee = new Referee(handleCard, handleFoul);
@@ -669,11 +718,6 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-
-
-
-
-
 function updateScoreboard() {
   document.getElementById("score").textContent = `${scoreHome} : ${scoreAway}`;
   document.getElementById("timer").textContent = toTimeString(matchTime);
@@ -698,7 +742,7 @@ function updatePowerBar() {
 }
 
 function spawnConfetti(side) {
-  const baseX = side === 'left' ? 60 : 990;
+  const baseX = side === "left" ? 60 : 990;
   for (let i = 0; i < 25; i++) {
     confettiParticles.push({
       x: baseX + (Math.random() - 0.5) * 40,
@@ -706,13 +750,13 @@ function spawnConfetti(side) {
       vx: (Math.random() - 0.5) * 2,
       vy: -Math.random() * 3 - 2,
       color: `hsl(${Math.random() * 360},80%,60%)`,
-      life: 1.5
+      life: 1.5,
     });
   }
 }
 
 function updateConfetti(delta) {
-  confettiParticles = confettiParticles.filter(p => {
+  confettiParticles = confettiParticles.filter((p) => {
     p.x += p.vx;
     p.y += p.vy;
     p.vy += 6 * delta;
@@ -723,7 +767,7 @@ function updateConfetti(delta) {
 
 function drawConfetti(ctx) {
   ctx.save();
-  confettiParticles.forEach(p => {
+  confettiParticles.forEach((p) => {
     ctx.fillStyle = p.color;
     ctx.fillRect(p.x, p.y, 3, 3);
   });
@@ -749,23 +793,23 @@ function checkGoal(ball) {
   if (ball.x < 15 && ball.y > 290 && ball.y < 390) {
     scoreAway++;
     playGoal();
-    logComment('Tor für Auswärtsteam!');
-    goalFlashSide = 'left';
+    logComment("Tor für Auswärtsteam!");
+    goalFlashSide = "left";
     goalFlashTimer = 1;
-    goalOverlayText = 'Tor für Auswärtsteam!';
+    goalOverlayText = "Tor für Auswärtsteam!";
     goalOverlayTimer = 2;
-    spawnConfetti('left');
+    spawnConfetti("left");
     resetKickoff();
   }
   if (ball.x > 1035 && ball.y > 290 && ball.y < 390) {
     scoreHome++;
     playGoal();
-    logComment('Tor für Heimteam!');
-    goalFlashSide = 'right';
+    logComment("Tor für Heimteam!");
+    goalFlashSide = "right";
     goalFlashTimer = 1;
-    goalOverlayText = 'Tor für Heimteam!';
+    goalOverlayText = "Tor für Heimteam!";
     goalOverlayTimer = 2;
-    spawnConfetti('right');
+    spawnConfetti("right");
     resetKickoff();
   }
 }
@@ -778,7 +822,7 @@ function resetKickoff() {
   ball.isLoose = false;
   setLastTouch(teamHeim[4]);
   playWhistle();
-  logComment('Anstoß');
+  logComment("Anstoß");
 }
 
 function resetGame() {
@@ -790,10 +834,9 @@ function resetGame() {
   redCards = [];
   resetKickoff();
   updateScoreboard();
-  logComment('Spiel zurückgesetzt');
+  logComment("Spiel zurückgesetzt");
   matchPaused = false;
 }
-
 
 function resolvePlayerCollisions(players) {
   for (let i = 0; i < players.length; i++) {
@@ -872,8 +915,8 @@ function updateUserInput(delta) {
 
   if (state.switch) {
     switchToNearestPlayer(userTeam);
-    logComment('Spieler gewechselt');
-    inputHandler.triggerCooldown('pass'); // small neutral cooldown
+    logComment("Spieler gewechselt");
+    inputHandler.triggerCooldown("pass"); // small neutral cooldown
   }
   if (state.cancel) {
     shotCharging = false;
@@ -881,7 +924,6 @@ function updateUserInput(delta) {
 
     passCharging = false;
     passCharge = 0;
-
   }
 }
 
@@ -891,7 +933,7 @@ function updateUserInput2() {
 }
 
 function updateFormationOffsets() {
-  const sideShift = (ball.x - 525) / 525 * 30;
+  const sideShift = ((ball.x - 525) / 525) * 30;
   formationOffsetHome.x = sideShift;
   formationOffsetAway.x = sideShift;
   const ownerTeam = teamId(ball.owner);
@@ -904,10 +946,10 @@ function updateFormationOffsets() {
       formationOffsetAway.x += 20;
     }
   }
-  if (coach.attackSide === 'left') {
+  if (coach.attackSide === "left") {
     formationOffsetHome.x -= 15;
     formationOffsetAway.x += 15;
-  } else if (coach.attackSide === 'right') {
+  } else if (coach.attackSide === "right") {
     formationOffsetHome.x += 15;
     formationOffsetAway.x -= 15;
   }
@@ -934,7 +976,7 @@ function gameLoop(timestamp) {
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
     if (window.debugOptions.showZones) {
-      drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? 'pressing' : null });
+      drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? "pressing" : null });
     }
     drawPlayers(ctx, allPlayers);
     if (window.debugOptions.showFormation) {
@@ -957,7 +999,7 @@ function gameLoop(timestamp) {
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
     if (window.debugOptions.showZones) {
-      drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? 'pressing' : null });
+      drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? "pressing" : null });
     }
     drawPlayers(ctx, allPlayers);
     if (window.debugOptions.showFormation) {
@@ -1016,12 +1058,11 @@ function gameLoop(timestamp) {
     if (userInput.shootPressed) {
       shotCharging = true;
       shotCharge = Math.min(1, shotCharge + delta);
-    } else if (shotCharging && inputHandler.can('shoot')) {
+    } else if (shotCharging && inputHandler.can("shoot")) {
       shootBall(selectedPlayer, shotCharge, userInput.dx, userInput.dy);
       shotCharging = false;
       shotCharge = 0;
-      inputHandler.triggerCooldown('shoot');
-
+      inputHandler.triggerCooldown("shoot");
     }
 
     if (userInput.passDown) {
@@ -1036,23 +1077,22 @@ function gameLoop(timestamp) {
         passIndicator = { from: { x: selectedPlayer.x, y: selectedPlayer.y }, to: { x: potentialMate.x, y: potentialMate.y }, time: 0.2 };
       }
     }
-    if (userInput.passUp && passCharging && inputHandler.can('pass')) {
+    if (userInput.passUp && passCharging && inputHandler.can("pass")) {
       if (!potentialMate) {
         potentialMate = findTeammateInDirection(selectedPlayer, userInput.dx, userInput.dy);
         if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
       }
       if (potentialMate) {
         passBall(selectedPlayer, potentialMate, passCharge);
-        inputHandler.triggerCooldown('pass');
+        inputHandler.triggerCooldown("pass");
       }
       passCharging = false;
       passCharge = 0;
     }
 
-    if (userInput.tacklePressed && !prevTackle && inputHandler.can('slide')) {
+    if (userInput.tacklePressed && !prevTackle && inputHandler.can("slide")) {
       tryTackle(selectedPlayer);
-      inputHandler.triggerCooldown('slide');
-
+      inputHandler.triggerCooldown("slide");
     }
   } else {
     shotCharging = false;
@@ -1124,18 +1164,17 @@ function gameLoop(timestamp) {
     }
   }
   const allPlayers = [...teamHeim, ...teamGast];
-  allPlayers.forEach(p => p.updateInjury(delta));
+  allPlayers.forEach((p) => p.updateInjury(delta));
 
   // 1. Wahrnehmung (inkl. FOV/Kopf/Memory)
-  allPlayers.forEach(p => {
-    const poiGoal = teamHeim.includes(p) ? { x: 1040, y: 340, role: "opponentGoal" }
-                                        : { x: 10, y: 340, role: "opponentGoal" };
+  allPlayers.forEach((p) => {
+    const poiGoal = teamHeim.includes(p) ? { x: 1040, y: 340, role: "opponentGoal" } : { x: 10, y: 340, role: "opponentGoal" };
     p.perceive([...allPlayers, ball, poiGoal, ...POIS]);
   });
 
   // 2. Decision/Behavior Tree (jeder Spieler individuell, Skill-basiertes Timing)
-  allPlayers.forEach(p => {
-    p.hasBall = (ball.owner === p);
+  allPlayers.forEach((p) => {
+    p.hasBall = ball.owner === p;
     const myTeam = teamHeim.includes(p) ? teamHeim : teamGast;
     const otherTeam = teamHeim.includes(p) ? teamGast : teamHeim;
     const world = {
@@ -1144,13 +1183,13 @@ function gameLoop(timestamp) {
       opponents: otherTeam,
       ball,
       opponentGoal: teamHeim.includes(p) ? { x: 1040, y: 340 } : { x: 10, y: 340 },
-      farLeft: { x: 60, y: 340 }
+      farLeft: { x: 60, y: 340 },
     };
     // Jeder Spieler entscheidet im eigenen Rhythmus (siehe Player.maybeDecide)
     p.maybeDecide(performance.now(), world, currentState);
     const teamIdx = teamHeim.includes(p) ? 0 : 1;
     const off = teamIdx === 0 ? formationOffsetHome : formationOffsetAway;
-    if (!p.controlledByUser && (p.currentAction === 'hold' || p.currentAction === 'rest')) {
+    if (!p.controlledByUser && (p.currentAction === "hold" || p.currentAction === "rest")) {
       let tx = p.formationX + off.x;
       let ty = p.formationY + off.y;
       const dxBall = ball.x - p.formationX;
@@ -1168,7 +1207,8 @@ function gameLoop(timestamp) {
   if (ball.owner && ball.owner.currentAction === "pass") {
     const owner = ball.owner;
     logComment(`${owner.role} spielt einen Pass`);
-    const dx = owner.targetX - ball.x, dy = owner.targetY - ball.y;
+    const dx = owner.targetX - ball.x,
+      dy = owner.targetY - ball.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const speed = 8; // Skill-basiert möglich!
     const offset = owner.radius + ball.radius + 2;
@@ -1181,16 +1221,18 @@ function gameLoop(timestamp) {
   }
 
   // 4. Spieler bewegen
-  allPlayers.forEach(p => {
+  allPlayers.forEach((p) => {
     const myTeam = teamHeim.includes(p) ? teamHeim : teamGast;
     const otherTeam = teamHeim.includes(p) ? teamGast : teamHeim;
     const world = { ball, teammates: myTeam, opponents: otherTeam };
     p.moveToTarget(world);
   });
-  allPlayers.forEach(p => p.updateHead(ball, delta, {
-    teammates: teamHeim.includes(p) ? teamHeim : teamGast,
-    opponents: teamHeim.includes(p) ? teamGast : teamHeim
-  }));
+  allPlayers.forEach((p) =>
+    p.updateHead(ball, delta, {
+      teammates: teamHeim.includes(p) ? teamHeim : teamGast,
+      opponents: teamHeim.includes(p) ? teamGast : teamHeim,
+    })
+  );
   resolvePlayerCollisions(allPlayers);
   for (const p of allPlayers) {
     if (p.currentAction === "tackle" && ball.owner !== p) {
@@ -1214,7 +1256,7 @@ function gameLoop(timestamp) {
   ball.update(delta, allPlayers, FIELD_BOUNDS, weather);
   if (ball.lastTouch) setLastTouch(ball.lastTouch);
   if (ball.outOfBounds && restartTimer <= 0 && freeKickTimer <= 0) {
-    if (ball.outOfBounds === 'top' || ball.outOfBounds === 'bottom') {
+    if (ball.outOfBounds === "top" || ball.outOfBounds === "bottom") {
       startThrowIn(ball.outOfBounds);
     } else {
       startGoalRestart(ball.outOfBounds);
@@ -1226,13 +1268,13 @@ function gameLoop(timestamp) {
   const myTeamId = userTeam === teamHeim ? 0 : 1;
   if (lastBallOwnerTeam === myTeamId && currentTeam !== myTeamId) {
     switchToNearestPlayer(userTeam);
-    logComment('Automatischer Spielerwechsel');
+    logComment("Automatischer Spielerwechsel");
   }
   lastBallOwnerTeam = currentTeam;
   const myTeamId2 = userTeam2 === teamHeim ? 0 : 1;
   if (lastBallOwnerTeam2 === myTeamId2 && currentTeam !== myTeamId2) {
     switchToNearestPlayer(userTeam2);
-    logComment('Spieler 2 automatisch gewechselt');
+    logComment("Spieler 2 automatisch gewechselt");
   }
   lastBallOwnerTeam2 = currentTeam;
 
@@ -1255,7 +1297,7 @@ function gameLoop(timestamp) {
   // 7. RENDER
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
   if (window.debugOptions.showZones) {
-    drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? 'pressing' : null });
+    drawZones(ctx, allPlayers, { ball, tactic: coach?.pressing > 1 ? "pressing" : null });
   }
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
@@ -1282,7 +1324,13 @@ function gameLoop(timestamp) {
   drawGoalHighlight(ctx, goalOverlayText, goalOverlayTimer, canvas.width, canvas.height);
   drawRadar(radarCtx, allPlayers, ball, radarCanvas.width, radarCanvas.height);
   if (matchPaused) {
-    drawOverlay(ctx, 'Spiel beendet', canvas.width);
+    drawOverlay(ctx, "Spiel beendet", canvas.width);
+  
+  const all = [...teamHeim, ...teamGast];
+  all.forEach(p => p.endStamina = p.stamina); // falls nicht geschehen
+  showAnalysis(all);
+
+
   }
 
   // 8. Score/Goal Check/Timer

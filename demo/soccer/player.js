@@ -1,25 +1,28 @@
-import { Capabilities } from './capabilities.js';
+import { Capabilities } from "./capabilities.js";
 import { createPlayerBT } from "./footBallBTs.js";
 import { computeEllipseRadii, getTargetZoneCenter } from "./TacticsHelper.js";
 import { getDynamicZone } from "./decision-rules.js";
 import { FIELD_BOUNDS } from "./ball.js";
 
-
 const TradeProfiles = {
-  sniper:      { shootingAccuracy: +0.15, tacklingSkill: -0.1 },
-  playmaker:   { passingAccuracy: +0.15, topSpeed: -0.05 },
-  wall:        { tacklingSkill: +0.2, acceleration: -0.08 },
-  engine:      { fitness: +0.2, shootingPower: -0.1 }
+  sniper: { shootingAccuracy: +0.15, tacklingSkill: -0.1 },
+  playmaker: { passingAccuracy: +0.15, topSpeed: -0.05 },
+  wall: { tacklingSkill: +0.2, acceleration: -0.08 },
+  engine: { fitness: +0.2, shootingPower: -0.1 },
   // usw.
 };
 
 function getPositionMultipliers(pos) {
-  switch(pos) {
-    case "ST": return { shootingAccuracy: 1.2, tacklingSkill: 0.8 };
-    case "IV": return { tacklingSkill: 1.3, topSpeed: 0.9 };
-    case "ZM": return { passingAccuracy: 1.15, shootingPower: 0.95 };
+  switch (pos) {
+    case "ST":
+      return { shootingAccuracy: 1.2, tacklingSkill: 0.8 };
+    case "IV":
+      return { tacklingSkill: 1.3, topSpeed: 0.9 };
+    case "ZM":
+      return { passingAccuracy: 1.15, shootingPower: 0.95 };
     // ...
-    default: return {};
+    default:
+      return {};
   }
 }
 
@@ -43,7 +46,7 @@ export class Player {
       reaction: options.reaction ?? Math.random(),
       vision: options.vision ?? Math.random(),
       workrate: options.workrate ?? Math.random(),
-      ...options.baseStats
+      ...options.baseStats,
     };
 
     // --- Spielerprofil / Trade (Sniper, Wall, Engine, Playmaker...) ---
@@ -52,7 +55,11 @@ export class Player {
 
     // --- Erfahrungssystem ---
     this.xp = {
-      passing: 0, shooting: 0, tackling: 0, vision: 0, fitness: 0
+      passing: 0,
+      shooting: 0,
+      tackling: 0,
+      vision: 0,
+      fitness: 0,
       // ...
     };
 
@@ -88,7 +95,7 @@ export class Player {
 
     // Kurzer Highlight-Effekt nach Fouls
     this.highlightTimer = 0;
-  
+
     // Tackling/Sliding
     this.tackleCooldown = 0;
     this.sliding = false;
@@ -97,10 +104,17 @@ export class Player {
     this.slideDirY = 0;
     this.slideSpeed = 0;
 
+    this.preferredFoot = options.preferredFoot || (Math.random() < 0.5 ? "left" : "right");
+    this.fluidity = options.fluidity ?? Math.random();
+    this.dribbleSide = this.preferredFoot;
+    this.heatmap = [];
+    this.totalDistance = 0;
+    this.startStamina = this.stamina ?? 1;
+    this.endStamina = null;
+
     // Bewegungsgeschwindigkeit (für Interpolation)
     this.vx = 0;
     this.vy = 0;
-
 
     // --- Decision-Timing (Awareness-Skill steuert Intervall) ---
     this.lastDecision = 0;
@@ -115,18 +129,18 @@ export class Player {
     const b = this.base;
     const t = this.getTradeBonus();
     // Beispielhaft einige abgeleitete Werte:
-    this.derived.acceleration     = b.athleticism * 0.6 + b.fitness * 0.2 + b.speed * 0.2 + (t.acceleration ?? 0);
-    this.derived.topSpeed         = b.athleticism * 0.4 + b.fitness * 0.3 + b.speed * 0.3 + (t.topSpeed ?? 0);
-    this.derived.bodyTurnRate     = b.athleticism * 0.3 + b.technique * 0.5 + (t.bodyTurnRate   ?? 0);
-    this.derived.headTurnRate     = b.vision * 0.6 + b.reaction * 0.4 + (t.headTurnRate         ?? 0);
-    this.derived.shootingPower    = b.technique * 0.5 + b.athleticism * 0.4 + (t.shootingPower  ?? 0);
+    this.derived.acceleration = b.athleticism * 0.6 + b.fitness * 0.2 + b.speed * 0.2 + (t.acceleration ?? 0);
+    this.derived.topSpeed = b.athleticism * 0.4 + b.fitness * 0.3 + b.speed * 0.3 + (t.topSpeed ?? 0);
+    this.derived.bodyTurnRate = b.athleticism * 0.3 + b.technique * 0.5 + (t.bodyTurnRate ?? 0);
+    this.derived.headTurnRate = b.vision * 0.6 + b.reaction * 0.4 + (t.headTurnRate ?? 0);
+    this.derived.shootingPower = b.technique * 0.5 + b.athleticism * 0.4 + (t.shootingPower ?? 0);
     this.derived.shootingAccuracy = b.technique * 0.5 + b.intelligence * 0.3 + (t.shootingAccuracy ?? 0);
-    this.derived.passingPower     = b.technique * 0.4 + b.intelligence * 0.5 + (t.passingPower     ?? 0);
-    this.derived.passingAccuracy  = b.technique * 0.5 + b.vision * 0.3 + b.intelligence * 0.2 + (t.passingAccuracy ?? 0);
-    this.derived.dribblingSkill   = b.technique * 0.5 + b.vision * 0.2 + b.fitness * 0.2 + (t.dribblingSkill ?? 0);
-    this.derived.tacklingSkill    = b.technique * 0.4 + b.mentality * 0.4 + b.athleticism * 0.2 + (t.tacklingSkill ?? 0);
-    this.derived.awareness        = b.vision * 0.5 + b.intelligence * 0.5 + (t.awareness ?? 0);
-    this.derived.balance          = b.athleticism * 0.3 + b.mentality * 0.7 + (t.balance ?? 0);
+    this.derived.passingPower = b.technique * 0.4 + b.intelligence * 0.5 + (t.passingPower ?? 0);
+    this.derived.passingAccuracy = b.technique * 0.5 + b.vision * 0.3 + b.intelligence * 0.2 + (t.passingAccuracy ?? 0);
+    this.derived.dribblingSkill = b.technique * 0.5 + b.vision * 0.2 + b.fitness * 0.2 + (t.dribblingSkill ?? 0);
+    this.derived.tacklingSkill = b.technique * 0.4 + b.mentality * 0.4 + b.athleticism * 0.2 + (t.tacklingSkill ?? 0);
+    this.derived.awareness = b.vision * 0.5 + b.intelligence * 0.5 + (t.awareness ?? 0);
+    this.derived.balance = b.athleticism * 0.3 + b.mentality * 0.7 + (t.balance ?? 0);
 
     // --- Positionsbonus anwenden ---
     for (const prop in this.positionMultipliers) {
@@ -138,19 +152,54 @@ export class Player {
 
   static getAllowedZone(player) {
     // These must match decision-rules.js
-    let marginX = 20, marginY = 15;
-    let width = 160, height = 180;
+    let marginX = 20,
+      marginY = 15;
+    let width = 160,
+      height = 180;
 
     switch (player.role) {
-      case "TW": width = 80; height = 140; break;
-      case "IV": case "LIV": case "RIV": width = 110; height = 190; break;
-      case "LV": case "RV": width = 135; height = 220; break;
-      case "DM": width = 170; height = 210; break;
-      case "ZM": case "OM": width = 270; height = 220; break;
-      case "LM": case "RM": width = 250; height = 270; break;
-      case "LF": case "RF": width = 320; height = 210; break;
-      case "ST": width = 320; height = 230; break;
-      default: width = 170; height = 200; break;
+      case "TW":
+        width = 80;
+        height = 140;
+        break;
+      case "IV":
+      case "LIV":
+      case "RIV":
+        width = 110;
+        height = 190;
+        break;
+      case "LV":
+      case "RV":
+        width = 135;
+        height = 220;
+        break;
+      case "DM":
+        width = 170;
+        height = 210;
+        break;
+      case "ZM":
+      case "OM":
+        width = 270;
+        height = 220;
+        break;
+      case "LM":
+      case "RM":
+        width = 250;
+        height = 270;
+        break;
+      case "LF":
+      case "RF":
+        width = 320;
+        height = 210;
+        break;
+      case "ST":
+        width = 320;
+        height = 230;
+        break;
+      default:
+        width = 170;
+        height = 200;
+        break;
     }
     // Widen each role's zone to ensure the team collectively covers its half
     width += 200;
@@ -181,8 +230,6 @@ export class Player {
       y: Math.max(bounds.minY, Math.min(bounds.maxY, y)),
     };
   }
-
-
 
   static getDynamicTargetZone(player, ball, coach) {
     const pressing = coach ? coach.pressing : 1;
@@ -219,10 +266,10 @@ export class Player {
   maybeDecide(now, world, gameState) {
     this.processMessages();
     if (this.controlledByUser) return;
-    if ((now - this.lastDecision) > this.reactionInterval) {
+    if (now - this.lastDecision > this.reactionInterval) {
       this.lastDecision = now;
-      this.bt.tick(this, world);  // Behavior Tree entscheidet Ziel/Aktion
-      const angle = Math.atan2(world.ball.y - this.y, world.ball.x - this.x) * 180 / Math.PI;
+      this.bt.tick(this, world); // Behavior Tree entscheidet Ziel/Aktion
+      const angle = (Math.atan2(world.ball.y - this.y, world.ball.x - this.x) * 180) / Math.PI;
       this.smoothTurnHeadTo(angle, this.derived.headTurnRate ?? 12);
     }
   }
@@ -295,6 +342,8 @@ export class Player {
       const movement = Math.hypot(this.vx, this.vy);
       const drain = movement * 0.001 * (1.2 - (this.base.stamina ?? 1));
       this.stamina = Math.max(0, (this.stamina ?? 1) - drain);
+      this.heatmap.push({ x: this.x, y: this.y });
+      this.totalDistance += dist;
       return false;
     }
     const recovery = 0.0005 * (0.5 + (this.base.stamina ?? 1));
@@ -364,12 +413,16 @@ export class Player {
     if (this.headDirection > 180) this.headDirection -= 360;
     if (this.headDirection < -180) this.headDirection += 360;
   }
-  sendMessage(targetPlayer, message) { targetPlayer.mailbox.push({ from: this, ...message }); }
-  broadcastMessage(team, message) { for (const mate of team) if (mate !== this) this.sendMessage(mate, message); }
+  sendMessage(targetPlayer, message) {
+    targetPlayer.mailbox.push({ from: this, ...message });
+  }
+  broadcastMessage(team, message) {
+    for (const mate of team) if (mate !== this) this.sendMessage(mate, message);
+  }
 
   processMessages() {
-    this.mailbox = this.mailbox.filter(msg => {
-      if (msg.type === 'pressing') {
+    this.mailbox = this.mailbox.filter((msg) => {
+      if (msg.type === "pressing") {
         this.pressing = msg.level;
         return false;
       }
@@ -381,10 +434,10 @@ export class Player {
     const now = performance.now ? performance.now() : Date.now();
     const memory = this.memory.ball;
     const timeSinceSeen = memory ? now - memory.lastSeen : Infinity;
-    const predicted = memory ? this.predictObjectPosition('ball', 0.3) : null;
+    const predicted = memory ? this.predictObjectPosition("ball", 0.3) : null;
     const ballDist = predicted ? Math.hypot(predicted.x - this.x, predicted.y - this.y) : Infinity;
     if (predicted && timeSinceSeen < 1000) {
-      const angle = Math.atan2(predicted.y - this.y, predicted.x - this.x) * 180 / Math.PI;
+      const angle = (Math.atan2(predicted.y - this.y, predicted.x - this.x) * 180) / Math.PI;
       this.smoothTurnHeadTo(angle, this.derived.headTurnRate ?? 12);
       this.scanTimer = 0;
       return;
@@ -392,7 +445,7 @@ export class Player {
     this.scanTimer = (this.scanTimer ?? 0) - dt * 1000;
     if (ballDist > 200 && this.scanTimer <= 0) {
       const candidates = world ? [...world.teammates, ...world.opponents] : [];
-      const nearby = candidates.filter(o => Math.hypot(o.x - this.x, o.y - this.y) < 220);
+      const nearby = candidates.filter((o) => Math.hypot(o.x - this.x, o.y - this.y) < 220);
       const target = nearby.length ? nearby[Math.floor(Math.random() * nearby.length)] : null;
       const angle = target ? Math.atan2(target.y - this.y, target.x - this.x) : Math.random() * 360;
       this.scanTargetAngle = angle;
@@ -431,4 +484,3 @@ export class Player {
     return `Player(${this.role}, ${this.x.toFixed(1)}, ${this.y.toFixed(1)})`;
   }
 }
-

@@ -88,6 +88,27 @@
             <option value="rain">Regen</option>
             <option value="wind">Windig</option>
         </select>
+        <div id="analysisPanel" style="display: none; padding: 12px; background: #111; color: #eee; font-size: 0.9em;">
+  <h3>Spieleranalyse</h3>
+  <button onclick="document.getElementById('analysisPanel').style.display='none'">✖ schließen</button>
+  <div id="analysisTable"></div>
+</div>
+
+<style>
+  #analysisPanel table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  #analysisPanel th, #analysisPanel td {
+    border: 1px solid #555;
+    padding: 4px 8px;
+    text-align: left;
+  }
+  #analysisPanel th {
+    background: #222;
+  }
+</style>
+
     </div>
 
     <div id="scoreboard">

@@ -31,6 +31,17 @@ export class Ball {
     this.y = startY;
   }
 
+  kickVelocity(startX, startY, vx, vy, kicker = null) {
+  this.owner = null;
+  this.isLoose = true;
+  this.lastTouch = kicker;
+  this.vx = vx;
+  this.vy = vy;
+  this.angularVelocity = 0;
+  this.x = startX;
+  this.y = startY;
+}
+
   clampToField(bounds = FIELD_BOUNDS) {
     this.outOfBounds = null;
     if (this.x < bounds.minX) { this.x = bounds.minX; this.outOfBounds = 'left'; }
