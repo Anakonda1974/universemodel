@@ -2,6 +2,7 @@ import { Capabilities } from './capabilities.js';
 import { createPlayerBT } from "./footBallBTs.js";
 import { computeEllipseRadii, getTargetZoneCenter } from "./TacticsHelper.js";
 import { getDynamicZone } from "./decision-rules.js";
+import { FIELD_BOUNDS } from "./ball.js";
 
 
 const TradeProfiles = {
@@ -163,16 +164,21 @@ export class Player {
   }
 
   static clampToZone(x, y, zone) {
-    return {
-      x: Math.max(zone.minX, Math.min(zone.maxX, x)),
-      y: Math.max(zone.minY, Math.min(zone.maxY, y)),
-    };
+    const cx = Math.max(zone.minX, Math.min(zone.maxX, x));
+    const cy = Math.max(zone.minY, Math.min(zone.maxY, y));
+    return Player.clampToField(cx, cy);
   }
 
   static clampToRect(x, y, zone, margin = 0) {
+    const rx = Math.max(zone.x - margin, Math.min(zone.x + zone.width + margin, x));
+    const ry = Math.max(zone.y - margin, Math.min(zone.y + zone.height + margin, y));
+    return Player.clampToField(rx, ry);
+  }
+
+  static clampToField(x, y, bounds = FIELD_BOUNDS) {
     return {
-      x: Math.max(zone.x - margin, Math.min(zone.x + zone.width + margin, x)),
-      y: Math.max(zone.y - margin, Math.min(zone.y + zone.height + margin, y)),
+      x: Math.max(bounds.minX, Math.min(bounds.maxX, x)),
+      y: Math.max(bounds.minY, Math.min(bounds.maxY, y)),
     };
   }
 

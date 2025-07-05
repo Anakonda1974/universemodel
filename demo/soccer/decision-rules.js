@@ -1,4 +1,5 @@
 // decision-rules.js
+import { FIELD_BOUNDS } from './ball.js';
 
 export function canPass(player, world) {
     if (!world.ball || !world.ball.isLoose) return false;
@@ -148,12 +149,12 @@ export function getDynamicZone(player, world) {
     offsetY *= 0.6;
   }
 
-  return {
-    x: centerX + offsetX - zoneWidth / 2,
-    y: centerY + offsetY - zoneHeight / 2,
-    width: zoneWidth,
-    height: zoneHeight
-  };
+  let x = centerX + offsetX - zoneWidth / 2;
+  let y = centerY + offsetY - zoneHeight / 2;
+  x = Math.max(FIELD_BOUNDS.minX, Math.min(FIELD_BOUNDS.maxX - zoneWidth, x));
+  y = Math.max(FIELD_BOUNDS.minY, Math.min(FIELD_BOUNDS.maxY - zoneHeight, y));
+
+  return { x, y, width: zoneWidth, height: zoneHeight };
 }
 
 
@@ -257,7 +258,9 @@ function decideBallOwnerAction(player, world) {
 // ---- Intent Resolver (bounds action to zone) ----
 function boundedIntent(player, intent, tx, ty, world, allowOutside = false) {
   const zone = getAllowedZone(player, world);
-  const target = allowOutside ? { x: tx, y: ty } : clampToZone(tx, ty, zone);
+  let target = allowOutside ? { x: tx, y: ty } : clampToZone(tx, ty, zone);
+  target.x = Math.max(FIELD_BOUNDS.minX, Math.min(FIELD_BOUNDS.maxX, target.x));
+  target.y = Math.max(FIELD_BOUNDS.minY, Math.min(FIELD_BOUNDS.maxY, target.y));
   player.targetX = target.x;
   player.targetY = target.y;
   player.currentAction = intent;
