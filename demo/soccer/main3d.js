@@ -84,21 +84,6 @@ function updatePlayerControls(dt) {
   }
 }
 
-function handleCollisions() {
-  for (const p of players) {
-    const dist = p.position.distanceTo(ball.position);
-    const minDist = p.radius + ball.radius;
-    if (dist < minDist) {
-      const normal = ball.position.clone().sub(p.position).normalize();
-      ball.position.copy(p.position).addScaledVector(normal, minDist);
-      const rel = ball.velocity.clone().sub(p.velocity);
-      const impact = rel.dot(normal);
-      if (impact < 0) {
-        ball.velocity.addScaledVector(normal, -impact * (1 + ball.restitution));
-      }
-    }
-  }
-}
 
 function toTimeString(sec) {
   const m = Math.floor(sec / 60);
@@ -138,9 +123,8 @@ function loop(now) {
 
   updatePlayerControls(dt);
   players.forEach(p => p.update(dt));
-  ball.update(dt);
+  ball.update(dt, players);
   updateCamera();
-  handleCollisions();
   checkGoals();
   matchTime += dt;
   updateHUD();
