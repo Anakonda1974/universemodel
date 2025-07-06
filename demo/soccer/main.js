@@ -10,6 +10,9 @@ import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
 import { InputHandler } from "./input.js";
 
+import { }  from "./debugManager.js";
+
+ 
 import { analyzePlayerPerformance, evaluateFootUse } from "./analyze.js";
 
 // ----- Game Setup -----
@@ -40,10 +43,9 @@ const inputHandler = new InputHandler();
 
 window.debugOptions = { showZones: true, showFOV: true, showBall: true, showFormation: false, showTargets: false };
 
-
 window.colorProfiles = {
   default: { field: "#065", home: "#0000ff", away: "#ff0000", background: "#222" },
-  classic: { field: "#060", home: "#006400", away: "#ff8c00", background: "#333" },
+  classic: { field: "#020", home: "#006400", away: "#ff8c00", background: "#333" },
   highContrast: { field: "#022", home: "#ffff00", away: "#ff00ff", background: "#000" },
 };
 window.renderOptions = { lineAlpha: 1, colorProfile: "default", fieldColor: "#065" };
@@ -67,6 +69,7 @@ const benchHeim = [],
 let ball;
 let coach;
 let referee;
+let debugManager = new DebugManager();
 let selectedPlayer = null;
 let userTeam = teamHeim;
 const userInput = {
@@ -145,6 +148,12 @@ let formationOffsetAway = { x: 0, y: 0 };
 let difficulty = "normal";
 const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
 
+
+
+
+
+
+
 // --- Weather ---
 // Higher friction values closer to 1 mean less slowdown per frame
 window.weather = { type: "clear", windX: 0, windY: 0, friction: 1 };
@@ -196,15 +205,17 @@ function showAnalysis(players) {
       <th>Rolle</th><th>Distanz</th><th>Stamina ⛽</th>
       <th>Workrate</th><th>Präf. Fuß</th><th>Falsche Fußnutzung</th>
     </tr></thead><tbody>`;
-  const rows = players.map(p => {
-    const perf = analyzePlayerPerformance(p);
-    const foot = evaluateFootUse(p);
-    return `<tr>
+  const rows = players
+    .map((p) => {
+      const perf = analyzePlayerPerformance(p);
+      const foot = evaluateFootUse(p);
+      return `<tr>
       <td>${perf.role}</td><td>${perf.distance}</td>
       <td>${perf.usedStamina}</td><td>${perf.readinessScore}</td>
       <td>${perf.preferredFoot}</td><td>${foot.wrongFootRate}</td>
     </tr>`;
-  }).join("\n");
+    })
+    .join("\n");
   table.innerHTML = header + rows + "</tbody></table>";
   panel.style.display = "block";
 }
@@ -242,6 +253,22 @@ function applyColorProfile(name) {
   if (window.invalidateField) window.invalidateField();
 }
 window.applyColorProfile = applyColorProfile;
+
+//   const renderSection = document.createElement('details');
+//     renderSection.innerHTML = `<summary>Rendering Options</summary>
+//       <label><input id="cp-dark" type="checkbox"> Dark Mode</label><br>
+//       <label>Line Alpha <input id="cp-alpha" type="range" min="0" max="1" step="0.1" value="1"></label><br>
+//       <label>Colour Profile <select id="cp-colors">
+//         <option value="default">Default</option>
+//         <option value="classic">Classic</option>
+//         <option value="highContrast">High Contrast</option>
+//       </select></label>`;
+//     content.appendChild(renderSection);
+//     renderSection.querySelector('#cp-colors').value = window.renderOptions.colorProfile;
+//     renderSection.querySelector('#cp-colors').onchange = e => {
+//       window.renderOptions.colorProfile = e.target.value;
+//       if (window.applyColorProfile) window.applyColorProfile(e.target.value);
+//     };
 
 function teamId(player) {
   if (!player) return null;
@@ -285,7 +312,7 @@ function startCrowdNoise() {
   noise.connect(crowdGain).connect(audioCtx.destination);
   noise.start(0);
 }
-startCrowdNoise();
+//startCrowdNoise();
 
 function playBeep(freq, duration = 300) {
   const osc = audioCtx.createOscillator();
@@ -377,7 +404,6 @@ function handleOffside(player) {
   kicker.currentAction = "freekick";
 }
 
-
 function calcPassSpeedForDistance(dist) {
   // Increase base speed range so long passes don't stall
   const min = 10;
@@ -457,7 +483,7 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   const startY = player.y + (dy / dist) * offset;
   //ball.kick(startX, startY, vx, vy, speedFinal, player);
   ball.kickVelocity(startX, startY, vx, vy, player);
-  
+
   ball.angularVelocity = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
 }
@@ -1296,6 +1322,7 @@ function gameLoop(timestamp) {
 
   // 7. RENDER
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
+
   if (window.debugOptions.showZones) {
     drawZones(ctx, allPlayers, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
   }
@@ -1326,12 +1353,10 @@ function gameLoop(timestamp) {
   debugManager.draw({ players: allPlayers, ball, tactic: coach?.pressing > 1 ? "pressing" : null });
   if (matchPaused) {
     drawOverlay(ctx, "Spiel beendet", canvas.width);
-  
-  const all = [...teamHeim, ...teamGast];
-  all.forEach(p => p.endStamina = p.stamina); // falls nicht geschehen
-  showAnalysis(all);
 
-
+    const all = [...teamHeim, ...teamGast];
+    all.forEach((p) => (p.endStamina = p.stamina)); // falls nicht geschehen
+    showAnalysis(all);
   }
 
   // 8. Score/Goal Check/Timer

@@ -44,6 +44,8 @@ export function drawField(ctx, width, height, flashTimer = 0, flashSide = null) 
     ctx.restore();
   }
 }
+
+
 export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false, showHeadDir = false, showTargets = false } = {}) {
   players.forEach(p => {
     // Draw body (circle)
