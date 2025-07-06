@@ -110,3 +110,20 @@ connection also shows a label indicating which property values are linked. You
 can double‑click on a connection itself to add hidden anchor points that shape
 the line without altering its curve. Right‑click a card to open a small context
 menu with options to remove the card or clear all of its connections.
+
+## Debug Visualization
+
+A small debugging subsystem is included under `src/debug/`. Use the following keys at runtime to toggle overlays:
+
+- **Z** – toggle zone visualization
+- **F** – toggle field of view
+- **R** – toggle radar
+- **I** – toggle player intents
+- **B** – toggle ball debug info
+- **D** – toggle dribble side markers
+
+Messages can be written to the on page console using `logDebug()` from `src/debug/logger.js`. The console element is added at the bottom of `public/index.html` and automatically scrolls to the newest entry.
+
+To show state information each frame, call `renderDebugLayers()` from `src/render.js` inside your main loop. You can optionally draw a HUD with `drawDebugOverlay()`.
+
+New debug drawing functions can be integrated by extending `renderDebugLayers()` and providing implementations alongside the existing placeholder functions in `src/render.js`.

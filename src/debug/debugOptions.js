@@ -1,0 +1,15 @@
+export const debugOptions = {
+  showRunDir: true,
+  showHeadDir: false,
+  showFOV: false,
+  showZones: true,
+  showSoftZones: false,
+  showIntents: false,
+  showFormationDebug: false,
+  showBallDebug: false,
+  showPasses: false,
+  showDribbleSide: false,
+  showPerception: false,
+  showRadar: true,
+  showDebugOverlay: true,
+};
