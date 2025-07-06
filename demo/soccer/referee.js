@@ -6,9 +6,19 @@ export class Referee {
     this.onCard = onCardCallback;
     this.onFoul = onFoulCallback;
     this.onOffside = onOffsideCallback;
+    this.x = 525;
+    this.y = 340;
+    this.radius = 10;
   }
 
-  update(players, ball) {
+  moveTowards(ball, dt) {
+    const speed = 0.6;
+    this.x += (ball.x - this.x) * speed * dt;
+    this.y += (ball.y - this.y) * speed * dt;
+  }
+
+  update(players, ball, dt = 0) {
+    this.moveTowards(ball, dt);
     for (const p of players) {
       if (p.currentAction === "tackle" && (!ball.owner || ball.owner !== p)) {
         for (const opp of players) {

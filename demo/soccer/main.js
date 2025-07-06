@@ -3,7 +3,7 @@
 import { Player } from "./player.js";
 import { Coach } from "./coach.js";
 import { Ball, FIELD_BOUNDS } from "./ball.js";
-import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawZones, drawBallDebug, drawFormationDebug } from "./render.js";
+import { drawField, drawPlayers, drawBall, drawOverlay, drawPasses, drawPerceptionHighlights, drawPassIndicator, drawRadar, drawActivePlayer, drawGoalHighlight, drawZones, drawBallDebug, drawFormationDebug, drawReferee } from "./render.js";
 import { DebugManager } from "./debugManager.js";
 import { logComment } from "./commentary.js";
 import { initControlPanel } from "./ui-panel.js";
@@ -931,6 +931,7 @@ function gameLoop(timestamp) {
       drawZones(ctx, allPlayers, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
     }
     drawPlayers(ctx, allPlayers, { showTargets: window.debugOptions.showTargets });
+    drawReferee(ctx, referee);
     if (window.debugOptions.showFormation) {
       drawFormationDebug(ctx, allPlayers);
     }
@@ -954,6 +955,7 @@ function gameLoop(timestamp) {
       drawZones(ctx, allPlayers, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
     }
     drawPlayers(ctx, allPlayers, { showTargets: window.debugOptions.showTargets });
+    drawReferee(ctx, referee);
     if (window.debugOptions.showFormation) {
       drawFormationDebug(ctx, allPlayers);
     }
@@ -1203,7 +1205,7 @@ function gameLoop(timestamp) {
     }
   }
 
-  referee.update(allPlayers, ball);
+  referee.update(allPlayers, ball, delta);
 
   checkSubstitutions();
 
@@ -1260,6 +1262,7 @@ function gameLoop(timestamp) {
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);
   drawPlayers(ctx, allPlayers, { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
+  drawReferee(ctx, referee);
   if (window.debugOptions.showFormation) {
     drawFormationDebug(ctx, allPlayers);
   }
