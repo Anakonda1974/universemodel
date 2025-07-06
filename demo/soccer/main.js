@@ -9,6 +9,7 @@ import { logComment } from "./commentary.js";
 import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
 import { InputHandler } from "./input.js";
+import { Capabilities } from "./capabilities.js";
 
 import { }  from "./debugManager.js";
 
@@ -404,8 +405,9 @@ function handleOffside(player) {
   kicker.currentAction = "freekick";
 }
 
+/*
+ * Obsolete manual implementations kept for reference.
 function calcPassSpeedForDistance(dist) {
-  // Increase base speed range so long passes don't stall
   const min = 10;
   const max = 22;
   const speed = min + (dist / 250) * (max - min);
@@ -426,32 +428,7 @@ function applyKickError(vx, vy, angleErrorDeg) {
 }
 
 function passBall(from, to, power = 1) {
-  if (!from || !to) return;
-  if (referee) referee.handlePass(from, to, [...teamHeim, ...teamGast]);
-  setLastTouch(from);
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const dist = Math.hypot(dx, dy);
-  if (dist === 0) return;
-  ball.owner = null;
-  ball.isLoose = true;
-  const baseSpeed = calcPassSpeedForDistance(dist);
-  const speed = baseSpeed * (0.7 + power * 0.8);
-  let vx = (dx / dist) * speed;
-  let vy = (dy / dist) * speed;
-  const targetAngle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const mis = orientationMisalignment(from, targetAngle);
-  const err = (Math.random() - 0.5) * mis * 0.2;
-  ({ vx, vy } = applyKickError(vx, vy, err));
-  const spd = Math.hypot(vx, vy);
-  const offset = from.radius + ball.radius + 2;
-  const startX = from.x + (dx / dist) * offset;
-  const startY = from.y + (dy / dist) * offset;
-  //ball.kick(startX, startY, vx, vy, spd, from);
-  ball.kickVelocity(startX, startY, vx, vy, from);
-  ball.angularVelocity = (Math.random() - 0.5) * 0.02;
-  from.currentAction = "pass";
-  passIndicator = { from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, time: 0.5 };
+  // old pass logic
 }
 
 function shootBall(player, power = 1, dirX = null, dirY = null) {
@@ -483,40 +460,24 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   const startY = player.y + (dy / dist) * offset;
   //ball.kick(startX, startY, vx, vy, speedFinal, player);
   ball.kickVelocity(startX, startY, vx, vy, player);
-
+  
   ball.angularVelocity = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
 }
 
-function tryTackle(player) {
-  if (!player || player.tackleCooldown > 0) return;
-  if (!ball.owner || ball.owner === player) return;
-  const target = ball.owner;
-  const dx = target.x - player.x;
-  const dy = target.y - player.y;
-  const dist = Math.hypot(dx, dy);
-  const tackleRadius = 25;
-  const slideRadius = 40;
-  if (dist < tackleRadius) {
-    ball.owner = player;
-    ball.isLoose = false;
-    setLastTouch(player);
-    ball.vx = 0;
-    ball.vy = 0;
-    ball.x = player.x;
-    ball.y = player.y;
-    for (const p of [...teamHeim, ...teamGast]) p.hasBall = false;
-    player.hasBall = true;
-    player.currentAction = "tackle";
-  } else if (dist < slideRadius) {
-    player.sliding = true;
-    player.slideDirX = dx / dist;
-    player.slideDirY = dy / dist;
-    player.slideSpeed = 8;
-    player.slideTimer = 30;
-    player.currentAction = "tackle";
+function doShoot(player, dirX, dirY) {
+  if (!player) return;
+  let goal = undefined;
+  const mag = Math.hypot(dirX ?? 0, dirY ?? 0);
+  if (mag > 0.1) {
+    goal = { x: player.x + dirX * 50, y: player.y + dirY * 50 };
   }
-  player.tackleCooldown = 120;
+  Capabilities.shoot(player, buildWorld(player), goal);
+}
+
+function doTackle(player) {
+  if (!player) return;
+  Capabilities.tackle(player, buildWorld(player), ball.owner);
 }
 
 // --- Formation laden und zuweisen ---
@@ -1080,7 +1041,7 @@ function gameLoop(timestamp) {
       shotCharging = true;
       shotCharge = Math.min(1, shotCharge + delta);
     } else if (shotCharging && inputHandler.can("shoot")) {
-      shootBall(selectedPlayer, shotCharge, userInput.dx, userInput.dy);
+      doShoot(selectedPlayer, userInput.dx, userInput.dy);
       shotCharging = false;
       shotCharge = 0;
       inputHandler.triggerCooldown("shoot");
@@ -1104,7 +1065,7 @@ function gameLoop(timestamp) {
         if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
       }
       if (potentialMate) {
-        passBall(selectedPlayer, potentialMate, passCharge);
+        doPass(selectedPlayer, potentialMate);
         inputHandler.triggerCooldown("pass");
       }
       passCharging = false;
@@ -1112,7 +1073,7 @@ function gameLoop(timestamp) {
     }
 
     if (userInput.tacklePressed && !prevTackle && inputHandler.can("slide")) {
-      tryTackle(selectedPlayer);
+      doTackle(selectedPlayer);
       inputHandler.triggerCooldown("slide");
     }
   } else {
@@ -1127,7 +1088,7 @@ function gameLoop(timestamp) {
       shotCharging2 = true;
       shotCharge2 = Math.min(1, shotCharge2 + delta);
     } else if (shotCharging2) {
-      shootBall(selectedPlayer2, shotCharge2, userInput2.dx, userInput2.dy);
+      doShoot(selectedPlayer2, userInput2.dx, userInput2.dy);
       shotCharging2 = false;
       shotCharge2 = 0;
     }
@@ -1161,12 +1122,12 @@ function gameLoop(timestamp) {
       potentialMate2 = findTeammateInDirection(selectedPlayer2, userInput2.dx, userInput2.dy);
       if (!potentialMate2) potentialMate2 = findNearestTeammate(selectedPlayer2);
     }
-    if (potentialMate2) passBall(selectedPlayer2, potentialMate2, passCharge2);
+    if (potentialMate2) doPass(selectedPlayer2, potentialMate2);
     passCharging2 = false;
     passCharge2 = 0;
   }
   if (!prevTackle2 && userInput2.tacklePressed && selectedPlayer2) {
-    tryTackle(selectedPlayer2);
+    doTackle(selectedPlayer2);
   }
   prevTackle = userInput.tacklePressed;
   prevPass2 = userInput2.passPressed;
