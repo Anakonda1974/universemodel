@@ -212,6 +212,19 @@ export function drawBall(ctx, ball) {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 }
+
+export function drawReferee(ctx, ref) {
+  if (!ref) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ref.x, ref.y, ref.radius, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffff00';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#000';
+  ctx.stroke();
+  ctx.restore();
+}
 export function drawOverlay(ctx, text, width) {
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, 0, width, 40);
