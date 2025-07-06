@@ -9,7 +9,6 @@ import { logComment } from "./commentary.js";
 import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
 import { InputHandler } from "./input.js";
-import { Capabilities } from "./capabilities.js";
 
 import { }  from "./debugManager.js";
 
@@ -405,8 +404,6 @@ function handleOffside(player) {
   kicker.currentAction = "freekick";
 }
 
-/*
- * Obsolete manual implementations kept for reference.
 function calcPassSpeedForDistance(dist) {
   const min = 10;
   const max = 22;
@@ -460,9 +457,36 @@ function shootBall(player, power = 1, dirX = null, dirY = null) {
   const startY = player.y + (dy / dist) * offset;
   //ball.kick(startX, startY, vx, vy, speedFinal, player);
   ball.kickVelocity(startX, startY, vx, vy, player);
-  
+
   ball.angularVelocity = (Math.random() - 0.5) * 0.04;
   player.currentAction = "shoot";
+  // old shoot logic
+}
+
+function tryTackle(player) {
+  // old tackle logic
+}
+
+
+function buildWorld(player) {
+  return {
+    ball,
+    referee,
+    players: [...teamHeim, ...teamGast],
+    opponentGoal: teamHeim.includes(player)
+      ? { x: 1040, y: 340 }
+      : { x: 10, y: 340 },
+  };
+}
+
+function doPass(player, target) {
+  if (!player || !target) return;
+  Capabilities.pass(player, buildWorld(player), target);
+  passIndicator = {
+    from: { x: player.x, y: player.y },
+    to: { x: target.x, y: target.y },
+    time: 0.5,
+  };
 }
 
 function doShoot(player, dirX, dirY) {
