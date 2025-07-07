@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Soccer Render Test</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #222; color: #fff; }
+        canvas { border: 2px solid white; background: #4CAF50; }
+    </style>
+</head>
+<body>
+    <h1>Soccer Render Test</h1>
+    <canvas id="testCanvas" width="1050" height="680"></canvas>
+    <div id="status">Loading...</div>
+    
+    <script type="module">
+        // Test basic rendering
+        const canvas = document.getElementById('testCanvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+        
+        // Test if canvas context works
+        if (!ctx) {
+            status.textContent = 'ERROR: Canvas context not available';
+        } else {
+            status.textContent = 'Canvas context OK';
+            
+            // Test basic drawing
+            ctx.fillStyle = '#065';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw field markings
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            
+            // Center line
+            ctx.beginPath();
+            ctx.moveTo(canvas.width/2, 0);
+            ctx.lineTo(canvas.width/2, canvas.height);
+            ctx.stroke();
+            
+            // Center circle
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, 91.5, 0, Math.PI*2);
+            ctx.stroke();
+            
+            // Goals
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, canvas.height/2-50, 10, 100);
+            ctx.fillRect(canvas.width-10, canvas.height/2-50, 10, 100);
+            
+            // Test players
+            ctx.fillStyle = '#0000ff';
+            ctx.beginPath();
+            ctx.arc(200, 200, 8, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(850, 200, 8, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Test ball
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, 6, 0, Math.PI*2);
+            ctx.fill();
+            
+            status.textContent = 'Render test complete - field, players, and ball should be visible';
+        }
+    </script>
+</body>
+</html>

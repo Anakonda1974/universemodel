@@ -144,14 +144,37 @@ export function initControlPanel({ teams, ball, coach, formations }) {
   }
   updatePitch();
 
-  /* ------ Debugging ------ */
+  /* ------ Enhanced Debug Controls ------ */
   const debugSection = document.createElement('details');
-  debugSection.innerHTML = `<summary>Debugging</summary>
-    <label><input id="cp-zones" type="checkbox"> Zones</label><br>
-    <label><input id="cp-fov" type="checkbox"> FOV</label><br>
-    <label><input id="cp-ballvec" type="checkbox"> Ball Vectors</label><br>
-    <label><input id="cp-formation" type="checkbox"> Formation Pos</label><br>
-    <label><input id="cp-targets" type="checkbox"> Targets</label>`;
+  debugSection.open = true;
+  debugSection.innerHTML = `<summary>🔧 Debug Options</summary>
+    <div style="margin: 10px 0;">
+      <label style="display: block; margin: 8px 0; cursor: pointer;">
+        <input id="cp-zones" type="checkbox" style="margin-right: 8px;">
+        <span style="font-weight: bold;">Player Zones</span>
+        <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show tactical positioning zones (selected player only)</div>
+      </label>
+      <label style="display: block; margin: 8px 0; cursor: pointer;">
+        <input id="cp-fov" type="checkbox" style="margin-right: 8px;">
+        <span style="font-weight: bold;">Field of View</span>
+        <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show player perception cones (selected player only)</div>
+      </label>
+      <label style="display: block; margin: 8px 0; cursor: pointer;">
+        <input id="cp-ballvec" type="checkbox" style="margin-right: 8px;">
+        <span style="font-weight: bold;">Ball Physics</span>
+        <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show ball trajectory and vectors</div>
+      </label>
+      <label style="display: block; margin: 8px 0; cursor: pointer;">
+        <input id="cp-formation" type="checkbox" style="margin-right: 8px;">
+        <span style="font-weight: bold;">Formation Debug</span>
+        <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show formation positioning guides (selected player only)</div>
+      </label>
+      <label style="display: block; margin: 8px 0; cursor: pointer;">
+        <input id="cp-targets" type="checkbox" style="margin-right: 8px;">
+        <span style="font-weight: bold;">Player Targets</span>
+        <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show movement target indicators (selected player only)</div>
+      </label>
+    </div>`;
   content.appendChild(debugSection);
   const dbg = window.debugOptions;
   debugSection.querySelector('#cp-zones').checked = dbg.showZones;

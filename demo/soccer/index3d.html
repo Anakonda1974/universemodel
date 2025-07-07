@@ -2,19 +2,284 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Football Sim 3D Prototype</title>
+    <title>Football Sim 3D - Enhanced</title>
     <style>
-        body { margin:0; overflow:hidden; background:#000; }
-        #overlay { position:absolute; top:10px; left:10px; color:white; font-family:sans-serif; }
-        #hud { margin-top:4px; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Main overlay for game info */
+        #overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: sans-serif;
+            z-index: 100;
+        }
+
+        #hud {
+            margin-top: 4px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* Scoreboard styling */
+        #scoreboard {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 100;
+            border: 2px solid #fff;
+        }
+
+        /* Control panel button */
+        #control-panel-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: 2px solid #fff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 1000;
+        }
+
+        #control-panel-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Control panel */
+        #control-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+            transition: right 0.3s ease;
+            z-index: 999;
+            overflow-y: auto;
+            border-left: 2px solid #fff;
+        }
+
+        #control-panel.open {
+            right: 0;
+        }
+
+        #control-panel h3 {
+            margin-top: 0;
+            color: #fff;
+            border-bottom: 1px solid #666;
+            padding-bottom: 10px;
+        }
+
+        #control-panel label {
+            display: block;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+
+        #control-panel input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        #control-panel select {
+            width: 100%;
+            padding: 5px;
+            margin: 5px 0;
+            background: #333;
+            color: white;
+            border: 1px solid #666;
+            border-radius: 3px;
+        }
+
+        /* Commentary box */
+        #commentary {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 400px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #fff;
+            overflow-y: auto;
+            font-size: 14px;
+            z-index: 100;
+        }
+
+        #commentary h4 {
+            margin: 0 0 10px 0;
+            color: #fff;
+        }
+
+        #commentary-content {
+            height: 100px;
+            overflow-y: auto;
+        }
+
+        /* Weather controls */
+        #weather-controls {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #666;
+            z-index: 100;
+        }
+
+        /* Match info */
+        #match-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid #666;
+            font-size: 14px;
+            z-index: 100;
+        }
     </style>
 </head>
 <body>
-<div id="overlay">
-    <div id="info">Use WASD to move, space to kick</div>
-    <div id="hud"><span id="score">0 : 0</span> - <span id="timer">00:00</span></div>
-</div>
-<script src="https://unpkg.com/three@0.156.1/build/three.min.js"></script>
-<script type="module" src="main3d.js"></script>
+    <!-- Main game overlay -->
+    <div id="overlay">
+        <div id="info">Use WASD to move, Space to kick, Mouse to look around</div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div id="scoreboard">
+        <div id="score">Home 0 : 0 Away</div>
+        <div id="timer" style="font-size: 16px; margin-top: 5px;">00:00 - 1st Half</div>
+    </div>
+
+    <!-- Match info -->
+    <div id="match-info">
+        <div>Ball: <span id="ball-owner">Loose</span></div>
+        <div>Weather: <span id="weather-display">Clear</span></div>
+        <div>Phase: <span id="game-phase">Kickoff</span></div>
+    </div>
+
+    <!-- Weather controls -->
+    <div id="weather-controls">
+        <label>Weather:</label>
+        <select id="weatherSelect">
+            <option value="clear">Clear</option>
+            <option value="rain">Rain</option>
+            <option value="wind">Wind</option>
+        </select>
+    </div>
+
+    <!-- Control panel toggle -->
+    <button id="control-panel-toggle">≡</button>
+
+    <!-- Control panel -->
+    <div id="control-panel">
+        <h3>🎮 Game Controls</h3>
+
+        <details open>
+            <summary>🔧 Debug Options</summary>
+            <div style="margin: 10px 0;">
+                <label>
+                    <input type="checkbox" id="debug-zones">
+                    <span style="font-weight: bold;">Player Zones</span>
+                    <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show tactical positioning zones (selected player only)</div>
+                </label>
+                <label>
+                    <input type="checkbox" id="debug-fov">
+                    <span style="font-weight: bold;">Field of View</span>
+                    <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show player perception cones (selected player only)</div>
+                </label>
+                <label>
+                    <input type="checkbox" id="debug-ball">
+                    <span style="font-weight: bold;">Ball Physics</span>
+                    <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show ball trajectory and vectors</div>
+                </label>
+                <label>
+                    <input type="checkbox" id="debug-formation">
+                    <span style="font-weight: bold;">Formation Debug</span>
+                    <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show formation positioning guides (selected player only)</div>
+                </label>
+                <label>
+                    <input type="checkbox" id="debug-targets">
+                    <span style="font-weight: bold;">Player Targets</span>
+                    <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Show movement target indicators (selected player only)</div>
+                </label>
+            </div>
+        </details>
+
+        <details>
+            <summary>⚽ Game Settings</summary>
+            <div style="margin: 10px 0;">
+                <label>Game Speed:</label>
+                <select id="gameSpeed">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                </select>
+
+                <label style="margin-top: 10px;">
+                    <input type="checkbox" id="pauseGame"> Pause Game
+                </label>
+            </div>
+        </details>
+
+        <details>
+            <summary>🎥 Camera Settings</summary>
+            <div style="margin: 10px 0;">
+                <label>Camera Mode:</label>
+                <select id="cameraMode">
+                    <option value="follow">Follow Player</option>
+                    <option value="overview">Overview</option>
+                    <option value="sideline">Sideline</option>
+                    <option value="free">Free Camera</option>
+                </select>
+
+                <label style="margin-top: 10px;">Camera Height:</label>
+                <input type="range" id="cameraHeight" min="5" max="30" value="15" style="width: 100%;">
+
+                <label style="margin-top: 10px;">Camera Distance:</label>
+                <input type="range" id="cameraDistance" min="5" max="25" value="10" style="width: 100%;">
+            </div>
+        </details>
+    </div>
+
+    <!-- Commentary -->
+    <div id="commentary">
+        <h4>📢 Commentary</h4>
+        <div id="commentary-content">
+            <div>Welcome to Football Sim 3D!</div>
+            <div>Match is about to begin...</div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.156.1/build/three.min.js"></script>
+    <script type="module" src="main3d.js"></script>
 </body>
 </html>

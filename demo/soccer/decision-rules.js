@@ -96,7 +96,7 @@ function clampToZone(x, y, zone) {
 
 // --- New dynamic allowed zone relative to the ball ---
 export function getDynamicZone(player, world) {
-  const { ball, tactic, coach } = world;
+  const { ball, tactic, coach, teammates } = world;
   const awareness = player.derived?.awareness ?? 0.5;
   const press = coach ? coach.pressing : player.pressing ?? 1;
   const baseCenter = { x: player.formationX, y: player.formationY };
@@ -106,6 +106,10 @@ export function getDynamicZone(player, world) {
   let centerX = c.x;
   let centerY = c.y;
 
+  // Determine if player is on home team (blue) or away team (red)
+  // Home team defends left side (x < 525), away team defends right side (x > 525)
+  const isHomeTeam = player.formationX < 525;
+
   let zoneWidth = 200;
   let zoneHeight = 200;
   let offsetX = 0;
@@ -114,15 +118,15 @@ export function getDynamicZone(player, world) {
   switch (player.role) {
     case "TW":
       zoneWidth = 100; zoneHeight = 150;
-      offsetX = player.color === "blue" ? -300 : 300;
+      offsetX = isHomeTeam ? -300 : 300;  // Home defends left, away defends right
       break;
     case "IV": case "LIV": case "RIV":
       zoneWidth = 140; zoneHeight = 200;
-      offsetX = player.color === "blue" ? -150 : 150;
+      offsetX = isHomeTeam ? -150 : 150;  // Home defends left, away defends right
       break;
     case "DM":
       zoneWidth = 180; zoneHeight = 240;
-      offsetX = player.color === "blue" ? -80 : 80;
+      offsetX = isHomeTeam ? -80 : 80;    // Home defends left, away defends right
       break;
     case "ZM": case "OM":
       zoneWidth = 250; zoneHeight = 250;
@@ -134,12 +138,12 @@ export function getDynamicZone(player, world) {
       break;
     case "LF": case "RF":
       zoneWidth = 200; zoneHeight = 180;
-      offsetX = player.color === "blue" ? 100 : -100;
+      offsetX = isHomeTeam ? 100 : -100;  // Home attacks right, away attacks left
       offsetY = (player.role === "LF" ? -80 : 80);
       break;
     case "ST":
       zoneWidth = 180; zoneHeight = 150;
-      offsetX = player.color === "blue" ? 160 : -160;
+      offsetX = isHomeTeam ? 160 : -160;  // Home attacks right, away attacks left
       break;
   }
 
@@ -160,10 +164,10 @@ export function getDynamicZone(player, world) {
   // modify by team phase
   if (world.phase === 'offense') {
     zoneWidth *= 1.1;
-    offsetX += player.color === 'blue' ? 20 : -20;
+    offsetX += isHomeTeam ? 20 : -20;  // Home pushes right when attacking, away pushes left
   } else if (world.phase === 'defense') {
     zoneWidth *= 0.9;
-    offsetX += player.color === 'blue' ? -20 : 20;
+    offsetX += isHomeTeam ? -20 : 20;  // Home pulls back left when defending, away pulls back right
   }
 
   const zoneParams = coach ? coach.getZoneParameters(player.role) : null;
@@ -176,6 +180,11 @@ export function getDynamicZone(player, world) {
   let y = centerY + offsetY - zoneHeight / 2;
   x = Math.max(FIELD_BOUNDS.minX, Math.min(FIELD_BOUNDS.maxX - zoneWidth, x));
   y = Math.max(FIELD_BOUNDS.minY, Math.min(FIELD_BOUNDS.maxY - zoneHeight, y));
+
+  // Debug zone calculation occasionally
+  if (Math.random() < 0.001) {
+   // console.log(`Zone for ${isHomeTeam ? 'HOME' : 'AWAY'} ${player.role}: formationX=${player.formationX.toFixed(0)}, centerX=${centerX.toFixed(0)}, offsetX=${offsetX}, zone.x=${x.toFixed(0)}-${(x + zoneWidth).toFixed(0)}`);
+  }
 
   return { x, y, width: zoneWidth, height: zoneHeight };
 }
@@ -266,20 +275,54 @@ export function decidePlayerAction(player, world, gameState) {
 }
 
 
-// ---- Ball Owner Behavior ----
+// ---- Enhanced Ball Owner Behavior ----
 function decideBallOwnerAction(player, world) {
-  // 1. If can shoot, sometimes shoot
-  if (canShoot(player, world) && Math.random() < (0.3 + (player.derived.shootingAccuracy ?? 0.5) * 0.4)) {
+  const playerIntelligence = player.derived?.awareness || player.base?.intelligence || 0.5;
+  const playerVision = player.derived?.vision || player.base?.vision || 0.5;
+  const goalDistance = Math.hypot(player.x - world.opponentGoal.x, player.y - world.opponentGoal.y);
+
+  // 1. Evaluate shooting opportunity
+  const shootingOpportunity = evaluateShootingOpportunity(player, world, world.opponentGoal);
+  const shootingThreshold = 0.4 + playerIntelligence * 0.3; // Smarter players shoot when better opportunities
+
+  if (canShoot(player, world) && shootingOpportunity > shootingThreshold) {
     return boundedIntent(player, "shoot", world.opponentGoal.x, world.opponentGoal.y, world);
   }
-  // 2. Pass to open teammate, prefer if pressured
-  const mate = findBestPass(player, world.teammates, world);
-  if (mate && shouldAttemptRiskyPass(player)) {
-    return boundedIntent(player, "pass", mate.x, mate.y, world);
+
+  // 2. Evaluate passing opportunities
+  const bestPass = findBestPass(player, world.teammates, world);
+  const currentPressure = evaluatePlayerPressure(player, world);
+
+  // Decision matrix based on intelligence and situation
+  const passThreshold = Math.max(0.2, 0.6 - playerIntelligence * 0.4 - currentPressure * 0.3);
+
+  if (bestPass) {
+    const passScore = evaluatePassOpportunity(player, bestPass, world, world.opponentGoal, playerVision, playerIntelligence);
+
+    // Intelligent players make better passing decisions
+    if (passScore > passThreshold * 100 || currentPressure > 0.7) {
+      return boundedIntent(player, "pass", bestPass.x, bestPass.y, world);
+    }
   }
-  // 3. Otherwise: Dribble to open space towards goal
+
+  // 3. Dribble toward goal if no good passing options
   const open = findOpenSpaceNearGoal(player, world);
   return boundedIntent(player, "dribble", open.x, open.y, world);
+}
+
+// Evaluate how much pressure the player is under
+function evaluatePlayerPressure(player, world) {
+  let pressure = 0;
+  const pressureRadius = 80;
+
+  world.opponents.forEach(opp => {
+    const distance = Math.hypot(player.x - opp.x, player.y - opp.y);
+    if (distance < pressureRadius) {
+      pressure += Math.max(0, 1 - distance / pressureRadius);
+    }
+  });
+
+  return Math.min(1, pressure);
 }
 
 // ---- Intent Resolver (bounds action to zone) ----
@@ -295,23 +338,208 @@ function boundedIntent(player, intent, tx, ty, world, allowOutside = false) {
   return { type: intent, targetX: target.x, targetY: target.y };
 }
 
-// ---- Smarter Passing: Only to open/less-marked players ----
+// ---- Enhanced Passing Intelligence: Goal-oriented and opportunity-aware ----
 export function findBestPass(player, teammates, world) {
-  let minMark = Infinity, best = null;
+  let bestScore = -Infinity, best = null;
+  const goal = world.opponentGoal;
+  const playerVision = player.derived?.vision || player.base?.vision || 0.5;
+  const playerIntelligence = player.derived?.awareness || player.base?.intelligence || 0.5;
+
   teammates.forEach(mate => {
     if (mate === player) return;
-    let d = Math.hypot(player.x - mate.x, player.y - mate.y);
-    if (d > 35 && d < 320) {
-      // "Mark" = closest opponent to this mate (smaller mark worse)
-      let mark = Math.min(...world.opponents.map(opp => Math.hypot(mate.x - opp.x, mate.y - opp.y)));
-      let score = mark - Math.abs(mate.y - player.y); // favor wide-open laterals
-      if (score > minMark) {
-        minMark = score;
-        best = mate;
+    const distance = Math.hypot(player.x - mate.x, player.y - mate.y);
+
+    // Basic distance filter
+    if (distance < 35 || distance > 320) return;
+
+    // Calculate comprehensive pass score
+    const passScore = evaluatePassOpportunity(player, mate, world, goal, playerVision, playerIntelligence);
+
+    if (passScore > bestScore) {
+      bestScore = passScore;
+      best = mate;
+    }
+  });
+
+  // Debug occasionally
+  if (best && Math.random() < 0.01) {
+    console.log(`Best pass: ${player.role} -> ${best.role}, score=${bestScore.toFixed(2)}`);
+  }
+
+  return best;
+}
+
+// Comprehensive pass evaluation considering multiple factors
+function evaluatePassOpportunity(passer, receiver, world, goal, vision, intelligence) {
+  const distance = Math.hypot(passer.x - receiver.x, passer.y - receiver.y);
+
+  // 1. Goal Advancement Score (how much closer to goal)
+  const passerGoalDist = Math.hypot(passer.x - goal.x, passer.y - goal.y);
+  const receiverGoalDist = Math.hypot(receiver.x - goal.x, receiver.y - goal.y);
+  const goalAdvancement = (passerGoalDist - receiverGoalDist) / passerGoalDist;
+  const advancementScore = goalAdvancement * 100; // 0-100 points for advancement
+
+  // 2. Shooting Opportunity Score
+  const shootingScore = evaluateShootingOpportunity(receiver, world, goal) * 150; // 0-150 points
+
+  // 3. Space and Marking Score
+  const spaceScore = evaluateReceiverSpace(receiver, world) * 80; // 0-80 points
+
+  // 4. Pass Safety Score (clear path, no interceptions)
+  const safetyScore = evaluatePassSafety(passer, receiver, world) * 60; // 0-60 points
+
+  // 5. Tactical Position Score (receiver's role and position)
+  const tacticalScore = evaluateTacticalPosition(receiver, world, goal) * 40; // 0-40 points
+
+  // 6. Player Ability Score (receiver's skill to use the pass)
+  const abilityScore = evaluateReceiverAbility(receiver) * 30; // 0-30 points
+
+  // Weight factors based on passer's vision and intelligence
+  const visionWeight = 0.5 + vision * 0.5; // 0.5 to 1.0
+  const intelligenceWeight = 0.5 + intelligence * 0.5; // 0.5 to 1.0
+
+  // Combine scores with intelligence-based weighting
+  const totalScore =
+    advancementScore * 1.0 +
+    shootingScore * intelligenceWeight * 1.2 +
+    spaceScore * visionWeight * 1.0 +
+    safetyScore * 1.0 +
+    tacticalScore * intelligenceWeight * 0.8 +
+    abilityScore * 0.6;
+
+  return totalScore;
+}
+
+// Evaluate if receiver has a good shooting opportunity
+function evaluateShootingOpportunity(receiver, world, goal) {
+  const goalDistance = Math.hypot(receiver.x - goal.x, receiver.y - goal.y);
+  const shootingRange = computeShootRadius(receiver);
+
+  if (goalDistance > shootingRange) return 0;
+
+  // Check shooting angle and obstacles
+  const angleToGoal = Math.atan2(goal.y - receiver.y, goal.x - receiver.x);
+  const goalWidth = 100; // Approximate goal width
+  const shootingAngle = Math.atan(goalWidth / goalDistance);
+
+  // Check for defenders blocking the shot
+  let clearShot = 1.0;
+  world.opponents.forEach(opp => {
+    const oppDistance = Math.hypot(receiver.x - opp.x, receiver.y - opp.y);
+    const oppAngle = Math.atan2(opp.y - receiver.y, opp.x - receiver.x);
+    const angleDiff = Math.abs(angleToGoal - oppAngle);
+
+    if (oppDistance < goalDistance && angleDiff < shootingAngle) {
+      clearShot *= Math.max(0.1, oppDistance / 50); // Reduce score based on blocking
+    }
+  });
+
+  // Score based on distance, angle, and clearness
+  const distanceScore = Math.max(0, 1 - goalDistance / shootingRange);
+  const angleScore = Math.min(1, shootingAngle * 2); // Better angle = higher score
+
+  return distanceScore * angleScore * clearShot;
+}
+
+// Evaluate space around receiver (how open they are)
+function evaluateReceiverSpace(receiver, world) {
+  const checkRadius = 60;
+  let spaceScore = 1.0;
+
+  // Check opponents near receiver
+  world.opponents.forEach(opp => {
+    const distance = Math.hypot(receiver.x - opp.x, receiver.y - opp.y);
+    if (distance < checkRadius) {
+      spaceScore *= Math.max(0.1, distance / checkRadius);
+    }
+  });
+
+  // Bonus for being in advanced positions
+  const isHomeTeam = receiver.formationX < 525;
+  const advancedPosition = isHomeTeam ? receiver.x > 525 : receiver.x < 525;
+  if (advancedPosition) spaceScore *= 1.3;
+
+  return spaceScore;
+}
+
+// Evaluate pass safety (clear path, no interceptions)
+function evaluatePassSafety(passer, receiver, world) {
+  const passVector = { x: receiver.x - passer.x, y: receiver.y - passer.y };
+  const passDistance = Math.hypot(passVector.x, passVector.y);
+  const passDirection = { x: passVector.x / passDistance, y: passVector.y / passDistance };
+
+  let safetyScore = 1.0;
+
+  // Check for opponents who could intercept
+  world.opponents.forEach(opp => {
+    // Project opponent position onto pass line
+    const toOpp = { x: opp.x - passer.x, y: opp.y - passer.y };
+    const projection = toOpp.x * passDirection.x + toOpp.y * passDirection.y;
+
+    // Only consider opponents between passer and receiver
+    if (projection > 0 && projection < passDistance) {
+      const projectedPoint = {
+        x: passer.x + passDirection.x * projection,
+        y: passer.y + passDirection.y * projection
+      };
+
+      const distanceToPassLine = Math.hypot(opp.x - projectedPoint.x, opp.y - projectedPoint.y);
+      const interceptRadius = 25; // How close opponent needs to be to intercept
+
+      if (distanceToPassLine < interceptRadius) {
+        safetyScore *= Math.max(0.2, distanceToPassLine / interceptRadius);
       }
     }
   });
-  return best;
+
+  return safetyScore;
+}
+
+// Evaluate tactical value of receiver's position
+function evaluateTacticalPosition(receiver, world, goal) {
+  const isHomeTeam = receiver.formationX < 525;
+  const goalDistance = Math.hypot(receiver.x - goal.x, receiver.y - goal.y);
+
+  let tacticalScore = 0.5; // Base score
+
+  // Role-based tactical value
+  switch (receiver.role) {
+    case "ST": case "LF": case "RF":
+      // Strikers get bonus for being close to goal
+      tacticalScore += Math.max(0, 1 - goalDistance / 300);
+      break;
+    case "OM": case "ZM":
+      // Midfielders get bonus for central positions
+      const centerDistance = Math.abs(receiver.y - 340);
+      tacticalScore += Math.max(0, 1 - centerDistance / 200);
+      break;
+    case "LM": case "RM":
+      // Wing players get bonus for wide positions
+      const wideBonus = receiver.role === "LM" ?
+        Math.max(0, 1 - receiver.y / 340) :
+        Math.max(0, 1 - (680 - receiver.y) / 340);
+      tacticalScore += wideBonus * 0.5;
+      break;
+  }
+
+  // Bonus for being in opponent's half
+  const inOpponentHalf = isHomeTeam ? receiver.x > 525 : receiver.x < 525;
+  if (inOpponentHalf) tacticalScore += 0.3;
+
+  return Math.min(1, tacticalScore);
+}
+
+// Evaluate receiver's ability to make use of the pass
+function evaluateReceiverAbility(receiver) {
+  const technique = receiver.derived?.passingAccuracy || receiver.base?.technique || 0.5;
+  const vision = receiver.derived?.vision || receiver.base?.vision || 0.5;
+  const shooting = receiver.derived?.shootingAccuracy || receiver.base?.technique || 0.5;
+  const stamina = receiver.stamina || 1;
+
+  // Combine abilities with stamina factor
+  const abilityScore = (technique * 0.4 + vision * 0.3 + shooting * 0.3) * stamina;
+
+  return abilityScore;
 }
 
 // ---- Open Space Navigation for Ball Holder & Attackers ----

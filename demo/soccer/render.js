@@ -47,7 +47,21 @@ export function drawField(ctx, width, height, flashTimer = 0, flashSide = null) 
 
 
 export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false, showHeadDir = false, showTargets = false } = {}) {
-  players.forEach(p => {
+  // Debug first call only
+  if (!drawPlayers.debugged) {
+    console.log("drawPlayers called with:", players.length, "players");
+    if (players.length > 0) {
+      console.log("First player:", players[0].x, players[0].y, players[0].color, players[0].radius);
+    }
+    drawPlayers.debugged = true;
+  }
+
+  players.forEach((p, index) => {
+    // Debug first few players only
+    if (index < 2 && !drawPlayers.playersDebugged) {
+      console.log(`Drawing player ${index}: x=${p.x}, y=${p.y}, radius=${p.radius}, color=${p.color}`);
+    }
+
     // Draw body (circle)
     ctx.save();
     ctx.beginPath();
@@ -57,6 +71,10 @@ export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false,
     ctx.lineWidth = 2;
     ctx.strokeStyle = "#222";
     ctx.stroke();
+
+    if (index < 2 && !drawPlayers.playersDebugged) {
+      console.log(`Player ${index} drawn at ${p.x}, ${p.y}`);
+    }
 
     // Draw head (smaller circle in front, based on direction)
     const headDist = p.radius * 0.85;
@@ -158,6 +176,11 @@ export function drawPlayers(ctx, players, { showFOV = false, showRunDir = false,
     }
     ctx.restore();
   });
+
+  // Mark debugging as complete after first render
+  if (!drawPlayers.playersDebugged && players.length > 0) {
+    drawPlayers.playersDebugged = true;
+  }
 }
 
 export function drawActivePlayer(ctx, player) {

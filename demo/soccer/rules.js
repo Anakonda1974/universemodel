@@ -38,6 +38,8 @@ export function inPenaltyBox(x, y, defendingSide) {
   return x >= box.x1 && x <= box.x2 && y >= box.y1 && y <= box.y2;
 }
 
+
+
 export function restartTypeForFoul(victim, fouler) {
   const defendingSide = victim.side;
   if (inPenaltyBox(victim.x, victim.y, defendingSide)) {

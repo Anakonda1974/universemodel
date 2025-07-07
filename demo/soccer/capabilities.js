@@ -1,22 +1,61 @@
 // capabilities.js
 
 export const Capabilities = {
+  // Calculate power-based speed with player stats and modifiers
+  calculateSpeed(player, basePower, actionType, targetDirection, distance) {
+    // Clamp power between 0 and 1
+    const power = Math.max(0, Math.min(1, basePower));
+
+    // TESTING: Make all players have perfect skills
+    const playerPower = 1.0; // Perfect power
+    const playerAccuracy = 1.0; // Perfect accuracy
+
+    // TESTING: Simplified orientation factor (less impact)
+    const bodyAngle = player.bodyDirection * Math.PI / 180;
+    const targetAngle = Math.atan2(targetDirection.dy, targetDirection.dx);
+    const angleDiff = Math.abs(((targetAngle - bodyAngle + Math.PI) % (2 * Math.PI)) - Math.PI);
+    const orientationFactor = 0.8 + 0.2 * Math.cos(angleDiff); // 0.8 to 1.0 (less penalty)
+
+    // TESTING: Perfect stamina
+    const staminaFactor = 1.0;
+
+    // Distance factor for passes (longer passes need more power)
+    const distanceFactor = actionType === 'pass' ? Math.min(1.5, 1 + distance / 400) : 1;
+
+    // Base speeds for different actions (boosted for testing)
+    const baseSpeed = actionType === 'shoot' ? 600 : 400;
+
+    // Calculate final speed
+    const finalSpeed = baseSpeed * power * (0.5 + playerPower * 0.5) * orientationFactor * staminaFactor * distanceFactor;
+
+    return {
+      speed: finalSpeed,
+      accuracy: playerAccuracy * orientationFactor * staminaFactor,
+      spin: (player.base.technique - 0.5) * 0.01 * power  // Reduced spin significantly
+    };
+  },
+
   // Offensive actions
-  shoot(player, world, goalPos = world.opponentGoal) {
+  shoot(player, world, goalPos = world.opponentGoal, power = 1) {
     const ball = world.ball;
     if (!ball || ball.owner !== player) return;
     const dx = goalPos.x - player.x;
     const dy = goalPos.y - player.y;
     const dist = Math.hypot(dx, dy) || 1;
-    const spin = (player.base.technique - 0.5) * 0.1;
+
+    const speedData = this.calculateSpeed(player, power, 'shoot', {dx, dy}, dist);
+
     const offset = player.radius + ball.radius + 2;
     const startX = player.x + (dx / dist) * offset;
     const startY = player.y + (dy / dist) * offset;
-    ball.kick(startX, startY, dx, dy, 20, spin, player);
+
+    ball.kick(startX, startY, dx, dy, speedData.speed, speedData.spin, player);
     player.currentAction = 'shoot';
+
+    console.log(`Shot: power=${power.toFixed(2)}, speed=${speedData.speed.toFixed(1)}, accuracy=${speedData.accuracy.toFixed(2)}`);
   },
 
-  pass(player, world, target) {
+  pass(player, world, target, power = 1) {
     const ball = world.ball;
     if (!ball || ball.owner !== player || !target) return;
     const tx = target.x ?? target.targetX;
@@ -25,13 +64,18 @@ export const Capabilities = {
     const dx = tx - player.x;
     const dy = ty - player.y;
     const dist = Math.hypot(dx, dy) || 1;
-    const spin = (player.base.technique - 0.5) * 0.05;
+
+    const speedData = this.calculateSpeed(player, power, 'pass', {dx, dy}, dist);
+
     const offset = player.radius + ball.radius + 2;
     const startX = player.x + (dx / dist) * offset;
     const startY = player.y + (dy / dist) * offset;
-    ball.kick(startX, startY, dx, dy, 12, spin, player);
+
+    ball.kick(startX, startY, dx, dy, speedData.speed, speedData.spin, player);
     player.currentAction = 'pass';
     if (world.referee) world.referee.handlePass(player, target, world.players);
+
+    console.log(`Pass: power=${power.toFixed(2)}, speed=${speedData.speed.toFixed(1)}, distance=${dist.toFixed(0)}`);
   },
 
   lobPass(player, world, target) {

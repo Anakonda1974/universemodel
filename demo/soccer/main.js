@@ -9,6 +9,8 @@ import { logComment } from "./commentary.js";
 import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
 import { InputHandler } from "./input.js";
+import { Capabilities } from "./capabilities.js";
+import { GameStateManager } from "./gameStateManager.js";
 
 import { }  from "./debugManager.js";
 
@@ -25,6 +27,16 @@ const powerBarWrapper = document.getElementById("powerBarWrapper");
 const powerBar = document.getElementById("powerBar");
 const radarCanvas = document.getElementById("radar");
 const radarCtx = radarCanvas.getContext("2d");
+
+// Debug: Check if canvas elements are found
+console.log("Canvas elements check:");
+console.log("Main canvas:", canvas, "Context:", ctx);
+console.log("Radar canvas:", radarCanvas, "Context:", radarCtx);
+console.log("Canvas dimensions:", canvas?.width, "x", canvas?.height);
+
+// Declare and initialize debug manager with proper context
+let debugManager = new DebugManager(debugCtx, inspectorDiv);
+console.log("Debug manager initialized with debug canvas context");
 
 // --- Global Settings ---
 window.keyBindings = {
@@ -69,7 +81,7 @@ const benchHeim = [],
 let ball;
 let coach;
 let referee;
-let debugManager = new DebugManager();
+let gameStateManager;
 let selectedPlayer = null;
 let userTeam = teamHeim;
 const userInput = {
@@ -170,17 +182,17 @@ function applyWeather() {
     case "wind":
       weather.windX = 0.03;
       weather.windY = 0.01;
-      weather.friction = 0.998;
+      weather.friction = 0.990;
       break;
     case "rain":
       weather.windX = 0;
       weather.windY = 0;
-      weather.friction = 0.995;
+      weather.friction = 0.985;
       break;
-    default:
+    default: // clear weather
       weather.windX = 0;
       weather.windY = 0;
-      weather.friction = 1;
+      weather.friction = 0.992; // Normal grass friction
   }
 }
 
@@ -479,9 +491,9 @@ function buildWorld(player) {
   };
 }
 
-function doPass(player, target) {
+function doPass(player, target, power = 1) {
   if (!player || !target) return;
-  Capabilities.pass(player, buildWorld(player), target);
+  Capabilities.pass(player, buildWorld(player), target, power);
   passIndicator = {
     from: { x: player.x, y: player.y },
     to: { x: target.x, y: target.y },
@@ -489,14 +501,14 @@ function doPass(player, target) {
   };
 }
 
-function doShoot(player, dirX, dirY) {
+function doShoot(player, dirX, dirY, power = 1) {
   if (!player) return;
   let goal = undefined;
   const mag = Math.hypot(dirX ?? 0, dirY ?? 0);
   if (mag > 0.1) {
     goal = { x: player.x + dirX * 50, y: player.y + dirY * 50 };
   }
-  Capabilities.shoot(player, buildWorld(player), goal);
+  Capabilities.shoot(player, buildWorld(player), goal, power);
 }
 
 function doTackle(player) {
@@ -561,23 +573,27 @@ async function loadFormations() {
   setFormation(0);
 }
 
-// --- Teams initialisieren (mit Basiswerten für Skill/Trade/Position) ---
+// --- Teams initialisieren (mit Basiswerten für Skill/Trait/Position) ---
+console.log("Creating teams...");
 for (let i = 0; i < 11; i++) {
   const p = new Player(80 + Math.random() * 20, 100 + i * 40, window.colorProfiles[window.renderOptions.colorProfile].home, {
     position: "ST",
-    trade: i === 9 ? "sniper" : null,
+    trait: i === 9 ? "sniper" : null,
   });
   p.baseline = { ...p.base };
   teamHeim.push(p);
+  console.log(`Home player ${i}: x=${p.x}, y=${p.y}, color=${p.color}`);
 }
 for (let i = 0; i < 11; i++) {
   const p = new Player(970 - Math.random() * 20, 100 + i * 40, window.colorProfiles[window.renderOptions.colorProfile].away, {
     position: "IV",
-    trade: i === 2 ? "wall" : null,
+    trait: i === 2 ? "wall" : null,
   });
   p.baseline = { ...p.base };
   teamGast.push(p);
+  console.log(`Away player ${i}: x=${p.x}, y=${p.y}, color=${p.color}`);
 }
+console.log(`Teams created: Home=${teamHeim.length}, Away=${teamGast.length}`);
 for (let i = 0; i < 3; i++) {
   const p = new Player(-30, -30, window.colorProfiles[window.renderOptions.colorProfile].home, { position: "ST" });
   p.baseline = { ...p.base };
@@ -590,6 +606,14 @@ for (let i = 0; i < 3; i++) {
 }
 ball = new Ball(525, 340);
 coach = new Coach([...teamHeim, ...teamGast]);
+
+// Initialize ball state properly
+console.log("Initializing ball at:", ball.x, ball.y);
+ball.vx = 0;
+ball.vy = 0;
+ball.isLoose = false;
+ball.outOfBounds = null;
+
 function handleCard(player, card) {
   if (card === "yellow") {
     yellowCards.push(player);
@@ -605,6 +629,93 @@ function handleCard(player, card) {
     player.y = -30;
   }
   playWhistle();
+}
+
+// Enhanced game event handler for FIFA rules
+function handleGameEvent(eventType, data) {
+  console.log(`FIFA Event: ${eventType}`, data);
+
+  switch (eventType) {
+    case 'goal':
+      handleGoalEvent(data);
+      break;
+    case 'halftime':
+      handleHalftimeEvent();
+      break;
+    case 'fulltime':
+      handleFulltimeEvent();
+      break;
+    case 'throwIn':
+      handleThrowInEvent(data);
+      break;
+    case 'corner':
+      handleCornerEvent(data);
+      break;
+    case 'freeKick':
+      handleFreeKickEvent(data);
+      break;
+    case 'penalty':
+      handlePenaltyEvent(data);
+      break;
+    default:
+      console.log(`Unhandled FIFA event: ${eventType}`);
+  }
+}
+
+function handleGoalEvent(data) {
+  goalFlashTimer = 2;
+  goalFlashSide = teamHeim.includes(data.scorer) ? "home" : "away";
+  goalOverlayTimer = 3;
+
+  if (teamHeim.includes(data.scorer)) {
+    scoreHeim++;
+  } else {
+    scoreGast++;
+  }
+
+  setTimeout(() => {
+    resetKickoff();
+  }, 3000);
+}
+
+function handleHalftimeEvent() {
+  logComment("Halbzeitpause");
+}
+
+function handleFulltimeEvent() {
+  logComment(`Spielende! ${scoreHeim}:${scoreGast}`);
+}
+
+function handleThrowInEvent(data) {
+  startThrowIn(data.side);
+}
+
+function handleCornerEvent(data) {
+  startGoalRestart(data.side);
+}
+
+function handleFreeKickEvent(data) {
+  freeKickTimer = 2;
+  const team = data.side === 'home' ? teamHeim : teamGast;
+  freeKickTaker = team[0];
+  ball.x = data.position.x;
+  ball.y = data.position.y;
+  ball.owner = freeKickTaker;
+  ball.isLoose = false;
+}
+
+function handlePenaltyEvent(data) {
+  restartTimer = 3;
+  restartType = "Elfmeter";
+  const team = data.side === 'home' ? teamHeim : teamGast;
+  const penaltyTaker = team.find(p => p.role === 'ST') || team[0];
+
+  ball.owner = penaltyTaker;
+  ball.isLoose = false;
+  ball.x = data.side === 'home' ? 885 : 165;
+  ball.y = 340;
+
+  logComment(`Elfmeter für ${data.side}!`);
 }
 
 function handleFoul(fouler, victim, restart) {
@@ -689,7 +800,11 @@ function startGoalRestart(side) {
     logComment("Abstoß");
   }
 }
-referee = new Referee(handleCard, handleFoul, handleOffside);
+// Initialize FIFA game state manager
+gameStateManager = new GameStateManager(handleGameEvent);
+
+// Initialize enhanced referee with FIFA rules
+referee = new Referee(handleCard, handleFoul, handleOffside, handleGameEvent);
 
 loadFormations();
 setupMatchControls();
@@ -822,13 +937,24 @@ function checkGoal(ball) {
 function resetKickoff() {
   ball.x = 525;
   ball.y = 340;
+  ball.vx = 0;
+  ball.vy = 0;
   ball.isLoose = true;
+  ball.outOfBounds = null; // Clear any out of bounds state
   setFormation(selectedFormationIndex);
   ball.owner = teamHeim[4]; // oder nach Zufall/Regel
   ball.isLoose = false;
   setLastTouch(teamHeim[4]);
+
+  // Clear any restart timers
+  restartTimer = 0;
+  freeKickTimer = 0;
+  restartTaker = null;
+  freeKickTaker = null;
+
   playWhistle();
   logComment("Anstoß");
+  console.log("Game reset - ball position:", ball.x, ball.y);
 }
 
 function resetGame() {
@@ -972,6 +1098,12 @@ function gameLoop(timestamp) {
     coach.analyzeOpponents(ball, teamHeim, teamGast);
     lastAnalysis = timestamp;
   }
+
+  // Debug: Log timer states occasionally
+  if (Math.random() < 0.001) {
+    console.log(`Debug: restartTimer=${restartTimer}, freeKickTimer=${freeKickTimer}, ball.outOfBounds=${ball.outOfBounds}`);
+  }
+
   if (restartTimer > 0) {
     restartTimer -= delta;
     ball.x = restartTaker.x;
@@ -986,8 +1118,8 @@ function gameLoop(timestamp) {
     }
     drawPlayers(ctx, allPlayers, { showTargets: window.debugOptions.showTargets });
     drawReferee(ctx, referee);
-    if (window.debugOptions.showFormation) {
-      drawFormationDebug(ctx, allPlayers);
+    if (window.debugOptions.showFormation && selectedPlayer) {
+      drawFormationDebug(ctx, [selectedPlayer]);
     }
     drawBall(ctx, ball);
     if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
@@ -1005,13 +1137,13 @@ function gameLoop(timestamp) {
     ball.owner = freeKickTaker;
     const allPlayers = [...teamHeim, ...teamGast];
     drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
-    if (window.debugOptions.showZones) {
-      drawZones(ctx, allPlayers, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
+    if (window.debugOptions.showZones && selectedPlayer) {
+      drawZones(ctx, [selectedPlayer], { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
     }
     drawPlayers(ctx, allPlayers, { showTargets: window.debugOptions.showTargets });
     drawReferee(ctx, referee);
-    if (window.debugOptions.showFormation) {
-      drawFormationDebug(ctx, allPlayers);
+    if (window.debugOptions.showFormation && selectedPlayer) {
+      drawFormationDebug(ctx, [selectedPlayer]);
     }
     drawBall(ctx, ball);
     if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
@@ -1067,7 +1199,7 @@ function gameLoop(timestamp) {
       shotCharging = true;
       shotCharge = Math.min(1, shotCharge + delta);
     } else if (shotCharging && inputHandler.can("shoot")) {
-      doShoot(selectedPlayer, userInput.dx, userInput.dy);
+      doShoot(selectedPlayer, userInput.dx, userInput.dy, shotCharge);
       shotCharging = false;
       shotCharge = 0;
       inputHandler.triggerCooldown("shoot");
@@ -1091,7 +1223,7 @@ function gameLoop(timestamp) {
         if (!potentialMate) potentialMate = findNearestTeammate(selectedPlayer);
       }
       if (potentialMate) {
-        doPass(selectedPlayer, potentialMate);
+        doPass(selectedPlayer, potentialMate, passCharge);
         inputHandler.triggerCooldown("pass");
       }
       passCharging = false;
@@ -1114,7 +1246,7 @@ function gameLoop(timestamp) {
       shotCharging2 = true;
       shotCharge2 = Math.min(1, shotCharge2 + delta);
     } else if (shotCharging2) {
-      doShoot(selectedPlayer2, userInput2.dx, userInput2.dy);
+      doShoot(selectedPlayer2, userInput2.dx, userInput2.dy, shotCharge2);
       shotCharging2 = false;
       shotCharge2 = 0;
     }
@@ -1148,7 +1280,7 @@ function gameLoop(timestamp) {
       potentialMate2 = findTeammateInDirection(selectedPlayer2, userInput2.dx, userInput2.dy);
       if (!potentialMate2) potentialMate2 = findNearestTeammate(selectedPlayer2);
     }
-    if (potentialMate2) doPass(selectedPlayer2, potentialMate2);
+    if (potentialMate2) doPass(selectedPlayer2, potentialMate2, passCharge2);
     passCharging2 = false;
     passCharge2 = 0;
   }
@@ -1172,7 +1304,17 @@ function gameLoop(timestamp) {
     }
   }
   const allPlayers = [...teamHeim, ...teamGast];
-  allPlayers.forEach((p) => p.updateInjury(delta));
+  allPlayers.forEach((p) => {
+    p.updateInjury(delta);
+
+    // Update ball cooldown timer
+    if (p.ballCooldown > 0) {
+      p.ballCooldown -= delta;
+      if (p.ballCooldown <= 0) {
+        p.ballCooldown = 0;
+      }
+    }
+  });
 
   // 1. Wahrnehmung (inkl. FOV/Kopf/Memory)
   allPlayers.forEach((p) => {
@@ -1259,7 +1401,9 @@ function gameLoop(timestamp) {
     }
   }
 
-  referee.update(allPlayers, ball, delta);
+  // Update FIFA game state and referee
+  gameStateManager.updateMatchTime(delta);
+  referee.update(allPlayers, ball, delta, gameStateManager.matchTime);
 
   checkSubstitutions();
 
@@ -1308,18 +1452,41 @@ function gameLoop(timestamp) {
   }
 
   // 7. RENDER
+  // Debug occasionally (not every frame)
+  if (Math.random() < 0.01) {
+    //console.log("Main render - players count:", allPlayers.length, "ball:", ball.x, ball.y);
+  }
+
   drawField(ctx, canvas.width, canvas.height, goalFlashTimer, goalFlashSide);
 
   if (window.debugOptions.showZones) {
-    drawZones(ctx, allPlayers, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
+    const playersToDebug = [];
+    if (selectedPlayer) playersToDebug.push(selectedPlayer);
+    if (selectedPlayer2) playersToDebug.push(selectedPlayer2);
+    if (playersToDebug.length > 0) {
+      drawZones(ctx, playersToDebug, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
+    }
   }
   drawPasses(ctx, allPlayers, ball);
   drawPassIndicator(ctx, passIndicator);
   drawConfetti(ctx);
-  drawPlayers(ctx, allPlayers, { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
+
+  //console.log("About to draw players:", allPlayers.length);
+  try {
+    drawPlayers(ctx, allPlayers, { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
+    //console.log("Players drawn successfully");
+  } catch (error) {
+    console.error("Error drawing players:", error);
+  }
+
   drawReferee(ctx, referee);
   if (window.debugOptions.showFormation) {
-    drawFormationDebug(ctx, allPlayers);
+    const playersToDebug = [];
+    if (selectedPlayer) playersToDebug.push(selectedPlayer);
+    if (selectedPlayer2) playersToDebug.push(selectedPlayer2);
+    if (playersToDebug.length > 0) {
+      drawFormationDebug(ctx, playersToDebug);
+    }
   }
   if (selectedPlayer) {
     drawPlayers(ctx, [selectedPlayer], { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
@@ -1366,5 +1533,9 @@ function gameLoop(timestamp) {
 
   requestAnimationFrame(gameLoop);
 }
+
+// Ensure proper game start
+resetKickoff();
+console.log("Game initialized and ready to start");
 
 requestAnimationFrame(gameLoop);

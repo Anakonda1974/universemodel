@@ -3,14 +3,7 @@ import { createPlayerBT } from "./footBallBTs.js";
 import { computeEllipseRadii, getTargetZoneCenter, interpolate } from "./TacticsHelper.js";
 import { getDynamicZone } from "./decision-rules.js";
 import { FIELD_BOUNDS } from "./ball.js";
-
-const TradeProfiles = {
-  sniper: { shootingAccuracy: +0.15, tacklingSkill: -0.1 },
-  playmaker: { passingAccuracy: +0.15, topSpeed: -0.05 },
-  wall: { tacklingSkill: +0.2, acceleration: -0.08 },
-  engine: { fitness: +0.2, shootingPower: -0.1 },
-  // usw.
-};
+import { TraitProfiles, getTraitProfile } from "./traitConfig.js";
 
 function getPositionMultipliers(pos) {
   switch (pos) {
@@ -49,8 +42,8 @@ export class Player {
       ...options.baseStats,
     };
 
-    // --- Spielerprofil / Trade (Sniper, Wall, Engine, Playmaker...) ---
-    this.trade = options.trade || null;
+    // --- Spielerprofil / Trait (Sniper, Wall, Engine, Playmaker...) ---
+    this.trait = options.trait || null;
     this.position = options.position || "ST"; // Default Stürmer
 
     // --- Erfahrungssystem ---
@@ -122,13 +115,13 @@ export class Player {
     this.reactionInterval = 300 + (1 - this.derived.awareness) * 400; // dynamisch
 
     // --- Capabilities ---
-    this.capabilities = { ...Capabilities }; // oder rollen-/trade-spezifisch
+    this.capabilities = { ...Capabilities }; // oder rollen-/trait-spezifisch
   }
 
-  // --- Abgeleitete Werte aktualisieren (immer nach XP-Gewinn o. Trade-Wechsel!) ---
+  // --- Abgeleitete Werte aktualisieren (immer nach XP-Gewinn o. Trait-Wechsel!) ---
   updateDerived() {
     const b = this.base;
-    const t = this.getTradeBonus();
+    const t = this.getTraitBonus();
     // Beispielhaft einige abgeleitete Werte:
     this.derived.acceleration = b.athleticism * 0.6 + b.fitness * 0.2 + b.speed * 0.2 + (t.acceleration ?? 0);
     this.derived.topSpeed = b.athleticism * 0.4 + b.fitness * 0.3 + b.speed * 0.3 + (t.topSpeed ?? 0);
@@ -245,9 +238,27 @@ export class Player {
     return { x: center.x, y: center.y, rx: radii.rx, ry: radii.ry };
   }
 
-  // --- Boni/Mali aus Trade-System holen ---
-  getTradeBonus() {
-    return TradeProfiles[this.trade] || {};
+  // --- Boni/Mali aus Trait-System holen ---
+  getTraitBonus() {
+    const traitProfile = TraitProfiles[this.trait];
+    if (!traitProfile) return {};
+
+    // Combine bonuses and penalties into a single object
+    const combined = {};
+
+    // Add bonuses
+    if (traitProfile.bonuses) {
+      Object.assign(combined, traitProfile.bonuses);
+    }
+
+    // Add penalties (they're already negative values)
+    if (traitProfile.penalties) {
+      for (const [stat, penalty] of Object.entries(traitProfile.penalties)) {
+        combined[stat] = (combined[stat] || 0) + penalty;
+      }
+    }
+
+    return combined;
   }
 
   // --- Erfahrung steigern ---
