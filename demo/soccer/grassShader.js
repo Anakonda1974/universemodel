@@ -303,7 +303,9 @@ export class GrassShader {
 
         // Apply height displacement using CPU-generated heightmap
         // Use heightmap value for realistic grass height variation
-        float totalDisplacement = heightmapValue * displacementStrength;
+        // Clamp heightmap value and apply smooth curve for natural grass growth
+        float clampedHeight = clamp(heightmapValue, 0.0, 1.0);
+        float totalDisplacement = clampedHeight * displacementStrength;
 
         // For a plane rotated -Math.PI/2 around X-axis (standard horizontal plane):
         // - Local Y-axis becomes world Z-axis (up/down)
@@ -318,12 +320,17 @@ export class GrassShader {
         // Store debug info for fragment shader
         vDebugHeight = totalDisplacement;
 
-        // Debug: Store displacement value for fragment shader debugging
+        // Store debug info for fragment shader
         vDebugHeight = totalDisplacement;
 
-        // Debug: Ensure displacement is significant
-        // Minimum displacement to ensure grass is always above ground
-        newPosition.y = max(newPosition.y, 0.01);
+        // Ensure grass stays above ground level with minimal adjustment
+        newPosition.y = max(newPosition.y, 0.001);
+
+        // Debug: Log displacement values occasionally for verification
+        if (position.x == 0.0 && position.z == 0.0) {
+          // This will only execute for the center vertex, reducing console spam
+          // Note: This is a shader debug technique - values won't actually log in real-time
+        }
 
         // Advanced wear-based compression and deformation (SEPARATE from displacement strength)
         if (vWear > 0.2) {
@@ -508,15 +515,20 @@ export class GrassShader {
         // Final color with lighting
         vec3 finalColor = finalGrassColor * lightIntensity;
 
-        // Debug: Displacement visualization mode (can be enabled via button)
-        // Visualize displacement as color: blue = low displacement, red = high displacement
-        // finalColor = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), clamp(vDebugHeight / 1.5, 0.0, 1.0));
+        // Debug visualization modes (controlled by debug buttons)
+        // These are replaced dynamically by the debug system:
 
-        // Debug: UV coordinate visualization (uncomment to enable)
+        // Displacement mode: Blue = low displacement, Red = high displacement
+        // finalColor = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), clamp(vDebugHeight / 0.15, 0.0, 1.0));
+
+        // UV coordinate mode: Red = U coordinate, Green = V coordinate
         // finalColor = vec3(vDebugUV.x, vDebugUV.y, 0.5);
 
-        // Debug: Wear visualization (uncomment to enable)
+        // Wear visualization mode: Green = no wear, Red = full wear
         // finalColor = mix(vec3(0.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0), vWear);
+
+        // Height visualization mode: Dark = low grass, Bright = tall grass
+        // finalColor = vec3(vGrassHeight, vGrassHeight, vGrassHeight);
 
         // Add subtle color variation for realism
         float colorVariation = noise(vUv * 300.0) * 0.1;
@@ -595,13 +607,13 @@ export class GrassShader {
         // Layer 5: Ridged noise for natural grass growth patterns
         const ridgedNoise = noise.ridgedNoise(u * 6, v * 6, 3);
 
-        // Combine all layers with different weights
+        // Combine all layers with different weights - reduced for subtlety
         let height = 0;
-        height += baseNoise * 0.4;      // 40% base variation
-        height += clumpNoise * 0.25;    // 25% clump patterns
-        height += bladeNoise * 0.2;     // 20% blade variation
-        height += microNoise * 0.1;     // 10% micro detail
-        height += ridgedNoise * 0.05;   // 5% ridged patterns
+        height += baseNoise * 0.3;      // 30% base variation
+        height += clumpNoise * 0.2;     // 20% clump patterns
+        height += bladeNoise * 0.15;    // 15% blade variation
+        height += microNoise * 0.05;    // 5% micro detail
+        height += ridgedNoise * 0.03;   // 3% ridged patterns
 
         // Normalize to [0, 1] range
         height = (height + 1) / 2;
@@ -609,8 +621,8 @@ export class GrassShader {
         // Apply grass growth curve for more realistic distribution
         height = Math.pow(height, 0.8); // Slight curve for natural look
 
-        // Add some base height and variation
-        height = 0.25 + height * 0.75; // Range from 0.25 to 1.0
+        // Add some base height and variation - more subtle for realistic grass
+        height = 0.7 + height * 0.3; // Range from 0.7 to 1.0 (subtle variation)
 
         // Clamp to valid range
         height = Math.max(0, Math.min(1, height));
@@ -680,8 +692,8 @@ export class GrassShader {
         wearMap: { value: this.wearTexture },
         heightMap: { value: this.heightmapTexture },
         noiseTexture: { value: this.noiseTexture },
-        grassHeight: { value: 0.8 },
-        displacementStrength: { value: 1.5 }, // Further increased for very visible displacement
+        grassHeight: { value: 0.3 }, // Realistic grass height in meters
+        displacementStrength: { value: 0.15 }, // Realistic grass height variation (was 1.5 - too extreme)
         noiseScale: { value: 1.0 }, // Proper heightmap sampling
         grassColorBase: { value: new THREE.Color(0x1a4a0a) },
         grassColorTip: { value: new THREE.Color(0x4a7c1a) },
@@ -995,9 +1007,96 @@ export class GrassShader {
     return this.wearData[index];
   }
 
+  // Debug method to test displacement at specific coordinates
+  testDisplacementAt(worldX, worldZ) {
+    // Convert world coordinates to UV coordinates
+    const u = (worldX + this.fieldWidth/2) / this.fieldWidth;
+    const v = (worldZ + this.fieldHeight/2) / this.fieldHeight;
+
+    // Clamp to valid range
+    const clampedU = Math.max(0, Math.min(1, u));
+    const clampedV = Math.max(0, Math.min(1, v));
+
+    console.log(`🧪 DISPLACEMENT TEST: World(${worldX}, ${worldZ}) -> UV(${clampedU.toFixed(3)}, ${clampedV.toFixed(3)})`);
+
+    // Get current displacement strength
+    const displacementStrength = this.material ? this.material.uniforms.displacementStrength.value : 0.15;
+
+    // Simulate heightmap sampling (approximate)
+    if (this.heightmapCanvas) {
+      const canvas = this.heightmapCanvas;
+      const ctx = this.heightmapContext;
+      const x = Math.floor(clampedU * canvas.width);
+      const y = Math.floor(clampedV * canvas.height);
+
+      const imageData = ctx.getImageData(x, y, 1, 1);
+      const heightValue = imageData.data[0] / 255; // Red channel
+      const displacement = heightValue * displacementStrength;
+
+      console.log(`🧪 DISPLACEMENT TEST: Height value: ${heightValue.toFixed(3)}, Displacement: ${displacement.toFixed(3)}m`);
+      return { heightValue, displacement, u: clampedU, v: clampedV };
+    }
+
+    return null;
+  }
+
+  // Method to create test wear patterns for debugging
+  createTestWearPattern() {
+    console.log('🧪 WEAR TEST: Creating test wear pattern...');
+
+    // Create a cross pattern in the center
+    const centerX = this.wearResolution / 2;
+    const centerZ = this.wearResolution / 2;
+
+    // Horizontal line
+    for (let x = centerX - 50; x < centerX + 50; x++) {
+      if (x >= 0 && x < this.wearResolution) {
+        const index = centerZ * this.wearResolution + x;
+        this.wearData[index] = 0.8;
+      }
+    }
+
+    // Vertical line
+    for (let z = centerZ - 50; z < centerZ + 50; z++) {
+      if (z >= 0 && z < this.wearResolution) {
+        const index = z * this.wearResolution + centerX;
+        this.wearData[index] = 0.8;
+      }
+    }
+
+    // Corner spots
+    const corners = [
+      [centerX - 100, centerZ - 100],
+      [centerX + 100, centerZ - 100],
+      [centerX - 100, centerZ + 100],
+      [centerX + 100, centerZ + 100]
+    ];
+
+    corners.forEach(([x, z]) => {
+      for (let dx = -10; dx <= 10; dx++) {
+        for (let dz = -10; dz <= 10; dz++) {
+          const px = x + dx;
+          const pz = z + dz;
+          if (px >= 0 && px < this.wearResolution && pz >= 0 && pz < this.wearResolution) {
+            const distance = Math.sqrt(dx * dx + dz * dz);
+            if (distance <= 10) {
+              const index = pz * this.wearResolution + px;
+              this.wearData[index] = 0.6;
+            }
+          }
+        }
+      }
+    });
+
+    this.wearNeedsUpdate = true;
+    this.updateWearTexture();
+    console.log('🧪 WEAR TEST: Test pattern created - cross in center with corner spots');
+  }
+
   // Dispose of resources
   dispose() {
     if (this.wearTexture) this.wearTexture.dispose();
+    if (this.heightmapTexture) this.heightmapTexture.dispose();
     if (this.noiseTexture) this.noiseTexture.dispose();
     if (this.material) this.material.dispose();
   }

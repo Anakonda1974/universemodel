@@ -114,8 +114,8 @@ export class SoccerPitch3D {
 
     // Layer 1: Ground/Dirt base (always visible)
     const groundGeo = new THREE.PlaneGeometry(
-      this.dimensions.width*10,
-      this.dimensions.height*10
+      this.dimensions.width,
+      this.dimensions.height
     );
     this.groundMesh = new THREE.Mesh(groundGeo, this.materials.dirt);
     this.groundMesh.rotation.x = -Math.PI/2;
@@ -172,7 +172,7 @@ export class SoccerPitch3D {
     this.group.add(centerLine);
     
     // Center circle
-    const centerCircleGeo = new THREE.RingGeometry(centerCircleRadius - 0.05, centerCircleRadius, 32);
+    const centerCircleGeo = new THREE.RingGeometry(centerCircleRadius - 0.05, centerCircleRadius, 64);
     const centerCircle = new THREE.Mesh(centerCircleGeo, this.materials.marking);
     centerCircle.rotation.x = -Math.PI/2;
     centerCircle.position.set(0, 0.01, 0);
@@ -180,7 +180,7 @@ export class SoccerPitch3D {
     this.group.add(centerCircle);
     
     // Center spot
-    const centerSpotGeo = new THREE.CircleGeometry(0.15, 16);
+    const centerSpotGeo = new THREE.CircleGeometry(0.15, 32);
     const centerSpot = new THREE.Mesh(centerSpotGeo, this.materials.marking);
     centerSpot.rotation.x = -Math.PI/2;
     centerSpot.position.set(0, 0.01, 0);

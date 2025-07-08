@@ -2,6 +2,7 @@ import * as THREE from 'https://unpkg.com/three@0.156.1/build/three.module.js';
 import { Player3D } from './player3d.js';
 import { Ball3D } from './ball3d.js';
 import { SoccerPitch3D } from './pitch3d.js';
+import { EnhancedSoccerPitch3D } from './enhancedPitch3d.js';
 import { initMultiplayer } from './multiplayer.js';
 
 // Import all 2D components for reuse
@@ -28,6 +29,11 @@ let referee;
 let gameStateManager;
 let selectedPlayer = null;
 let selectedPlayer2 = null;
+
+// ===== 3D GAME OBJECTS (for debug system) =====
+let allPlayers3D = [];
+let ball3D = null;
+let pitch = null;
 
 // Game timing and state
 let matchTime = 0;
@@ -78,6 +84,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB); // Sky blue background
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+window.camera = camera; // Make camera globally accessible
 const cameraOffset = new THREE.Vector3(0, -15, 10);
 camera.position.copy(cameraOffset);
 camera.lookAt(0, 0, 0);
@@ -115,9 +122,10 @@ const stadiumLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
 stadiumLight2.position.set(30, 30, 20);
 scene.add(stadiumLight2);
 
-// ===== MODULAR SOCCER PITCH WITH ADVANCED GRASS SHADER =====
-// Create professional soccer pitch with dynamic wear tracking
-const pitch = new SoccerPitch3D(renderer);
+// ===== ENHANCED AAA-QUALITY SOCCER PITCH =====
+// Create professional soccer pitch with advanced grass system, LOD, culling, and PBR
+pitch = new EnhancedSoccerPitch3D(renderer); // Use global variable
+console.log('🏟️ ENHANCED PITCH: Using AAA-quality grass system with LOD, culling, and PBR');
 pitch.addTo(scene);
 
 // Get field dimensions for coordinate conversion
@@ -183,6 +191,7 @@ for (let i = 0; i < 11; i++) {
   player2D.player3D = player3D; // Link back
 
   teamHeim.push(player2D);
+  allPlayers3D.push(player3D); // Add to global 3D array
   player3D.addTo(scene);
 }
 
@@ -223,6 +232,7 @@ for (let i = 0; i < 11; i++) {
   player2D.player3D = player3D; // Link back
 
   teamGast.push(player2D);
+  allPlayers3D.push(player3D); // Add to global 3D array
   player3D.addTo(scene);
 }
 
@@ -236,7 +246,7 @@ ball2D = new Ball(525, 340); // Center of 2D field
 const ballPos3D = convert2Dto3D(ball2D.x, ball2D.y);
 
 // Create 3D ball for visualization
-const ball3D = new Ball3D(ballPos3D.x, ballPos3D.z, 0.11);
+ball3D = new Ball3D(ballPos3D.x, ballPos3D.z, 0.11); // Use global variable
 ball3D.ball2D = ball2D; // Link 2D and 3D
 ball2D.ball3D = ball3D; // Link back
 ball3D.addTo(scene);
@@ -445,7 +455,7 @@ function initializeUI() {
     });
   }
 
-  // Debug controls
+  // Debug controls - Enhanced with proper initialization
   const debugControls = {
     'debug-zones': 'showZones',
     'debug-fov': 'showFOV',
@@ -457,12 +467,62 @@ function initializeUI() {
   Object.entries(debugControls).forEach(([id, option]) => {
     const checkbox = document.getElementById(id);
     if (checkbox) {
+      // Initialize checkbox state from debugOptions
+      checkbox.checked = window.debugOptions[option];
+
       checkbox.addEventListener('change', (e) => {
         window.debugOptions[option] = e.target.checked;
-        console.log(`Debug option ${option}: ${e.target.checked}`);
+        console.log(`🔧 DEBUG: ${option} = ${e.target.checked}`);
+
+        // Apply debug changes immediately
+        updateDebugVisuals();
       });
+    } else {
+      console.warn(`🔧 DEBUG: Checkbox with id '${id}' not found`);
     }
   });
+
+  // Function to update debug visuals based on current debug options
+  function updateDebugVisuals() {
+    // Check if game objects are initialized
+    if (!allPlayers3D || !pitch) {
+      console.log('🔧 DEBUG: Game objects not yet initialized, skipping visual updates');
+      return;
+    }
+
+    // Update player debug visuals
+    allPlayers3D.forEach(player3D => {
+      if (player3D.debugHelpers) {
+        // Show/hide zones for selected player only
+        if (player3D.debugHelpers.zones) {
+          player3D.debugHelpers.zones.visible =
+            window.debugOptions.showZones &&
+            (selectedPlayer === player3D.player2D || selectedPlayer2 === player3D.player2D);
+        }
+
+        // Show/hide FOV for selected player only
+        if (player3D.debugHelpers.fov) {
+          player3D.debugHelpers.fov.visible =
+            window.debugOptions.showFOV &&
+            (selectedPlayer === player3D.player2D || selectedPlayer2 === player3D.player2D);
+        }
+
+        // Show/hide targets for selected player only
+        if (player3D.debugHelpers.targets) {
+          player3D.debugHelpers.targets.visible =
+            window.debugOptions.showTargets &&
+            (selectedPlayer === player3D.player2D || selectedPlayer2 === player3D.player2D);
+        }
+      }
+    });
+
+    // Update ball debug visuals
+    if (ball3D && ball3D.debugHelpers) {
+      ball3D.debugHelpers.visible = window.debugOptions.showBall;
+    }
+
+    console.log('🔧 DEBUG: Visual updates applied');
+  }
 
   // Weather controls
   const weatherSelect = document.getElementById('weatherSelect');
@@ -884,8 +944,8 @@ function enhancedLoop(now) {
     return;
   }
 
-  // Update grass shader with dynamic wear tracking
-  pitch.update(dt, { x: 1, y: 0.5 }, 0.02);
+  // Update enhanced grass system with LOD, culling, and dynamic wear tracking
+  pitch.update(dt, camera, { x: 1, y: 0.5 }, 0.02);
 
   // Update 2D game systems
   if (gameStateManager) {
@@ -1093,287 +1153,246 @@ function initializeWearTestMode() {
       const strength = parseFloat(e.target.value);
       displacementValue.textContent = strength.toFixed(1);
 
-      // Update the grass shader displacement strength
-      if (pitch && pitch.grassShader && pitch.grassShader.material) {
-        const oldValue = pitch.grassShader.material.uniforms.displacementStrength.value;
-        pitch.grassShader.material.uniforms.displacementStrength.value = strength;
-        console.log(`🏔️ DISPLACEMENT DEBUG: Strength changed from ${oldValue} to ${strength}`);
-        console.log(`🏔️ DISPLACEMENT DEBUG: Material uniforms:`, {
-          grassHeight: pitch.grassShader.material.uniforms.grassHeight.value,
-          displacementStrength: pitch.grassShader.material.uniforms.displacementStrength.value,
-          noiseScale: pitch.grassShader.material.uniforms.noiseScale.value
-        });
-      } else {
-        console.error('🏔️ DISPLACEMENT DEBUG: Cannot update displacement - missing references:', {
-          pitch: !!pitch,
-          grassShader: !!(pitch && pitch.grassShader),
-          material: !!(pitch && pitch.grassShader && pitch.grassShader.material)
-        });
-      }
-    });
-  }
-
-  // Debug displacement button
-  const debugButton = document.getElementById('debugDisplacement');
-  if (debugButton) {
-    debugButton.addEventListener('click', () => {
-      console.log('🏔️ DISPLACEMENT DEBUG: Manual debug triggered');
-
-      if (pitch && pitch.grassShader) {
-        console.log('🏔️ DISPLACEMENT DEBUG: Grass shader state:');
-        console.log(`🏔️ DISPLACEMENT DEBUG: - Field dimensions: ${pitch.grassShader.fieldWidth} x ${pitch.grassShader.fieldHeight}`);
-        console.log(`🏔️ DISPLACEMENT DEBUG: - Wear resolution: ${pitch.grassShader.wearResolution}`);
-
-        if (pitch.grassShader.material) {
-          const uniforms = pitch.grassShader.material.uniforms;
-          console.log('🏔️ DISPLACEMENT DEBUG: Material uniforms:');
-          console.log(`🏔️ DISPLACEMENT DEBUG: - grassHeight: ${uniforms.grassHeight.value}`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - displacementStrength: ${uniforms.displacementStrength.value}`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - noiseScale: ${uniforms.noiseScale.value}`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - time: ${uniforms.time.value}`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - heightMap: ${uniforms.heightMap.value ? 'LOADED' : 'MISSING'}`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - wearMap: ${uniforms.wearMap.value ? 'LOADED' : 'MISSING'}`);
-        }
-
-        if (pitch.grassMesh) {
-          console.log('🏔️ DISPLACEMENT DEBUG: Grass mesh:');
-          console.log(`🏔️ DISPLACEMENT DEBUG: - Vertices: ${pitch.grassMesh.geometry.attributes.position.count}`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - Position: (${pitch.grassMesh.position.x}, ${pitch.grassMesh.position.y}, ${pitch.grassMesh.position.z})`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - Rotation: (${pitch.grassMesh.rotation.x}, ${pitch.grassMesh.rotation.y}, ${pitch.grassMesh.rotation.z})`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - Scale: (${pitch.grassMesh.scale.x}, ${pitch.grassMesh.scale.y}, ${pitch.grassMesh.scale.z})`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - Visible: ${pitch.grassMesh.visible}`);
-          console.log(`🏔️ DISPLACEMENT DEBUG: - Material type: ${pitch.grassMesh.material.type}`);
-        }
-      } else {
-        console.error('🏔️ DISPLACEMENT DEBUG: Pitch or grass shader not available');
-      }
-    });
-  }
-
-  // Displacement visualization button
-  const visualizeButton = document.getElementById('visualizeDisplacement');
-  let visualizationMode = false;
-  if (visualizeButton) {
-    visualizeButton.addEventListener('click', () => {
-      visualizationMode = !visualizationMode;
-
-      if (pitch && pitch.grassShader && pitch.grassShader.material) {
-        // Toggle displacement visualization in fragment shader
-        const fragmentShader = pitch.grassShader.fragmentShader;
-
-        if (visualizationMode) {
-          // Enable visualization mode
-          const newFragmentShader = fragmentShader.replace(
-            '// finalColor = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), vDebugHeight / 2.0);',
-            'finalColor = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), vDebugHeight / 2.0);'
-          );
-
-          // Create new material with visualization
-          const newMaterial = new THREE.ShaderMaterial({
-            uniforms: pitch.grassShader.material.uniforms,
-            vertexShader: pitch.grassShader.vertexShader,
-            fragmentShader: newFragmentShader,
-            transparent: true,
-            side: THREE.DoubleSide,
-            alphaTest: 0.1
+      // Update displacement strength for both grass systems
+      if (pitch) {
+        if (pitch.advancedGrass && pitch.advancedGrass.grassMaterials) {
+          // Update displacement strength for all LOD materials in AdvancedGrassSystem
+          pitch.advancedGrass.grassMaterials.forEach((material, lodIndex) => {
+            if (material.uniforms && material.uniforms.displacementStrength) {
+              material.uniforms.displacementStrength.value = strength;
+            }
           });
-
-          pitch.grassMesh.material = newMaterial;
-          pitch.grassShader.material = newMaterial;
-          visualizeButton.textContent = '🌱 Normal View';
-          visualizeButton.style.background = '#4CAF50';
-          console.log('🏔️ DISPLACEMENT DEBUG: Visualization mode ENABLED - Red=High, Blue=Low displacement');
+          console.log(`🏔️ DISPLACEMENT DEBUG: Updated AdvancedGrassSystem displacement strength to ${strength} for all LOD levels`);
+        } else if (pitch.grassShader && pitch.grassShader.material) {
+          // Update displacement strength for GrassShader system
+          if (pitch.grassShader.material.uniforms && pitch.grassShader.material.uniforms.displacementStrength) {
+            pitch.grassShader.material.uniforms.displacementStrength.value = strength;
+            console.log(`🏔️ DISPLACEMENT DEBUG: Updated GrassShader displacement strength to ${strength}`);
+          }
         } else {
-          // Disable visualization mode
-          pitch.grassMesh.material = pitch.grassShader.createGrassMaterial();
-          pitch.grassShader.material = pitch.grassMesh.material;
-          visualizeButton.textContent = '🌈 Visualize Displacement';
-          visualizeButton.style.background = '#FF9800';
-          console.log('🏔️ DISPLACEMENT DEBUG: Visualization mode DISABLED - Normal grass view');
+          console.error('🏔️ DISPLACEMENT DEBUG: Cannot update displacement - no grass system found');
+          console.log('🏔️ DISPLACEMENT DEBUG: Available systems:', {
+            advancedGrass: !!pitch.advancedGrass,
+            grassShader: !!pitch.grassShader
+          });
         }
+      } else {
+        console.error('🏔️ DISPLACEMENT DEBUG: Pitch not available');
       }
     });
   }
 
-  // UV correction test button
-  const uvTestButton = document.getElementById('testUVCorrection');
-  let uvCorrectionMode = 0;
-  const uvCorrections = [
-    'vec2(1.0 - uv.x, uv.y)',           // 0: Flip X
-    'vec2(uv.x, 1.0 - uv.y)',           // 1: Flip Y
-    'vec2(1.0 - uv.x, 1.0 - uv.y)',     // 2: Flip both
-    'vec2(uv.y, uv.x)',                 // 3: Swap XY
-    'vec2(1.0 - uv.y, uv.x)',           // 4: 90° rotation
-    'vec2(uv.y, 1.0 - uv.x)',           // 5: -90° rotation
-    'vec2(1.0 - uv.y, 1.0 - uv.x)',     // 6: 180° rotation + swap
-    'uv'                                 // 7: No correction
-  ];
+  // Grass height slider
+  const grassHeightSlider = document.getElementById('grassHeight');
+  const grassHeightValue = document.getElementById('grassHeightValue');
+  if (grassHeightSlider && grassHeightValue) {
+    grassHeightSlider.addEventListener('input', (e) => {
+      const height = parseFloat(e.target.value);
+      grassHeightValue.textContent = height.toFixed(2) + 'm';
 
-  if (uvTestButton) {
-    uvTestButton.addEventListener('click', () => {
-      uvCorrectionMode = (uvCorrectionMode + 1) % uvCorrections.length;
-
-      if (pitch && pitch.grassShader) {
-        // Update the vertex shader with new UV correction
-        const newVertexShader = pitch.grassShader.vertexShader.replace(
-          /correctedUV = vec2\([^;]+\);/,
-          `correctedUV = ${uvCorrections[uvCorrectionMode]};`
-        );
-
-        // Create new material with updated shader
-        const newMaterial = new THREE.ShaderMaterial({
-          uniforms: pitch.grassShader.material.uniforms,
-          vertexShader: newVertexShader,
-          fragmentShader: pitch.grassShader.fragmentShader,
-          transparent: true,
-          side: THREE.DoubleSide,
-          alphaTest: 0.1
-        });
-
-        pitch.grassMesh.material = newMaterial;
-        pitch.grassShader.material = newMaterial;
-
-        uvTestButton.textContent = `🔄 UV Mode ${uvCorrectionMode}`;
-        console.log(`🔄 UV CORRECTION: Mode ${uvCorrectionMode} - ${uvCorrections[uvCorrectionMode]}`);
+      if (pitch && pitch.advancedGrass) {
+        pitch.advancedGrass.updateGrassHeight(height);
+        console.log(`🌱 GRASS HEIGHT: Updated to ${height}m`);
+      } else {
+        console.warn('🌱 GRASS HEIGHT: Advanced grass system not available');
       }
     });
   }
 
-  // Coordinate test button
-  const coordTestButton = document.getElementById('testCoordinates');
-  if (coordTestButton) {
-    coordTestButton.addEventListener('click', () => {
-      if (pitch && pitch.grassShader) {
-        console.log('🎯 COORDINATE TEST: Creating wear at known positions...');
+  // Grass density slider
+  const grassDensitySlider = document.getElementById('grassDensity');
+  const grassDensityValue = document.getElementById('grassDensityValue');
+  if (grassDensitySlider && grassDensityValue) {
+    grassDensitySlider.addEventListener('input', (e) => {
+      const density = parseFloat(e.target.value);
+      grassDensityValue.textContent = density.toFixed(1) + 'x';
 
-        // Test specific coordinates to verify mapping
-        // Updated for new field dimensions: width=52.5 (goal to goal), height=34 (sideline to sideline)
-        const testPoints = [
-          { x: 0, z: 0, name: 'Center' },
-          { x: 25, z: 0, name: 'Right Goal Area' },
-          { x: -25, z: 0, name: 'Left Goal Area' },
-          { x: 0, z: 15, name: 'Top Sideline' },
-          { x: 0, z: -15, name: 'Bottom Sideline' },
-          { x: 26, z: 16, name: 'Top Right Corner' },
-          { x: -26, z: -16, name: 'Bottom Left Corner' }
-        ];
-
-        testPoints.forEach((point, index) => {
-          setTimeout(() => {
-            console.log(`🎯 COORDINATE TEST: Creating wear at ${point.name}: (${point.x}, ${point.z})`);
-            pitch.recordPlayerActivity(point.x, point.z, 'tackle', 10);
-          }, index * 500); // Stagger the points
-        });
+      if (pitch && pitch.advancedGrass) {
+        pitch.advancedGrass.updateDensity(density);
+        console.log(`🌾 GRASS DENSITY: Updated to ${density}x`);
+      } else {
+        console.warn('🌾 GRASS DENSITY: Advanced grass system not available');
       }
     });
   }
 
-  // Debug helpers toggle button
+  // Wireframe toggle
+  const wireframeCheckbox = document.getElementById('showWireframe');
+  if (wireframeCheckbox) {
+    wireframeCheckbox.addEventListener('change', (e) => {
+      const enabled = e.target.checked;
+
+      if (pitch && pitch.advancedGrass) {
+        pitch.advancedGrass.setWireframe(enabled);
+        console.log(`🔲 WIREFRAME: ${enabled ? 'Enabled' : 'Disabled'}`);
+      } else {
+        console.warn('🔲 WIREFRAME: Advanced grass system not available');
+      }
+    });
+  }
+
+  // Debug grass info button - works with AdvancedGrassSystem
+  const debugGrassButton = document.getElementById('debugGrassInfo');
+  if (debugGrassButton) {
+    debugGrassButton.addEventListener('click', () => {
+      console.log('🌱 GRASS DEBUG: ===== COMPREHENSIVE GRASS REPORT =====');
+
+      if (pitch && pitch.advancedGrass) {
+        const debugInfo = pitch.advancedGrass.getDebugInfo();
+        console.log('🌱 GRASS DEBUG: Advanced grass system state:');
+        console.log(`🌱 GRASS DEBUG: - Field dimensions: ${debugInfo.fieldDimensions}`);
+        console.log(`🌱 GRASS DEBUG: - Base grass height: ${debugInfo.baseGrassHeight}m`);
+        console.log(`🌱 GRASS DEBUG: - Density multiplier: ${debugInfo.densityMultiplier}x`);
+        console.log(`🌱 GRASS DEBUG: - Wireframe mode: ${debugInfo.showWireframe}`);
+        console.log(`🌱 GRASS DEBUG: - LOD levels: ${debugInfo.lodLevels}`);
+        console.log(`🌱 GRASS DEBUG: - Total chunks: ${debugInfo.totalChunks}`);
+        console.log(`🌱 GRASS DEBUG: - Visible chunks: ${debugInfo.visibleChunks}`);
+        console.log(`🌱 GRASS DEBUG: - Grass instances: ${debugInfo.grassInstances}`);
+        console.log(`🌱 GRASS DEBUG: - Wind direction: ${debugInfo.windDirection}`);
+        console.log(`🌱 GRASS DEBUG: - Wind strength: ${debugInfo.windStrength}`);
+        console.log(`🌱 GRASS DEBUG: - Wear resolution: ${debugInfo.wearResolution}`);
+
+        // Enhanced camera info with FOV analysis
+        console.log('🌱 GRASS DEBUG: Camera state:');
+        console.log(`🌱 GRASS DEBUG: - Position: (${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`);
+        console.log(`🌱 GRASS DEBUG: - FOV: ${camera.fov}°`);
+        console.log(`🌱 GRASS DEBUG: - Camera mode: ${window.cameraMode}`);
+        console.log(`🌱 GRASS DEBUG: - Camera height setting: ${window.cameraHeightValue}`);
+        console.log(`🌱 GRASS DEBUG: - Camera distance setting: ${window.cameraDistanceValue}`);
+
+        const direction = camera.getWorldDirection(new THREE.Vector3());
+        console.log(`🌱 GRASS DEBUG: - Looking direction: (${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}, ${direction.z.toFixed(2)})`);
+
+        // Calculate viewing angle
+        const angleToGround = Math.asin(-direction.y) * (180 / Math.PI);
+        console.log(`🌱 GRASS DEBUG: - Viewing angle to ground: ${angleToGround.toFixed(1)}° (0° = horizontal, 90° = straight down)`);
+
+        // FOV scaling analysis
+        const fovScale = Math.max(0.5, Math.min(2.0, camera.fov / 60));
+        const heightScale = Math.max(0.5, Math.min(3.0, camera.position.y / 15));
+        console.log(`🌱 GRASS DEBUG: - FOV scale factor: ${fovScale.toFixed(2)} (based on ${camera.fov}° FOV)`);
+        console.log(`🌱 GRASS DEBUG: - Height scale factor: ${heightScale.toFixed(2)} (based on ${camera.position.y.toFixed(1)}m height)`);
+
+        console.log('🌱 GRASS DEBUG: ===== END GRASS REPORT =====');
+      } else {
+        console.error('🌱 GRASS DEBUG: Advanced grass system not available');
+        console.log('🌱 GRASS DEBUG: Available objects:', { pitch: !!pitch, advancedGrass: pitch ? !!pitch.advancedGrass : false });
+      }
+    });
+  }
+
+  // Obsolete buttons removed - visualizeDisplacement, testUVCorrection, testCoordinates, cycleDebugMode, testDisplacementPattern
+  // These were designed for the old GrassShader system and don't work with AdvancedGrassSystem
+
+
+
+
+
+
+  // Test wear pattern button - works with both grass systems
+  const testWearButton = document.getElementById('testWearPattern');
+  if (testWearButton) {
+    testWearButton.addEventListener('click', () => {
+      if (pitch) {
+        if (pitch.grassShader) {
+          pitch.grassShader.createTestWearPattern();
+          console.log('🌿 WEAR TEST: Test wear pattern created (GrassShader)');
+        } else if (pitch.advancedGrass) {
+          pitch.advancedGrass.createTestWearPattern();
+          console.log('🌿 WEAR TEST: Test wear pattern created (AdvancedGrassSystem)');
+        } else {
+          console.error('🌿 WEAR TEST: No grass system available');
+        }
+      } else {
+        console.error('🌿 WEAR TEST: Pitch not available');
+      }
+    });
+  }
+
+  // Debug helpers toggle button - toggles player debug visuals
   const debugHelpersButton = document.getElementById('toggleDebugHelpers');
+  let debugHelpersVisible = false;
   if (debugHelpersButton) {
     debugHelpersButton.addEventListener('click', () => {
-      if (pitch) {
-        console.log('🔍 DEBUG: Attempting to toggle debug helpers...');
-        console.log('🔍 DEBUG: Pitch object:', pitch);
-        console.log('🔍 DEBUG: toggleDebugHelpers method exists:', typeof pitch.toggleDebugHelpers);
+      debugHelpersVisible = !debugHelpersVisible;
 
-        if (typeof pitch.toggleDebugHelpers === 'function') {
-          const isVisible = pitch.toggleDebugHelpers();
-          debugHelpersButton.textContent = isVisible ? '🔍 Hide Debug Helpers' : '🔍 Show Debug Helpers';
-          debugHelpersButton.style.background = isVisible ? '#4CAF50' : '#607D8B';
-        } else {
-          console.error('🔍 DEBUG: toggleDebugHelpers method not found on pitch object');
-          console.log('🔍 DEBUG: Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(pitch)));
+      // Toggle debug options
+      window.debugOptions.showZones = debugHelpersVisible;
+      window.debugOptions.showFOV = debugHelpersVisible;
+      window.debugOptions.showTargets = debugHelpersVisible;
+
+      // Update button appearance
+      debugHelpersButton.textContent = debugHelpersVisible ? '🔍 Hide Debug Helpers' : '🔍 Show Debug Helpers';
+      debugHelpersButton.style.background = debugHelpersVisible ? '#4CAF50' : '#607D8B';
+
+      // Update debug visuals (if function exists)
+      if (typeof updateDebugVisuals === 'function') {
+        updateDebugVisuals();
+      }
+
+      console.log(`🔍 DEBUG: Debug helpers ${debugHelpersVisible ? 'enabled' : 'disabled'}`);
+    });
+  }
+
+  // Debug mode cycling removed - not applicable to AdvancedGrassSystem
+
+  // Test displacement pattern removed - not applicable to AdvancedGrassSystem
+
+  // Quick access panel buttons
+  const toggleCameraPanel = document.getElementById('toggleCameraPanel');
+  const toggleGrassPanel = document.getElementById('toggleGrassPanel');
+  const toggleDebugPanel = document.getElementById('toggleDebugPanel');
+  const toggleGamePanel = document.getElementById('toggleGamePanel');
+
+  if (toggleCameraPanel) {
+    toggleCameraPanel.addEventListener('click', () => {
+      // Find camera section by text content
+      const summaries = document.querySelectorAll('summary');
+      for (let summary of summaries) {
+        if (summary.textContent.includes('Camera')) {
+          summary.parentElement.open = !summary.parentElement.open;
+          summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          break;
         }
-      } else {
-        console.error('🔍 DEBUG: Pitch object not available');
       }
     });
   }
 
-  // Debug mode cycling button
-  const debugModeButton = document.getElementById('cycleDebugMode');
-  let debugMode = 0;
-  const debugModes = [
-    { name: 'Normal', shader: 'normal' },
-    { name: 'Displacement', shader: 'finalColor = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), clamp(vDebugHeight / 1.5, 0.0, 1.0));' },
-    { name: 'UV Coords', shader: 'finalColor = vec3(vDebugUV.x, vDebugUV.y, 0.5);' },
-    { name: 'Wear Map', shader: 'finalColor = mix(vec3(0.0, 1.0, 0.0), vec3(1.0, 0.0, 0.0), vWear);' }
-  ];
-
-  if (debugModeButton) {
-    debugModeButton.addEventListener('click', () => {
-      debugMode = (debugMode + 1) % debugModes.length;
-      const mode = debugModes[debugMode];
-
-      if (pitch && pitch.grassShader) {
-        if (mode.shader === 'normal') {
-          // Reset to normal grass material
-          pitch.grassMesh.material = pitch.grassShader.createGrassMaterial();
-          pitch.grassShader.material = pitch.grassMesh.material;
-        } else {
-          // Create debug material with visualization
-          const debugFragmentShader = pitch.grassShader.fragmentShader.replace(
-            /\/\/ Add subtle color variation for realism/,
-            `${mode.shader}\n        // Add subtle color variation for realism`
-          );
-
-          const debugMaterial = new THREE.ShaderMaterial({
-            uniforms: pitch.grassShader.material.uniforms,
-            vertexShader: pitch.grassShader.vertexShader,
-            fragmentShader: debugFragmentShader,
-            transparent: true,
-            side: THREE.DoubleSide,
-            alphaTest: 0.1
-          });
-
-          pitch.grassMesh.material = debugMaterial;
-          pitch.grassShader.material = debugMaterial;
+  if (toggleGrassPanel) {
+    toggleGrassPanel.addEventListener('click', () => {
+      const summaries = document.querySelectorAll('summary');
+      for (let summary of summaries) {
+        if (summary.textContent.includes('Grass')) {
+          summary.parentElement.open = !summary.parentElement.open;
+          summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          break;
         }
-
-        debugModeButton.textContent = `🎨 Debug Mode: ${mode.name}`;
-        console.log(`🎨 DEBUG MODE: Switched to ${mode.name}`);
       }
     });
   }
 
-  // Displacement pattern test button
-  const displacementTestButton = document.getElementById('testDisplacementPattern');
-  if (displacementTestButton) {
-    displacementTestButton.addEventListener('click', () => {
-      console.log('🧪 DISPLACEMENT TEST: Creating test pattern from blue goal perspective...');
-      console.log('🧪 DISPLACEMENT TEST: Your viewing angle: Behind blue goal toward midpoint');
-      console.log('🧪 DISPLACEMENT TEST: Expected movement: Only height (Y-axis) changes');
+  if (toggleDebugPanel) {
+    toggleDebugPanel.addEventListener('click', () => {
+      const summaries = document.querySelectorAll('summary');
+      for (let summary of summaries) {
+        if (summary.textContent.includes('Debug')) {
+          summary.parentElement.open = !summary.parentElement.open;
+          summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          break;
+        }
+      }
+    });
+  }
 
-      if (pitch && pitch.grassShader) {
-        // Switch to displacement visualization mode
-        const debugMode = 1; // Displacement mode
-        const mode = {
-          name: 'Displacement',
-          shader: 'finalColor = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), clamp(vDebugHeight / 1.5, 0.0, 1.0));'
-        };
-
-        const debugFragmentShader = pitch.grassShader.fragmentShader.replace(
-          /\/\/ Add subtle color variation for realism/,
-          `${mode.shader}\n        // Add subtle color variation for realism`
-        );
-
-        const debugMaterial = new THREE.ShaderMaterial({
-          uniforms: pitch.grassShader.material.uniforms,
-          vertexShader: pitch.grassShader.vertexShader,
-          fragmentShader: debugFragmentShader,
-          transparent: true,
-          side: THREE.DoubleSide,
-          alphaTest: 0.1
-        });
-
-        pitch.grassMesh.material = debugMaterial;
-        pitch.grassShader.material = debugMaterial;
-
-        console.log('🧪 DISPLACEMENT TEST: Switched to displacement visualization');
-        console.log('🧪 DISPLACEMENT TEST: Blue = low height, Red = high height');
-        console.log('🧪 DISPLACEMENT TEST: Now adjust displacement strength slider');
-        console.log('🧪 DISPLACEMENT TEST: Colors should change but positions should NOT shift');
+  if (toggleGamePanel) {
+    toggleGamePanel.addEventListener('click', () => {
+      const summaries = document.querySelectorAll('summary');
+      for (let summary of summaries) {
+        if (summary.textContent.includes('Game')) {
+          summary.parentElement.open = !summary.parentElement.open;
+          summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          break;
+        }
       }
     });
   }
@@ -1389,56 +1408,33 @@ function handleWearTestMouseMove(event) {
   if (currentTime - lastWearTime < 50) return; // Throttle to 20fps for performance
   lastWearTime = currentTime;
 
-  // Get mouse position relative to canvas
+  // CAMERA-AGNOSTIC TOP-DOWN PROJECTION
+  // Get mouse position relative to canvas (0-1 normalized)
   const rect = renderer.domElement.getBoundingClientRect();
-  const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  const mouseNormX = (event.clientX - rect.left) / rect.width;  // 0 to 1
+  const mouseNormY = (event.clientY - rect.top) / rect.height;  // 0 to 1
 
-  // Use top-down raycasting instead of camera-based raycasting
+  // Get field bounds for direct mapping
   const fieldBounds = pitch.getBounds();
-  const fieldWidth = fieldBounds.maxX - fieldBounds.minX;
-  const fieldHeight = fieldBounds.maxZ - fieldBounds.minZ;
 
-  // Convert normalized mouse coordinates (-1 to 1) to field coordinates
-  // CORRECTED: Fix 90-degree misorientation
-  // The field is now oriented with width (52.5) > height (34)
-  // Mouse X should map to field Z (left-right movement on screen)
-  // Mouse Y should map to field X (up-down movement on screen)
-  const fieldX = fieldBounds.minX + (-mouseY + 1) * 0.5 * fieldWidth;  // Mouse Y -> Field X (inverted for screen coords)
-  const fieldZ = fieldBounds.minZ + (mouseX + 1) * 0.5 * fieldHeight;  // Mouse X -> Field Z
+  // FIXED TOP-DOWN PERSPECTIVE: Direct linear mapping from screen to field
+  // Screen coordinates (0,0) = top-left, (1,1) = bottom-right
+  // Field coordinates: X = goal-to-goal, Z = sideline-to-sideline
+  // Map screen directly to field in top-down view
+  const fieldX = fieldBounds.minX + mouseNormX * (fieldBounds.maxX - fieldBounds.minX);
+  const fieldZ = fieldBounds.maxZ - mouseNormY * (fieldBounds.maxZ - fieldBounds.minZ); // Invert Y for screen coords
 
-  // Create top-down raycaster from high above the field
-  const raycaster = new THREE.Raycaster();
-  const rayOrigin = new THREE.Vector3(fieldX, 50, fieldZ); // High above the field
-  const rayDirection = new THREE.Vector3(0, -1, 0); // Pointing straight down
-  raycaster.set(rayOrigin, rayDirection);
-
-  // Try to intersect with the grass mesh for precise positioning
-  let intersectionPoint;
-  if (pitch.grassMesh) {
-    const intersects = raycaster.intersectObject(pitch.grassMesh);
-    if (intersects.length > 0) {
-      intersectionPoint = intersects[0].point;
-    } else {
-      // Fallback to calculated position
-      intersectionPoint = new THREE.Vector3(fieldX, 0, fieldZ);
-    }
-  } else {
-    intersectionPoint = new THREE.Vector3(fieldX, 0, fieldZ);
-  }
+  // Create intersection point directly (no raycasting needed for top-down)
+  const intersectionPoint = new THREE.Vector3(fieldX, 0, fieldZ);
 
   // Check if intersection is within field bounds
   if (intersectionPoint.x >= fieldBounds.minX && intersectionPoint.x <= fieldBounds.maxX &&
       intersectionPoint.z >= fieldBounds.minZ && intersectionPoint.z <= fieldBounds.maxZ) {
 
-    // Record wear at the intersection point (top-down projection)
-    console.log(`🎯 COORDINATE DEBUG: Mouse: (${mouseX.toFixed(2)}, ${mouseY.toFixed(2)}) -> Field: (${intersectionPoint.x.toFixed(2)}, ${intersectionPoint.z.toFixed(2)}) - Type: ${wearActivityType}, Intensity: ${wearIntensity}`);
+    // Record wear at the intersection point
+    console.log(`🎯 FIXED TOP-DOWN: Screen(${mouseNormX.toFixed(3)}, ${mouseNormY.toFixed(3)}) -> Field(${intersectionPoint.x.toFixed(2)}, ${intersectionPoint.z.toFixed(2)})`);
+    console.log(`🎯 FIELD BOUNDS: X[${fieldBounds.minX}, ${fieldBounds.maxX}] Z[${fieldBounds.minZ}, ${fieldBounds.maxZ}]`);
 
-    // Enhanced coordinate debugging with orientation info
-    const fieldBounds = pitch.getBounds();
-    console.log(`🎯 COORDINATE DEBUG: Field bounds: X[${fieldBounds.minX}, ${fieldBounds.maxX}] (goals), Z[${fieldBounds.minZ}, ${fieldBounds.maxZ}] (sidelines)`);
-    console.log(`🎯 COORDINATE DEBUG: Field dimensions: ${fieldBounds.maxX - fieldBounds.minX} x ${fieldBounds.maxZ - fieldBounds.minZ} (width x height)`);
-    console.log(`🎯 COORDINATE DEBUG: Mouse mapping - X:${mouseX.toFixed(2)}->Z:${intersectionPoint.z.toFixed(2)}, Y:${mouseY.toFixed(2)}->X:${intersectionPoint.x.toFixed(2)}`);
     pitch.recordPlayerActivity(
       intersectionPoint.x,
       intersectionPoint.z,
