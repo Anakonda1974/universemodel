@@ -10,32 +10,31 @@ import { initControlPanel } from "./ui-panel.js";
 import { Referee } from "./referee.js";
 import { InputHandler } from "./input.js";
 import { Capabilities } from "./capabilities.js";
-import { GameStateManager } from "./gameStateManager.js";
+import { GameStateManager as FIFAGameStateManager } from "./gameStateManager.js";
 
 import { }  from "./debugManager.js";
 
- 
+
 import { analyzePlayerPerformance, evaluateFootUse } from "./analyze.js";
 
-// ----- Game Setup -----
-const canvas = document.getElementById("spielfeld");
-const ctx = canvas.getContext("2d");
-const debugCanvas = document.getElementById("debugCanvas");
-const debugCtx = debugCanvas.getContext("2d");
-const inspectorDiv = document.getElementById("inspector");
-const powerBarWrapper = document.getElementById("powerBarWrapper");
-const powerBar = document.getElementById("powerBar");
-const radarCanvas = document.getElementById("radar");
-const radarCtx = radarCanvas.getContext("2d");
+// New modular systems
+import { GameStateManager } from './gameState.js';
+import { InputManager } from './inputManager.js';
+import { GameLoop } from './gameLoop.js';
+import { EventManager } from './eventManager.js';
+
+// ----- Modular Game Setup -----
+// Initialize centralized game state management
+const gameState = new GameStateManager();
 
 // Debug: Check if canvas elements are found
 console.log("Canvas elements check:");
-console.log("Main canvas:", canvas, "Context:", ctx);
-console.log("Radar canvas:", radarCanvas, "Context:", radarCtx);
-console.log("Canvas dimensions:", canvas?.width, "x", canvas?.height);
+console.log("Main canvas:", gameState.canvas, "Context:", gameState.ctx);
+console.log("Radar canvas:", gameState.ui.radarCanvas, "Context:", gameState.ui.radarCtx);
+console.log("Canvas dimensions:", gameState.canvas?.width, "x", gameState.canvas?.height);
 
 // Declare and initialize debug manager with proper context
-let debugManager = new DebugManager(debugCtx, inspectorDiv);
+let debugManager = new DebugManager(gameState.ui.debugCtx, gameState.ui.inspectorDiv);
 console.log("Debug manager initialized with debug canvas context");
 
 // --- Global Settings ---
@@ -62,119 +61,91 @@ window.colorProfiles = {
 };
 window.renderOptions = { lineAlpha: 1, colorProfile: "default", fieldColor: "#065" };
 
+// Game state constants (kept for compatibility)
 const GameState = {
   FORMATION: "Formation wählen",
   TRANSITION: "Positionswechsel",
   RUNNING: "Spiel läuft",
 };
-let currentState = GameState.FORMATION;
-let nextState = GameState.RUNNING;
-const MAX_TRANSITION_TIME = 8000;
-let transitionStartTime = null;
 
-let formations = [];
-let selectedFormationIndex = 0;
-const teamHeim = [],
-  teamGast = [];
-const benchHeim = [],
-  benchGast = [];
-let ball;
-let coach;
-let referee;
-let gameStateManager;
-let selectedPlayer = null;
-let userTeam = teamHeim;
-const userInput = {
-  up: false,
-  down: false,
-  left: false,
-  right: false,
-  dx: 0,
-  dy: 0,
-  passPressed: false,
-  passDown: false,
-  passUp: false,
-  shootPressed: false,
-  shootDown: false,
-  shootUp: false,
-  tacklePressed: false,
-  tackleDown: false,
-  tackleUp: false,
-  resetPressed: false,
-  resetDown: false,
-  resetUp: false,
-};
-let selectedPlayer2 = null;
-let userTeam2 = teamGast;
-const userInput2 = {
-  up: false,
-  down: false,
-  left: false,
-  right: false,
-  dx: 0,
-  dy: 0,
-  passPressed: false,
-  shootPressed: false,
-  tacklePressed: false,
-};
-let passIndicator = null;
-let passCharge = 0;
-let passCharging = false;
-let shotCharge = 0;
-let shotCharging = false;
-let shotCharge2 = 0;
-let shotCharging2 = false;
-let passCharge2 = 0;
-let passCharging2 = false;
+// Initialize modular systems
+const inputManager = new InputManager(inputHandler);
+const eventManager = new EventManager(gameState);
+
+// Legacy compatibility - these will be gradually replaced
+const teamHeim = gameState.teams.home;
+const teamGast = gameState.teams.away;
+const benchHeim = gameState.teams.benchHome;
+const benchGast = gameState.teams.benchAway;
+
+// Legacy variables that reference gameState
+let ball = gameState.ball;
+let coach = gameState.coach;
+let referee = gameState.referee;
+let selectedPlayer = gameState.selectedPlayer;
+let selectedPlayer2 = gameState.teams.selectedPlayer2;
+let userTeam = gameState.teams.userTeam;
+let userTeam2 = gameState.teams.userTeam2;
+let passIndicator = gameState.effects.passIndicator;
+let formations = gameState.formation.formations;
+let selectedFormationIndex = gameState.formation.selectedIndex;
+let currentState = gameState.gameState.current;
+let nextState = gameState.gameState.next;
+let transitionStartTime = gameState.gameState.transitionStartTime;
+let matchPaused = gameState.gameState.matchPaused;
+let scoreHome = gameState.match.scoreHome;
+let scoreAway = gameState.match.scoreAway;
+let matchTime = gameState.match.time;
+let halftime = gameState.match.halftime;
+let halfLengthMinutes = gameState.match.halfLengthMinutes;
+let lastFrameTime = gameState.match.lastFrameTime;
+let yellowCards = gameState.discipline.yellowCards;
+let redCards = gameState.discipline.redCards;
+let goalFlashTimer = gameState.effects.goalFlash.timer;
+let goalFlashSide = gameState.effects.goalFlash.side;
+let goalOverlayTimer = gameState.effects.goalOverlay.timer;
+let goalOverlayText = gameState.effects.goalOverlay.text;
+let confettiParticles = gameState.effects.confettiParticles;
+let freeKickTimer = gameState.restarts.freeKick.timer;
+let freeKickTaker = gameState.restarts.freeKick.taker;
+let restartTimer = gameState.restarts.restart.timer;
+let restartTaker = gameState.restarts.restart.taker;
+let restartType = gameState.restarts.restart.type;
+let lastTouchTeam = gameState.restarts.lastTouchTeam;
+let lastBallOwnerTeam = gameState.restarts.lastBallOwnerTeam;
+let lastBallOwnerTeam2 = gameState.restarts.lastBallOwnerTeam2;
+let formationOffsetHome = gameState.formation.offsetHome;
+let formationOffsetAway = gameState.formation.offsetAway;
+let difficulty = gameState.settings.difficulty;
+let lastAnalysis = gameState.settings.lastAnalysis;
+let lastFormationSwitch = gameState.formation.lastSwitch;
+
+// Legacy input variables
+let userInput = gameState.input.user1;
+let userInput2 = gameState.input.user2;
+let passCharge = gameState.charging.pass.charge;
+let passCharging = gameState.charging.pass.active;
+let shotCharge = gameState.charging.shot.charge;
+let shotCharging = gameState.charging.shot.active;
+let shotCharge2 = gameState.charging.shot2.charge;
+let shotCharging2 = gameState.charging.shot2.active;
+let passCharge2 = gameState.charging.pass2.charge;
+let passCharging2 = gameState.charging.pass2.active;
 let prevTackle = false;
 let prevPass2 = false;
 let prevTackle2 = false;
-
-let goalFlashTimer = 0;
-let goalFlashSide = null;
-
-let goalOverlayTimer = 0;
-let goalOverlayText = "";
-
-// ----- Confetti particles for goal celebration -----
-let confettiParticles = [];
-
-let freeKickTimer = 0;
-let freeKickTaker = null;
-
-let lastTouchTeam = null; // 0 = home, 1 = away
-let restartTimer = 0;
-let restartTaker = null;
-let restartType = "";
-
-let lastBallOwnerTeam = null;
-let lastBallOwnerTeam2 = null;
-
+// Legacy compatibility variables (gradually being replaced)
 const POIS = [{ x: 60, y: 340, role: "farLeft" }];
 
-// --- Dynamic formation offsets ---
-let formationOffsetHome = { x: 0, y: 0 };
-let formationOffsetAway = { x: 0, y: 0 };
-
 // --- Difficulty ---
-let difficulty = "normal";
 const difficultyMultipliers = { easy: 0.8, normal: 1, hard: 1.2 };
 
-
-
-
-
-
-
-// --- Weather ---
-// Higher friction values closer to 1 mean less slowdown per frame
-window.weather = { type: "clear", windX: 0, windY: 0, friction: 1 };
+// --- Weather (integrated into gameState) ---
+window.weather = gameState.settings.weather;
 const weather = window.weather;
 
-let lastAnalysis = 0;
-
 function setLastTouch(player) {
-  lastTouchTeam = teamHeim.includes(player) ? 0 : 1;
+  gameState.restarts.lastTouchTeam = teamHeim.includes(player) ? 0 : 1;
 }
 
 function applyWeather() {
@@ -344,17 +315,7 @@ function playGoal() {
   playBeep(500, 700);
 }
 
-// Score, timer, cards, etc.
-let scoreHome = 0,
-  scoreAway = 0;
-let matchTime = 0; // in seconds
-let halftime = 1;
-let matchPaused = false;
-let halfLengthMinutes = 45;
-let lastFrameTime = null;
-let yellowCards = [],
-  redCards = [];
-let lastFormationSwitch = 0;
+// Score, timer, cards, etc. (now managed by gameState)
 
 function findNearestTeammate(player) {
   const team = teamHeim.includes(player) ? teamHeim : teamGast;
@@ -581,7 +542,7 @@ for (let i = 0; i < 11; i++) {
     trait: i === 9 ? "sniper" : null,
   });
   p.baseline = { ...p.base };
-  teamHeim.push(p);
+  gameState.teams.home.push(p);
   console.log(`Home player ${i}: x=${p.x}, y=${p.y}, color=${p.color}`);
 }
 for (let i = 0; i < 11; i++) {
@@ -590,29 +551,29 @@ for (let i = 0; i < 11; i++) {
     trait: i === 2 ? "wall" : null,
   });
   p.baseline = { ...p.base };
-  teamGast.push(p);
+  gameState.teams.away.push(p);
   console.log(`Away player ${i}: x=${p.x}, y=${p.y}, color=${p.color}`);
 }
-console.log(`Teams created: Home=${teamHeim.length}, Away=${teamGast.length}`);
+console.log(`Teams created: Home=${gameState.teams.home.length}, Away=${gameState.teams.away.length}`);
 for (let i = 0; i < 3; i++) {
   const p = new Player(-30, -30, window.colorProfiles[window.renderOptions.colorProfile].home, { position: "ST" });
   p.baseline = { ...p.base };
-  benchHeim.push(p);
+  gameState.teams.benchHome.push(p);
 }
 for (let i = 0; i < 3; i++) {
   const p = new Player(-30, -30, window.colorProfiles[window.renderOptions.colorProfile].away, { position: "IV" });
   p.baseline = { ...p.base };
-  benchGast.push(p);
+  gameState.teams.benchAway.push(p);
 }
-ball = new Ball(525, 340);
-coach = new Coach([...teamHeim, ...teamGast]);
+gameState.setBall(new Ball(525, 340));
+gameState.setCoach(new Coach([...gameState.teams.home, ...gameState.teams.away]));
 
 // Initialize ball state properly
-console.log("Initializing ball at:", ball.x, ball.y);
-ball.vx = 0;
-ball.vy = 0;
-ball.isLoose = false;
-ball.outOfBounds = null;
+console.log("Initializing ball at:", gameState.ball.x, gameState.ball.y);
+gameState.ball.vx = 0;
+gameState.ball.vy = 0;
+gameState.ball.isLoose = false;
+gameState.ball.outOfBounds = null;
 
 function handleCard(player, card) {
   if (card === "yellow") {
@@ -801,10 +762,10 @@ function startGoalRestart(side) {
   }
 }
 // Initialize FIFA game state manager
-gameStateManager = new GameStateManager(handleGameEvent);
+const fifaGameStateManager = new FIFAGameStateManager(eventManager.handleEvent.bind(eventManager));
 
 // Initialize enhanced referee with FIFA rules
-referee = new Referee(handleCard, handleFoul, handleOffside, handleGameEvent);
+gameState.setReferee(new Referee(handleCard, handleFoul, handleOffside, eventManager.handleEvent.bind(eventManager)));
 
 loadFormations();
 setupMatchControls();
@@ -813,12 +774,20 @@ applyDifficulty();
 setupWeatherControls();
 applyWeather();
 applyColorProfile(window.renderOptions.colorProfile);
-initControlPanel({ teams: { home: teamHeim, away: teamGast }, ball, coach, formations });
-selectedPlayer = teamHeim[0];
-debugManager.setSelectedPlayer(selectedPlayer);
-userTeam = teamHeim;
-selectedPlayer2 = teamGast[0];
-userTeam2 = teamGast;
+initControlPanel({ teams: { home: gameState.teams.home, away: gameState.teams.away }, ball: gameState.ball, coach: gameState.coach, formations: gameState.formation.formations });
+
+// Set up input manager with players
+gameState.setSelectedPlayer(gameState.teams.home[0]);
+gameState.teams.selectedPlayer2 = gameState.teams.away[0];
+gameState.teams.userTeam = gameState.teams.home;
+gameState.teams.userTeam2 = gameState.teams.away;
+
+inputManager.setPlayers(
+  gameState.selectedPlayer, gameState.teams.home,
+  gameState.teams.selectedPlayer2, gameState.teams.away
+);
+
+debugManager.setSelectedPlayer(gameState.selectedPlayer);
 
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -1089,15 +1058,139 @@ function updateFormationOffsets() {
   formationOffsetAway.y = 0;
 }
 
-// ----- GAME LOOP -----
-function gameLoop(timestamp) {
-  if (lastFrameTime === null) lastFrameTime = timestamp;
-  const delta = (timestamp - lastFrameTime) / 1000;
-  lastFrameTime = timestamp;
-  if (timestamp - lastAnalysis > 5000) {
-    coach.analyzeOpponents(ball, teamHeim, teamGast);
-    lastAnalysis = timestamp;
+// ----- MODULAR GAME LOOP -----
+// Create a simple renderer for the new game loop
+class SimpleRenderer {
+  constructor(gameState, debugManager) {
+    this.gameState = gameState;
+    this.debugManager = debugManager;
   }
+
+  render(gameState) {
+    const ctx = gameState.ctx;
+    const canvas = gameState.canvas;
+    const allPlayers = gameState.getAllPlayers();
+    const ball = gameState.ball;
+    const coach = gameState.coach;
+
+    // Main rendering
+    drawField(ctx, canvas.width, canvas.height, gameState.effects.goalFlash.timer, gameState.effects.goalFlash.side);
+
+    if (window.debugOptions.showZones) {
+      const playersToDebug = [];
+      if (gameState.selectedPlayer) playersToDebug.push(gameState.selectedPlayer);
+      if (gameState.teams.selectedPlayer2) playersToDebug.push(gameState.teams.selectedPlayer2);
+      if (playersToDebug.length > 0) {
+        drawZones(ctx, playersToDebug, { ball, coach, tactic: coach?.pressing > 1 ? "pressing" : null });
+      }
+    }
+
+    drawPasses(ctx, allPlayers, ball);
+    drawPassIndicator(ctx, gameState.effects.passIndicator);
+    this.drawConfetti(ctx, gameState.effects.confettiParticles);
+
+    try {
+      drawPlayers(ctx, allPlayers, { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
+    } catch (error) {
+      console.error("Error drawing players:", error);
+    }
+
+    drawReferee(ctx, gameState.referee);
+
+    if (window.debugOptions.showFormation) {
+      const playersToDebug = [];
+      if (gameState.selectedPlayer) playersToDebug.push(gameState.selectedPlayer);
+      if (gameState.teams.selectedPlayer2) playersToDebug.push(gameState.teams.selectedPlayer2);
+      if (playersToDebug.length > 0) {
+        drawFormationDebug(ctx, playersToDebug);
+      }
+    }
+
+    if (gameState.selectedPlayer) {
+      drawPlayers(ctx, [gameState.selectedPlayer], { showFOV: window.debugOptions.showFOV, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
+    }
+    if (gameState.teams.selectedPlayer2) {
+      drawPlayers(ctx, [gameState.teams.selectedPlayer2], { showFOV: true, showRunDir: true, showHeadDir: true, showTargets: window.debugOptions.showTargets });
+    }
+
+    drawActivePlayer(ctx, gameState.selectedPlayer);
+    drawActivePlayer(ctx, gameState.teams.selectedPlayer2);
+
+    drawPerceptionHighlights(ctx, gameState.selectedPlayer);
+    drawPerceptionHighlights(ctx, gameState.teams.selectedPlayer2);
+
+    drawBall(ctx, ball);
+    if (window.debugOptions.showBall) drawBallDebug(ctx, ball);
+    drawOverlay(ctx, `Ball: ${ball.owner ? ball.owner.role : "Loose"} | Weather: ${gameState.settings.weather.type}`, canvas.width);
+    drawGoalHighlight(ctx, gameState.effects.goalOverlay.text, gameState.effects.goalOverlay.timer, canvas.width, canvas.height);
+    drawRadar(gameState.ui.radarCtx, allPlayers, ball, gameState.ui.radarCanvas.width, gameState.ui.radarCanvas.height);
+
+    this.debugManager.draw({ players: allPlayers, ball, tactic: coach?.pressing > 1 ? "pressing" : null });
+
+    if (gameState.isMatchPaused()) {
+      drawOverlay(ctx, "Game Ended", canvas.width);
+      const all = [...gameState.teams.home, ...gameState.teams.away];
+      all.forEach((p) => (p.endStamina = p.stamina));
+      showAnalysis(all);
+    }
+  }
+
+  drawConfetti(ctx, particles) {
+    ctx.save();
+    particles.forEach((p) => {
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, 3, 3);
+    });
+    ctx.restore();
+  }
+
+  renderRestartState(restart) {
+    const ctx = gameState.ctx;
+    const canvas = gameState.canvas;
+    const allPlayers = gameState.getAllPlayers();
+
+    drawField(ctx, canvas.width, canvas.height, gameState.effects.goalFlash.timer, gameState.effects.goalFlash.side);
+    if (window.debugOptions.showZones) {
+      drawZones(ctx, allPlayers, { ball: gameState.ball, coach: gameState.coach, tactic: gameState.coach?.pressing > 1 ? "pressing" : null });
+    }
+    drawPlayers(ctx, allPlayers, { showTargets: window.debugOptions.showTargets });
+    drawReferee(ctx, gameState.referee);
+    if (window.debugOptions.showFormation && gameState.selectedPlayer) {
+      drawFormationDebug(ctx, [gameState.selectedPlayer]);
+    }
+    drawBall(ctx, gameState.ball);
+    if (window.debugOptions.showBall) drawBallDebug(ctx, gameState.ball);
+    drawOverlay(ctx, `${restart.type}: ${restart.timer.toFixed(1)}s`, canvas.width);
+    updateScoreboard();
+  }
+
+  renderFreeKickState(freeKick) {
+    const ctx = gameState.ctx;
+    const canvas = gameState.canvas;
+    const allPlayers = gameState.getAllPlayers();
+
+    drawField(ctx, canvas.width, canvas.height, gameState.effects.goalFlash.timer, gameState.effects.goalFlash.side);
+    if (window.debugOptions.showZones && gameState.selectedPlayer) {
+      drawZones(ctx, [gameState.selectedPlayer], { ball: gameState.ball, coach: gameState.coach, tactic: gameState.coach?.pressing > 1 ? "pressing" : null });
+    }
+    drawPlayers(ctx, allPlayers, { showTargets: window.debugOptions.showTargets });
+    drawReferee(ctx, gameState.referee);
+    if (window.debugOptions.showFormation && gameState.selectedPlayer) {
+      drawFormationDebug(ctx, [gameState.selectedPlayer]);
+    }
+    drawBall(ctx, gameState.ball);
+    if (window.debugOptions.showBall) drawBallDebug(ctx, gameState.ball);
+    drawOverlay(ctx, `Free Kick: ${freeKick.timer.toFixed(1)}s`, canvas.width);
+    updateScoreboard();
+  }
+}
+
+// Initialize the new modular game loop
+const renderer = new SimpleRenderer(gameState, debugManager);
+const gameLoop = new GameLoop(gameState, inputManager, renderer);
+
+// Legacy game loop function (to be replaced)
+function legacyGameLoop(timestamp) {
 
   // Debug: Log timer states occasionally
   if (Math.random() < 0.001) {
@@ -1535,7 +1628,8 @@ function gameLoop(timestamp) {
 }
 
 // Ensure proper game start
-resetKickoff();
-console.log("Game initialized and ready to start");
+eventManager.resetKickoff();
+console.log("Game initialized and ready to start with modular systems");
 
-requestAnimationFrame(gameLoop);
+// Start the new modular game loop
+gameLoop.start();

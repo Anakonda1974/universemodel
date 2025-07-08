@@ -34,7 +34,16 @@ export function canShoot(player, world) {
 
 
 function playerIsClosestToBall(player, world) {
-  if (!world.ball || !world.ball.isLoose) return false;
+  // Defensive programming - check if world and world.ball exist
+  if (!world) {
+    console.error('playerIsClosestToBall: world is undefined');
+    return false;
+  }
+  if (!world.ball) {
+    console.error('playerIsClosestToBall: world.ball is undefined');
+    return false;
+  }
+  if (!world.ball.isLoose) return false;
   let d = Math.hypot(player.x - world.ball.x, player.y - world.ball.y);
     let closest = true;
     for (let p of world.players) {
@@ -186,7 +195,16 @@ export function getDynamicZone(player, world) {
    // console.log(`Zone for ${isHomeTeam ? 'HOME' : 'AWAY'} ${player.role}: formationX=${player.formationX.toFixed(0)}, centerX=${centerX.toFixed(0)}, offsetX=${offsetX}, zone.x=${x.toFixed(0)}-${(x + zoneWidth).toFixed(0)}`);
   }
 
-  return { x, y, width: zoneWidth, height: zoneHeight };
+  return {
+    x,
+    y,
+    width: zoneWidth,
+    height: zoneHeight,
+    minX: x,
+    maxX: x + zoneWidth,
+    minY: y,
+    maxY: y + zoneHeight
+  };
 }
 
 

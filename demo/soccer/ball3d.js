@@ -81,14 +81,39 @@ export class Ball3D {
     }
 
     for (const p of players) {
-      const dx = this.position.x - p.position.x;
-      const dy = this.position.y - p.position.y;
-      const dist = Math.hypot(dx, dy);
-      const minDist = p.radius + this.radius;
-      if (dist < minDist && this.position.z < p.radius * 2) {
-        const normal = new THREE.Vector3(dx, dy, 0).normalize();
-        this.position.copy(p.position).addScaledVector(normal, minDist);
-        const rel = this.velocity.clone().sub(p.velocity);
+      // Handle both Player3D objects (with mesh.position) and 2D players (with x, y)
+      let playerPos;
+      let playerRadius = 0.5; // Default radius
+      let playerVelocity = new THREE.Vector3(0, 0, 0); // Default velocity
+
+      if (p && p.mesh && p.mesh.position) {
+        // Player3D object
+        playerPos = p.mesh.position;
+        playerRadius = p.radius || 0.5;
+        playerVelocity = p.velocity || new THREE.Vector3(0, 0, 0);
+      } else if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+        // 2D player object - convert to 3D coordinates
+        const x3d = (p.x - 525) / 20; // Center and scale
+        const z3d = -(p.y - 340) / 20; // Center, scale, and flip Z
+        playerPos = new THREE.Vector3(x3d, 0, z3d);
+        playerRadius = p.radius || 0.5;
+        playerVelocity = new THREE.Vector3(0, 0, 0);
+      } else {
+        // Skip invalid player objects
+        continue;
+      }
+
+      const dx = this.position.x - playerPos.x;
+      const dz = this.position.z - playerPos.z;
+      const dist = Math.hypot(dx, dz);
+      const minDist = playerRadius + this.radius;
+
+      if (dist < minDist && this.position.y < playerRadius * 2) {
+        const normal = new THREE.Vector3(dx, 0, dz).normalize();
+        this.position.x = playerPos.x + normal.x * minDist;
+        this.position.z = playerPos.z + normal.z * minDist;
+
+        const rel = this.velocity.clone().sub(playerVelocity);
         const impact = rel.dot(normal);
         if (impact < 0) {
           this.velocity.addScaledVector(normal, -impact * (1 + this.restitution));

@@ -128,6 +128,36 @@
             z-index: 100;
         }
 
+        /* Wear test mode indicator */
+        #wearTestIndicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 200;
+            display: none;
+            border: 2px solid #4CAF50;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #wearTestIndicator.active {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
         #commentary h4 {
             margin: 0 0 10px 0;
             color: #fff;
@@ -183,6 +213,12 @@
         <div>Ball: <span id="ball-owner">Loose</span></div>
         <div>Weather: <span id="weather-display">Clear</span></div>
         <div>Phase: <span id="game-phase">Kickoff</span></div>
+    </div>
+
+    <!-- Wear test mode indicator -->
+    <div id="wearTestIndicator">
+        🌱 GRASS WEAR TEST MODE ACTIVE 🌱<br>
+        <div style="font-size: 14px; margin-top: 5px;">Move mouse over field to simulate wear</div>
     </div>
 
     <!-- Weather controls -->
@@ -251,21 +287,127 @@
         </details>
 
         <details>
-            <summary>🎥 Camera Settings</summary>
+            <summary>🌱 Grass Wear Test Mode</summary>
+            <div style="margin: 10px 0;">
+                <label style="margin-bottom: 10px;">
+                    <input type="checkbox" id="wearTestMode">
+                    <span style="font-weight: bold; color: #4CAF50;">Enable Wear Test Mode</span>
+                    <div style="font-size: 11px; color: #aaa; margin-left: 20px;">Move mouse over field to simulate player wear</div>
+                </label>
+
+                <label>Wear Intensity: <span id="wearIntensityValue">2.0</span></label>
+                <input type="range" id="wearIntensity" min="0.5" max="10" step="0.5" value="2.0" style="width: 100%;">
+
+                <label>Activity Type:</label>
+                <select id="wearActivityType" style="margin-bottom: 10px;">
+                    <option value="walk">🚶 Walk (Light)</option>
+                    <option value="run">🏃 Run (Moderate)</option>
+                    <option value="sprint">💨 Sprint (Fast)</option>
+                    <option value="tackle" selected>🤼 Tackle (Heavy)</option>
+                    <option value="slide">🛝 Slide (Maximum)</option>
+                    <option value="shot">⚽ Shot (Divot)</option>
+                    <option value="foul">💥 Foul (Scuff)</option>
+                    <option value="jump">🦘 Jump (Impact)</option>
+                </select>
+
+                <button id="resetWear" style="width: 100%; padding: 8px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                    🔄 Reset All Wear
+                </button>
+
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #666;">
+                    <label>🏔️ Displacement Strength:</label>
+                    <input type="range" id="displacementStrength" min="0" max="3" step="0.1" value="1.5" style="width: 100%; margin: 5px 0;">
+                    <div style="font-size: 12px; color: #ccc;">Current: <span id="displacementValue">1.5</span></div>
+
+                    <button id="debugDisplacement" style="width: 100%; padding: 8px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 10px;">
+                        🔍 Debug Displacement
+                    </button>
+
+                    <button id="visualizeDisplacement" style="width: 100%; padding: 8px; background: #FF9800; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                        🌈 Visualize Displacement
+                    </button>
+
+                    <button id="testUVCorrection" style="width: 100%; padding: 8px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                        🔄 Test UV Correction
+                    </button>
+
+                    <button id="testCoordinates" style="width: 100%; padding: 8px; background: #E91E63; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                        🎯 Test Coordinates
+                    </button>
+
+                    <button id="toggleDebugHelpers" style="width: 100%; padding: 8px; background: #607D8B; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                        🔍 Show Debug Helpers
+                    </button>
+
+                    <button id="cycleDebugMode" style="width: 100%; padding: 8px; background: #795548; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                        🎨 Debug Mode: Normal
+                    </button>
+
+                    <button id="testDisplacementPattern" style="width: 100%; padding: 8px; background: #FF5722; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                        🧪 Test Displacement Pattern
+                    </button>
+                </div>
+            </div>
+        </details>
+
+        <details>
+            <summary>🎥 Camera & Visual Settings</summary>
             <div style="margin: 10px 0;">
                 <label>Camera Mode:</label>
                 <select id="cameraMode">
                     <option value="follow">Follow Player</option>
-                    <option value="overview">Overview</option>
-                    <option value="sideline">Sideline</option>
+                    <option value="broadcast">TV Broadcast</option>
+                    <option value="overview">Tactical Overview</option>
+                    <option value="cinematic">Cinematic</option>
+                    <option value="drone">Drone View</option>
                     <option value="free">Free Camera</option>
                 </select>
 
-                <label style="margin-top: 10px;">Camera Height:</label>
-                <input type="range" id="cameraHeight" min="5" max="30" value="15" style="width: 100%;">
+                <label style="margin-top: 10px;">Field of View: <span id="fovValue">60</span>°</label>
+                <input type="range" id="cameraFOV" min="30" max="120" value="60" style="width: 100%;">
 
-                <label style="margin-top: 10px;">Camera Distance:</label>
-                <input type="range" id="cameraDistance" min="5" max="25" value="10" style="width: 100%;">
+                <label style="margin-top: 10px;">Camera Height: <span id="cameraHeightValue">15</span></label>
+                <input type="range" id="cameraHeight" min="3" max="50" value="15" style="width: 100%;">
+
+                <label style="margin-top: 10px;">Camera Distance: <span id="cameraDistanceValue">10</span></label>
+                <input type="range" id="cameraDistance" min="2" max="40" value="10" style="width: 100%;">
+
+                <label style="margin-top: 10px;">Camera Speed: <span id="cameraSpeedValue">0.1</span></label>
+                <input type="range" id="cameraSpeed" min="0.02" max="0.5" step="0.01" value="0.1" style="width: 100%;">
+
+                <label style="margin-top: 10px;">
+                    <input type="checkbox" id="smoothCamera" checked> Smooth Camera Movement
+                </label>
+
+                <label>
+                    <input type="checkbox" id="autoFocus"> Auto Focus on Ball
+                </label>
+            </div>
+        </details>
+
+        <details>
+            <summary>✨ Post-Processing Effects</summary>
+            <div style="margin: 10px 0;">
+                <label>
+                    <input type="checkbox" id="enableBloom"> Bloom Effect
+                </label>
+
+                <label>
+                    <input type="checkbox" id="enableSSAO"> Ambient Occlusion
+                </label>
+
+                <label>
+                    <input type="checkbox" id="enableMotionBlur"> Motion Blur
+                </label>
+
+                <label style="margin-top: 10px;">Contrast: <span id="contrastValue">1.0</span></label>
+                <input type="range" id="contrast" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%;">
+
+                <label style="margin-top: 10px;">Saturation: <span id="saturationValue">1.0</span></label>
+                <input type="range" id="saturation" min="0.0" max="2.0" step="0.1" value="1.0" style="width: 100%;">
+
+                <label style="margin-top: 10px;">Brightness: <span id="brightnessValue">0.0</span></label>
+                <input type="range" id="brightness" min="-0.5" max="0.5" step="0.05" value="0.0" style="width: 100%;">
             </div>
         </details>
     </div>
@@ -279,7 +421,6 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/three@0.156.1/build/three.min.js"></script>
     <script type="module" src="main3d.js"></script>
 </body>
 </html>
