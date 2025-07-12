@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procedural Universe - Performance Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .performance-metric {
+      @apply bg-gray-100 p-3 rounded-lg border;
+    }
+    .cache-stat {
+      @apply text-sm text-gray-600;
+    }
+    .noise-demo {
+      @apply border rounded p-2 m-1 inline-block;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 p-6">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">Procedural Universe Performance Demo</h1>
+    
+    <!-- Performance Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="performance-metric">
+        <h3 class="font-semibold text-lg mb-2">🚀 Caching System</h3>
+        <div id="cache-stats" class="space-y-1">
+          <div class="cache-stat">Property Cache: <span id="prop-cache">0</span> entries</div>
+          <div class="cache-stat">Entity Cache: <span id="entity-cache">0</span> entries</div>
+          <div class="cache-stat">Noise Cache: <span id="noise-cache">0</span> entries</div>
+        </div>
+      </div>
+      
+      <div class="performance-metric">
+        <h3 class="font-semibold text-lg mb-2">🌊 Advanced Noise</h3>
+        <div id="noise-stats" class="space-y-1">
+          <div class="cache-stat">Algorithms: <span id="noise-algorithms">5</span> types</div>
+          <div class="cache-stat">Cache Hits: <span id="cache-hits">0</span></div>
+          <div class="cache-stat">Generation Time: <span id="gen-time">0</span>ms</div>
+        </div>
+      </div>
+      
+      <div class="performance-metric">
+        <h3 class="font-semibold text-lg mb-2">🎨 Rendering System</h3>
+        <div id="render-stats" class="space-y-1">
+          <div class="cache-stat">LOD Objects: <span id="lod-objects">0</span></div>
+          <div class="cache-stat">Instanced Meshes: <span id="instanced-meshes">0</span></div>
+          <div class="cache-stat">Memory Usage: <span id="memory-usage">0</span> KB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Controls -->
+    <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Interactive Performance Test</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Planet Generation Controls -->
+        <div>
+          <h3 class="text-lg font-medium mb-3">Planet Generation</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-1">Number of Planets:</label>
+              <input type="range" id="planet-count" min="1" max="1000" value="100" 
+                     class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+              <span id="planet-count-value" class="text-sm text-gray-600">100</span>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-1">Cache Enabled:</label>
+              <input type="checkbox" id="cache-enabled" checked 
+                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded">
+            </div>
+            
+            <button id="generate-planets" 
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+              Generate Planets
+            </button>
+          </div>
+        </div>
+
+        <!-- Noise Algorithm Demo -->
+        <div>
+          <h3 class="text-lg font-medium mb-3">Noise Algorithm Comparison</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-1">Algorithm:</label>
+              <select id="noise-algorithm" class="w-full p-2 border border-gray-300 rounded">
+                <option value="perlin">Perlin Noise</option>
+                <option value="simplex">Simplex Noise</option>
+                <option value="worley">Worley Noise</option>
+                <option value="fractal">Fractal Noise</option>
+                <option value="ridged">Ridged Noise</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-1">Sample Size:</label>
+              <input type="range" id="sample-size" min="100" max="10000" value="1000" 
+                     class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+              <span id="sample-size-value" class="text-sm text-gray-600">1000</span>
+            </div>
+            
+            <button id="test-noise" 
+                    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+              Test Noise Performance
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Display -->
+    <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Performance Results</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Generation Results -->
+        <div>
+          <h3 class="text-lg font-medium mb-3">Generation Performance</h3>
+          <div id="generation-results" class="space-y-2">
+            <div class="text-sm">
+              <span class="font-medium">Last Generation:</span>
+              <span id="last-gen-time">-</span>ms
+            </div>
+            <div class="text-sm">
+              <span class="font-medium">Cache Hit Rate:</span>
+              <span id="cache-hit-rate">-</span>%
+            </div>
+            <div class="text-sm">
+              <span class="font-medium">Entities Generated:</span>
+              <span id="entities-generated">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Noise Visualization -->
+        <div>
+          <h3 class="text-lg font-medium mb-3">Noise Samples</h3>
+          <div id="noise-visualization" class="grid grid-cols-8 gap-1">
+            <!-- Noise samples will be displayed here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Planet List -->
+    <div class="bg-white p-6 rounded-lg shadow-lg">
+      <h2 class="text-2xl font-semibold mb-4">Generated Planets</h2>
+      <div id="planet-list" class="space-y-2 max-h-96 overflow-y-auto">
+        <!-- Planet data will be displayed here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script type="module">
+    import { SeedManager } from '../dist/SeedManager.js';
+    import { PropertyGraph } from '../dist/PropertyGraph.js';
+    import { ProceduralEntity } from '../dist/ProceduralEntity.js';
+    import { createPlanetDefinitions } from '../dist/PlanetDefinitions.js';
+    import { 
+      noise3D, 
+      clearNoiseCache, 
+      getNoiseCacheStats,
+      batchNoise3D 
+    } from '../dist/AdvancedNoise.js';
+    import { 
+      LODManager, 
+      InstancedRenderer, 
+      RenderingPerformanceMonitor 
+    } from '../dist/RenderingSystem.js';
+
+    // Initialize systems
+    const seedManager = new SeedManager('PerformanceDemo2024');
+    const planetGraph = new PropertyGraph(createPlanetDefinitions());
+    const performanceMonitor = new RenderingPerformanceMonitor();
+    
+    // Performance tracking
+    let generationStats = {
+      totalTime: 0,
+      cacheHits: 0,
+      totalRequests: 0,
+      entitiesGenerated: 0
+    };
+
+    // Update UI elements
+    function updateStats() {
+      // Cache stats
+      const propStats = planetGraph.getCacheStats();
+      const entityStats = ProceduralEntity.getCacheStats();
+      const noiseStats = getNoiseCacheStats();
+      
+      document.getElementById('prop-cache').textContent = 
+        Object.values(propStats.propertyCache).reduce((sum, cache) => sum + cache.size, 0);
+      document.getElementById('entity-cache').textContent = entityStats.entity.size;
+      document.getElementById('noise-cache').textContent = noiseStats.size;
+      
+      // Performance stats
+      document.getElementById('cache-hits').textContent = generationStats.cacheHits;
+      document.getElementById('gen-time').textContent = generationStats.totalTime.toFixed(2);
+      
+      // Generation results
+      document.getElementById('cache-hit-rate').textContent = 
+        generationStats.totalRequests > 0 
+          ? ((generationStats.cacheHits / generationStats.totalRequests) * 100).toFixed(1)
+          : '0';
+      document.getElementById('entities-generated').textContent = generationStats.entitiesGenerated;
+    }
+
+    // Generate planets with performance tracking
+    function generatePlanets(count, useCache) {
+      const startTime = performance.now();
+      const planets = [];
+      
+      if (!useCache) {
+        // Clear caches to test without caching
+        planetGraph.clearCache();
+        ProceduralEntity.clearCache();
+        clearNoiseCache();
+      }
+      
+      for (let i = 0; i < count; i++) {
+        const planetPath = ['Galaxy-1', 'System-1', `Planet-${i}`];
+        const planet = new ProceduralEntity(`Planet-${i}`, planetPath, seedManager, planetGraph);
+        
+        const data = planet.generateGrouped();
+        planets.push({ id: `Planet-${i}`, data });
+      }
+      
+      const endTime = performance.now();
+      const generationTime = endTime - startTime;
+      
+      generationStats.totalTime = generationTime;
+      generationStats.entitiesGenerated = count;
+      
+      document.getElementById('last-gen-time').textContent = generationTime.toFixed(2);
+      
+      displayPlanets(planets);
+      updateStats();
+      
+      return planets;
+    }
+
+    // Display generated planets
+    function displayPlanets(planets) {
+      const container = document.getElementById('planet-list');
+      container.innerHTML = '';
+      
+      planets.slice(0, 20).forEach(planet => { // Show first 20 planets
+        const div = document.createElement('div');
+        div.className = 'p-3 border rounded-lg bg-gray-50';
+        div.innerHTML = `
+          <div class="font-medium">${planet.id}</div>
+          <div class="text-sm text-gray-600 grid grid-cols-2 gap-2">
+            <span>Radius: ${planet.data.basic?.radius?.toFixed(2) || 'N/A'}</span>
+            <span>Mass: ${planet.data.basic?.mass?.toFixed(2) || 'N/A'}</span>
+            <span>Atmosphere: ${planet.data.atmosphere?.pressure?.toFixed(2) || 'N/A'}</span>
+            <span>Temperature: ${planet.data.climate?.temperature?.toFixed(1) || 'N/A'}°C</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+      
+      if (planets.length > 20) {
+        const moreDiv = document.createElement('div');
+        moreDiv.className = 'p-3 text-center text-gray-500';
+        moreDiv.textContent = `... and ${planets.length - 20} more planets`;
+        container.appendChild(moreDiv);
+      }
+    }
+
+    // Test noise performance
+    function testNoisePerformance(algorithm, sampleSize) {
+      const startTime = performance.now();
+      const samples = [];
+      
+      // Generate sample points
+      const points = [];
+      for (let i = 0; i < sampleSize; i++) {
+        points.push({
+          x: (Math.random() - 0.5) * 100,
+          y: (Math.random() - 0.5) * 100,
+          z: (Math.random() - 0.5) * 100
+        });
+      }
+      
+      // Test noise generation
+      const config = { 
+        algorithm: algorithm, 
+        frequency: 0.1, 
+        cache: true 
+      };
+      
+      for (const point of points) {
+        const value = noise3D(point.x, point.y, point.z, config);
+        samples.push(value);
+      }
+      
+      const endTime = performance.now();
+      const testTime = endTime - startTime;
+      
+      document.getElementById('gen-time').textContent = testTime.toFixed(2);
+      
+      // Visualize noise samples
+      visualizeNoise(samples.slice(0, 64)); // Show first 64 samples
+      updateStats();
+      
+      return { samples, time: testTime };
+    }
+
+    // Visualize noise samples
+    function visualizeNoise(samples) {
+      const container = document.getElementById('noise-visualization');
+      container.innerHTML = '';
+      
+      samples.forEach(value => {
+        const div = document.createElement('div');
+        const normalized = (value + 1) * 0.5; // Normalize to 0-1
+        const gray = Math.floor(normalized * 255);
+        div.style.backgroundColor = `rgb(${gray}, ${gray}, ${gray})`;
+        div.style.width = '20px';
+        div.style.height = '20px';
+        div.className = 'border';
+        div.title = `Value: ${value.toFixed(3)}`;
+        container.appendChild(div);
+      });
+    }
+
+    // Event listeners
+    document.getElementById('planet-count').addEventListener('input', (e) => {
+      document.getElementById('planet-count-value').textContent = e.target.value;
+    });
+
+    document.getElementById('sample-size').addEventListener('input', (e) => {
+      document.getElementById('sample-size-value').textContent = e.target.value;
+    });
+
+    document.getElementById('generate-planets').addEventListener('click', () => {
+      const count = parseInt(document.getElementById('planet-count').value);
+      const useCache = document.getElementById('cache-enabled').checked;
+      generatePlanets(count, useCache);
+    });
+
+    document.getElementById('test-noise').addEventListener('click', () => {
+      const algorithm = document.getElementById('noise-algorithm').value;
+      const sampleSize = parseInt(document.getElementById('sample-size').value);
+      testNoisePerformance(algorithm, sampleSize);
+    });
+
+    // Initialize with some data
+    generatePlanets(10, true);
+    testNoisePerformance('perlin', 100);
+    
+    // Update stats periodically
+    setInterval(updateStats, 1000);
+  </script>
+</body>
+</html>

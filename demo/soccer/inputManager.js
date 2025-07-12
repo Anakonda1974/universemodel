@@ -129,11 +129,21 @@ export class InputManager {
     if (input.passDown || (playerNum === 2 && input.passPressed && !this.previousStates.pass2)) {
       charging.active = true;
       charging.charge = 0;
+      charging.startTime = performance.now();
     }
 
     if (charging.active) {
-      charging.charge = Math.min(1, charging.charge + delta);
-      charging.target = this.findPassTarget(player, input.dx || input.direction?.x, input.dy || input.direction?.y);
+      // Enhanced charging with variable speed based on player stats
+      const passingSkill = player.derived?.passingPower || player.base?.technique || 0.5;
+      const chargeRate = 0.8 + (passingSkill * 0.4); // Skilled players charge faster
+
+      charging.charge = Math.min(1, charging.charge + (delta * chargeRate));
+
+      // Enhanced target finding with multiple options
+      charging.target = this.findEnhancedPassTarget(player, input.dx || input.direction?.x, input.dy || input.direction?.y);
+
+      // Provide visual feedback for pass power
+      this.updatePassPowerIndicator(charging.charge, charging.target);
     }
 
     if (input.passUp || (playerNum === 2 && !input.passPressed && charging.active)) {
@@ -161,32 +171,77 @@ export class InputManager {
     return target;
   }
 
-  findTeammateInDirection(player, dx, dy, maxAngle = 60) {
-    const team = this.players.player1.team.includes(player) ? 
+  findTeammateInDirection(player, dx, dy, maxAngle = 90) {
+    const team = this.players.player1.team.includes(player) ?
                  this.players.player1.team : this.players.player2.team;
-    
+
     const mag = Math.hypot(dx || 0, dy || 0);
     if (mag < 0.01) return null;
-    
+
     let best = null;
-    let bestAng = maxAngle;
-    
+    let bestScore = -1;
+
     for (const mate of team) {
       if (mate === player) continue;
       const mx = mate.x - player.x;
       const my = mate.y - player.y;
       const dist = Math.hypot(mx, my);
       if (dist === 0) continue;
-      
+
       const dot = (mx * dx + my * dy) / (dist * mag);
       const ang = (Math.acos(Math.max(-1, Math.min(1, dot))) * 180) / Math.PI;
-      
-      if (ang <= bestAng) {
-        bestAng = ang;
-        best = mate;
+
+      if (ang <= maxAngle) {
+        // Enhanced scoring system for pass target selection
+        const angleScore = 1 - (ang / maxAngle); // 0-1, higher is better
+
+        // Distance score (prefer medium distances)
+        let distanceScore;
+        if (dist < 20) {
+          distanceScore = dist / 20; // Penalty for very close
+        } else if (dist < 60) {
+          distanceScore = 1.0; // Optimal range
+        } else {
+          distanceScore = Math.max(0.2, 1 - (dist - 60) / 40);
+        }
+
+        // Goal advancement score
+        const goal = { x: 525, y: 170 }; // Opponent goal
+        const playerGoalDist = Math.hypot(player.x - goal.x, player.y - goal.y);
+        const mateGoalDist = Math.hypot(mate.x - goal.x, mate.y - goal.y);
+        const advancementScore = Math.max(0, (playerGoalDist - mateGoalDist) / playerGoalDist);
+
+        // Pressure score (avoid heavily marked teammates)
+        const pressureScore = this.calculateTeammatePressureSimple(mate, team);
+
+        // Combined score
+        const totalScore = angleScore * 0.4 + distanceScore * 0.3 +
+                          advancementScore * 0.2 + pressureScore * 0.1;
+
+        if (totalScore > bestScore) {
+          bestScore = totalScore;
+          best = mate;
+        }
       }
     }
     return best;
+  }
+
+  // Simple pressure calculation for teammate selection
+  calculateTeammatePressureSimple(teammate, team) {
+    // Get opponents (players not in our team)
+    const allPlayers = [...this.players.player1.team, ...this.players.player2.team];
+    const opponents = allPlayers.filter(p => !team.includes(p));
+
+    let pressure = 0;
+    opponents.forEach(opponent => {
+      const distance = Math.hypot(teammate.x - opponent.x, teammate.y - opponent.y);
+      if (distance < 15) {
+        pressure += (15 - distance) / 15;
+      }
+    });
+
+    return Math.max(0, 1 - Math.min(pressure, 1)); // Higher = less pressure
   }
 
   findNearestTeammate(player) {

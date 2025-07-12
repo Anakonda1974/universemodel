@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procedural System Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .property-node {
+      @apply bg-white border-2 border-gray-300 rounded-lg p-3 cursor-move shadow-md;
+      min-width: 200px;
+    }
+    .property-node.selected {
+      @apply border-blue-500 shadow-lg;
+    }
+    .dependency-line {
+      stroke: #6b7280;
+      stroke-width: 2;
+      fill: none;
+      marker-end: url(#arrowhead);
+    }
+    .canvas-area {
+      background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+      <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold">🔧 Procedural System Builder</h1>
+            <p class="text-gray-600">Create custom property graphs visually</p>
+          </div>
+          <div class="flex space-x-2">
+            <button id="new-system" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+              New System
+            </button>
+            <button id="save-system" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              Save System
+            </button>
+            <button id="load-system" class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">
+              Load System
+            </button>
+            <button id="test-system" class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">
+              Test System
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex h-screen">
+      <!-- Left Sidebar: Tools and Properties -->
+      <div class="w-80 bg-white border-r overflow-y-auto">
+        <!-- System Info -->
+        <div class="p-4 border-b">
+          <h3 class="font-semibold mb-2">System Information</h3>
+          <div class="space-y-2">
+            <input type="text" id="system-name" placeholder="System Name"
+                   class="w-full p-2 border rounded">
+            <textarea id="system-description" placeholder="Description"
+                      class="w-full p-2 border rounded h-20 resize-none"></textarea>
+            <input type="text" id="system-version" placeholder="Version (e.g., 1.0.0)"
+                   class="w-full p-2 border rounded">
+          </div>
+        </div>
+
+        <!-- Property Templates -->
+        <div class="p-4 border-b">
+          <h3 class="font-semibold mb-2">Add Property</h3>
+          <div class="space-y-2">
+            <button class="property-template w-full p-2 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                    data-type="number">
+              📊 Number Property
+            </button>
+            <button class="property-template w-full p-2 bg-green-100 text-green-800 rounded hover:bg-green-200"
+                    data-type="string">
+              📝 Text Property
+            </button>
+            <button class="property-template w-full p-2 bg-purple-100 text-purple-800 rounded hover:bg-purple-200"
+                    data-type="boolean">
+              ✅ Boolean Property
+            </button>
+            <button class="property-template w-full p-2 bg-orange-100 text-orange-800 rounded hover:bg-orange-200"
+                    data-type="discrete">
+              🎯 Choice Property
+            </button>
+          </div>
+        </div>
+
+        <!-- Property Editor -->
+        <div class="p-4 border-b">
+          <h3 class="font-semibold mb-2">Property Editor</h3>
+          <div id="property-editor" class="space-y-3">
+            <p class="text-gray-500 text-sm">Select a property to edit</p>
+          </div>
+        </div>
+
+        <!-- System Analysis -->
+        <div class="p-4">
+          <h3 class="font-semibold mb-2">System Analysis</h3>
+          <div id="system-analysis" class="space-y-2 text-sm">
+            <div>Properties: <span id="prop-count">0</span></div>
+            <div>Dependencies: <span id="dep-count">0</span></div>
+            <div>Max Depth: <span id="max-depth">0</span></div>
+            <div>Groups: <span id="group-count">0</span></div>
+          </div>
+          <button id="analyze-system" class="mt-2 w-full px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600">
+            Analyze
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Canvas Area -->
+      <div class="flex-1 relative">
+        <div id="canvas-container" class="w-full h-full canvas-area relative overflow-hidden">
+          <!-- SVG for dependency lines -->
+          <svg id="dependency-svg" class="absolute inset-0 w-full h-full pointer-events-none">
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                      refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
+              </marker>
+            </defs>
+          </svg>
+
+          <!-- Property nodes will be added here dynamically -->
+        </div>
+      </div>
+
+      <!-- Right Sidebar: Test Results -->
+      <div class="w-80 bg-white border-l overflow-y-auto">
+        <div class="p-4">
+          <h3 class="font-semibold mb-2">Test Results</h3>
+          <div id="test-results" class="space-y-2">
+            <p class="text-gray-500 text-sm">Run a test to see results</p>
+          </div>
+        </div>
+
+        <div class="p-4 border-t">
+          <h3 class="font-semibold mb-2">Generated Entity</h3>
+          <div id="generated-entity" class="space-y-2 text-sm max-h-96 overflow-y-auto">
+            <!-- Generated entity properties will appear here -->
+          </div>
+        </div>
+
+        <div class="p-4 border-t">
+          <h3 class="font-semibold mb-2">Performance</h3>
+          <div id="performance-stats" class="space-y-1 text-sm">
+            <div>Generation Time: <span id="perf-time">-</span>ms</div>
+            <div>Cache Hits: <span id="perf-cache">-</span></div>
+            <div>Memory Usage: <span id="perf-memory">-</span>KB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Property Editor Modal -->
+  <div id="property-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
+      <h3 class="text-lg font-semibold mb-4">Edit Property</h3>
+      <div id="modal-content" class="space-y-3">
+        <!-- Modal content will be populated dynamically -->
+      </div>
+      <div class="flex justify-end space-x-2 mt-4">
+        <button id="modal-cancel" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+          Cancel
+        </button>
+        <button id="modal-save" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { ProceduralSystemBuilder } from '../dist/ProceduralSystemBuilder.js';
+
+    class SystemBuilderUI {
+      constructor() {
+        this.builder = new ProceduralSystemBuilder();
+        this.properties = new Map();
+        this.selectedProperty = null;
+        this.draggedProperty = null;
+        this.nextPropertyId = 1;
+
+        this.initializeEventListeners();
+        this.updateAnalysis();
+      }
+
+      initializeEventListeners() {
+        // System controls
+        document.getElementById('new-system').addEventListener('click', () => this.newSystem());
+        document.getElementById('save-system').addEventListener('click', () => this.saveSystem());
+        document.getElementById('load-system').addEventListener('click', () => this.loadSystem());
+        document.getElementById('test-system').addEventListener('click', () => this.testSystem());
+        document.getElementById('analyze-system').addEventListener('click', () => this.updateAnalysis());
+
+        // Property templates
+        document.querySelectorAll('.property-template').forEach(btn => {
+          btn.addEventListener('click', (e) => this.addProperty(e.target.dataset.type));
+        });
+
+        // Modal controls
+        document.getElementById('modal-cancel').addEventListener('click', () => this.closeModal());
+        document.getElementById('modal-save').addEventListener('click', () => this.savePropertyEdit());
+
+        // Canvas interactions
+        const canvas = document.getElementById('canvas-container');
+        canvas.addEventListener('click', (e) => this.canvasClick(e));
+        canvas.addEventListener('mousemove', (e) => this.canvasMouseMove(e));
+        canvas.addEventListener('mouseup', () => this.canvasMouseUp());
+      }
+
+      newSystem() {
+        if (confirm('Create a new system? This will clear the current work.')) {
+          this.properties.clear();
+          this.selectedProperty = null;
+          this.nextPropertyId = 1;
+          document.getElementById('system-name').value = '';
+          document.getElementById('system-description').value = '';
+          document.getElementById('system-version').value = '1.0.0';
+          this.updateCanvas();
+          this.updateAnalysis();
+        }
+      }
+
+      addProperty(type) {
+        const property = {
+          id: \`property_\${this.nextPropertyId++}\`,
+          name: \`New \${type.charAt(0).toUpperCase() + type.slice(1)} Property\`,
+          description: '',
+          outputType: type,
+          group: 'default',
+          inputs: [],
+          x: Math.random() * 400 + 100,
+          y: Math.random() * 300 + 100,
+          range: type === 'number' ? { min: 0, max: 1 } : undefined,
+          options: type === 'discrete' ? ['option1', 'option2'] : undefined
+        };
+
+        this.properties.set(property.id, property);
+        this.updateCanvas();
+        this.updateAnalysis();
+        this.selectProperty(property.id);
+      }
+
+      selectProperty(propertyId) {
+        this.selectedProperty = propertyId;
+        this.updateCanvas();
+        this.updatePropertyEditor();
+      }
+
+      updatePropertyEditor() {
+        const editor = document.getElementById('property-editor');
+
+        if (!this.selectedProperty) {
+          editor.innerHTML = '<p class="text-gray-500 text-sm">Select a property to edit</p>';
+          return;
+        }
+
+        const property = this.properties.get(this.selectedProperty);
+        if (!property) return;
+
+        editor.innerHTML = \`
+          <div class="space-y-2">
+            <div>
+              <label class="block text-sm font-medium">Name</label>
+              <input type="text" id="edit-name" value="\${property.name}"
+                     class="w-full p-1 border rounded text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Description</label>
+              <textarea id="edit-description" class="w-full p-1 border rounded text-sm h-16">\${property.description}</textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Group</label>
+              <input type="text" id="edit-group" value="\${property.group}"
+                     class="w-full p-1 border rounded text-sm">
+            </div>
+            \${this.getTypeSpecificEditor(property)}
+            <div class="flex space-x-1">
+              <button id="edit-dependencies" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-sm">
+                Dependencies
+              </button>
+              <button id="delete-property" class="px-2 py-1 bg-red-500 text-white rounded text-sm">
+                Delete
+              </button>
+            </div>
+          </div>
+        \`;
+
+        // Add event listeners
+        document.getElementById('edit-name').addEventListener('input', (e) => {
+          property.name = e.target.value;
+          this.updateCanvas();
+        });
+
+        document.getElementById('edit-description').addEventListener('input', (e) => {
+          property.description = e.target.value;
+        });
+
+        document.getElementById('edit-group').addEventListener('input', (e) => {
+          property.group = e.target.value;
+          this.updateAnalysis();
+        });
+
+        document.getElementById('delete-property').addEventListener('click', () => {
+          this.deleteProperty(this.selectedProperty);
+        });
+
+        document.getElementById('edit-dependencies').addEventListener('click', () => {
+          this.editDependencies(this.selectedProperty);
+        });
+      }
+
+      getTypeSpecificEditor(property) {
+        switch (property.outputType) {
+          case 'number':
+            return \`
+              <div>
+                <label class="block text-sm font-medium">Range</label>
+                <div class="flex space-x-1">
+                  <input type="number" id="edit-min" value="\${property.range?.min || 0}"
+                         class="flex-1 p-1 border rounded text-sm" placeholder="Min">
+                  <input type="number" id="edit-max" value="\${property.range?.max || 1}"
+                         class="flex-1 p-1 border rounded text-sm" placeholder="Max">
+                </div>
+              </div>
+            \`;
+          case 'discrete':
+            return \`
+              <div>
+                <label class="block text-sm font-medium">Options</label>
+                <textarea id="edit-options" class="w-full p-1 border rounded text-sm h-16"
+                          placeholder="One option per line">\${(property.options || []).join('\\n')}</textarea>
+              </div>
+            \`;
+          default:
+            return '';
+        }
+      }
+
+      updateCanvas() {
+        const container = document.getElementById('canvas-container');
+
+        // Clear existing property nodes
+        container.querySelectorAll('.property-node').forEach(node => node.remove());
+
+        // Add property nodes
+        this.properties.forEach((property, id) => {
+          const node = this.createPropertyNode(property);
+          container.appendChild(node);
+        });
+
+        this.updateDependencyLines();
+      }
+
+      createPropertyNode(property) {
+        const node = document.createElement('div');
+        node.className = \`property-node \${this.selectedProperty === property.id ? 'selected' : ''}\`;
+        node.style.left = property.x + 'px';
+        node.style.top = property.y + 'px';
+        node.style.position = 'absolute';
+        node.dataset.propertyId = property.id;
+
+        const typeColors = {
+          number: 'bg-blue-100 text-blue-800',
+          string: 'bg-green-100 text-green-800',
+          boolean: 'bg-purple-100 text-purple-800',
+          discrete: 'bg-orange-100 text-orange-800'
+        };
+
+        node.innerHTML = \`
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs px-2 py-1 rounded \${typeColors[property.outputType] || 'bg-gray-100'}">\${property.outputType}</span>
+            <span class="text-xs text-gray-500">\${property.group}</span>
+          </div>
+          <div class="font-medium text-sm mb-1">\${property.name}</div>
+          <div class="text-xs text-gray-600">\${property.description || 'No description'}</div>
+          \${property.inputs && property.inputs.length > 0 ?
+            \`<div class="text-xs text-blue-600 mt-1">Depends on: \${property.inputs.join(', ')}</div>\` :
+            ''
+          }
+        \`;
+
+        // Add event listeners
+        node.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.selectProperty(property.id);
+        });
+
+        node.addEventListener('mousedown', (e) => {
+          this.draggedProperty = property.id;
+          this.dragOffset = {
+            x: e.clientX - property.x,
+            y: e.clientY - property.y
+          };
+        });
+
+        return node;
+      }
+
+      updateDependencyLines() {
+        const svg = document.getElementById('dependency-svg');
+        svg.innerHTML = '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" /></marker></defs>';
+
+        this.properties.forEach(property => {
+          if (property.inputs) {
+            property.inputs.forEach(inputId => {
+              const inputProp = this.properties.get(inputId);
+              if (inputProp) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const startX = inputProp.x + 100;
+                const startY = inputProp.y + 50;
+                const endX = property.x + 100;
+                const endY = property.y + 50;
+
+                line.setAttribute('d', \`M \${startX} \${startY} Q \${(startX + endX) / 2} \${startY - 50} \${endX} \${endY}\`);
+                line.setAttribute('class', 'dependency-line');
+                svg.appendChild(line);
+              }
+            });
+          }
+        });
+      }
+
+      canvasClick(e) {
+        if (e.target.id === 'canvas-container') {
+          this.selectedProperty = null;
+          this.updateCanvas();
+          this.updatePropertyEditor();
+        }
+      }
+
+      canvasMouseMove(e) {
+        if (this.draggedProperty) {
+          const property = this.properties.get(this.draggedProperty);
+          if (property) {
+            property.x = e.clientX - this.dragOffset.x;
+            property.y = e.clientY - this.dragOffset.y;
+            this.updateCanvas();
+          }
+        }
+      }
+
+      canvasMouseUp() {
+        this.draggedProperty = null;
+      }
+
+      deleteProperty(propertyId) {
+        if (confirm('Delete this property?')) {
+          // Remove dependencies on this property
+          this.properties.forEach(prop => {
+            if (prop.inputs) {
+              prop.inputs = prop.inputs.filter(id => id !== propertyId);
+            }
+          });
+
+          this.properties.delete(propertyId);
+          this.selectedProperty = null;
+          this.updateCanvas();
+          this.updatePropertyEditor();
+          this.updateAnalysis();
+        }
+      }
+
+      editDependencies(propertyId) {
+        const property = this.properties.get(propertyId);
+        if (!property) return;
+
+        const availableProps = Array.from(this.properties.values())
+          .filter(p => p.id !== propertyId)
+          .map(p => p.id);
+
+        const currentDeps = property.inputs || [];
+
+        const modal = document.getElementById('property-modal');
+        const content = document.getElementById('modal-content');
+
+        content.innerHTML = \`
+          <div>
+            <label class="block text-sm font-medium mb-2">Dependencies for \${property.name}</label>
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              \${availableProps.map(propId => \`
+                <label class="flex items-center">
+                  <input type="checkbox" \${currentDeps.includes(propId) ? 'checked' : ''}
+                         data-prop-id="\${propId}" class="mr-2">
+                  <span class="text-sm">\${this.properties.get(propId).name} (\${propId})</span>
+                </label>
+              \`).join('')}
+            </div>
+          </div>
+        \`;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        this.modalPropertyId = propertyId;
+      }
+
+      closeModal() {
+        document.getElementById('property-modal').classList.add('hidden');
+        document.getElementById('property-modal').classList.remove('flex');
+      }
+
+      savePropertyEdit() {
+        if (this.modalPropertyId) {
+          const property = this.properties.get(this.modalPropertyId);
+          const checkboxes = document.querySelectorAll('#modal-content input[type="checkbox"]');
+
+          property.inputs = Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.dataset.propId);
+
+          this.updateCanvas();
+          this.updatePropertyEditor();
+          this.updateAnalysis();
+        }
+        this.closeModal();
+      }
+
+      updateAnalysis() {
+        const propCount = this.properties.size;
+        const depCount = Array.from(this.properties.values())
+          .reduce((sum, prop) => sum + (prop.inputs?.length || 0), 0);
+
+        const groups = new Set();
+        this.properties.forEach(prop => groups.add(prop.group));
+
+        document.getElementById('prop-count').textContent = propCount;
+        document.getElementById('dep-count').textContent = depCount;
+        document.getElementById('group-count').textContent = groups.size;
+
+        // Calculate max depth (simplified)
+        document.getElementById('max-depth').textContent = this.calculateMaxDepth();
+      }
+
+      calculateMaxDepth() {
+        const depths = new Map();
+
+        const getDepth = (propId, visited = new Set()) => {
+          if (visited.has(propId)) return 0; // Circular dependency
+          if (depths.has(propId)) return depths.get(propId);
+
+          const property = this.properties.get(propId);
+          if (!property || !property.inputs || property.inputs.length === 0) {
+            depths.set(propId, 0);
+            return 0;
+          }
+
+          visited.add(propId);
+          const maxInputDepth = Math.max(0, ...property.inputs.map(id => getDepth(id, visited)));
+          const depth = maxInputDepth + 1;
+          depths.set(propId, depth);
+          visited.delete(propId);
+
+          return depth;
+        };
+
+        return Math.max(0, ...Array.from(this.properties.keys()).map(id => getDepth(id)));
+      }
+
+      async testSystem() {
+        try {
+          // Convert properties to system template
+          const systemTemplate = {
+            name: document.getElementById('system-name').value || 'Test System',
+            description: document.getElementById('system-description').value || 'Generated system',
+            version: document.getElementById('system-version').value || '1.0.0',
+            properties: Array.from(this.properties.values())
+          };
+
+          // Create and test the system
+          const startTime = performance.now();
+          const graph = this.builder.createSystem(systemTemplate);
+          const entity = this.builder.createTestEntity(systemTemplate.name);
+
+          if (entity) {
+            const result = entity.generateGrouped();
+            const endTime = performance.now();
+
+            // Update performance stats
+            document.getElementById('perf-time').textContent = (endTime - startTime).toFixed(2);
+            document.getElementById('perf-cache').textContent = '0'; // First run
+            document.getElementById('perf-memory').textContent = 'N/A';
+
+            // Display results
+            this.displayTestResults(result);
+
+            // Test again for cache performance
+            const cacheStart = performance.now();
+            entity.generateGrouped();
+            const cacheEnd = performance.now();
+
+            document.getElementById('perf-cache').textContent = \`\${((endTime - startTime) / (cacheEnd - cacheStart)).toFixed(1)}x faster\`;
+          }
+        } catch (error) {
+          document.getElementById('test-results').innerHTML = \`
+            <div class="p-2 bg-red-100 text-red-800 rounded text-sm">
+              Error: \${error.message}
+            </div>
+          \`;
+        }
+      }
+
+      displayTestResults(result) {
+        const container = document.getElementById('generated-entity');
+        container.innerHTML = '';
+
+        Object.entries(result).forEach(([groupName, properties]) => {
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'mb-3';
+
+          const header = document.createElement('h4');
+          header.className = 'font-medium text-sm mb-1 capitalize';
+          header.textContent = groupName;
+          groupDiv.appendChild(header);
+
+          const propsDiv = document.createElement('div');
+          propsDiv.className = 'space-y-1';
+
+          Object.entries(properties).forEach(([propName, value]) => {
+            const propDiv = document.createElement('div');
+            propDiv.className = 'flex justify-between text-xs';
+            propDiv.innerHTML = \`
+              <span class="text-gray-600">\${propName}:</span>
+              <span class="font-mono">\${typeof value === 'number' ? value.toFixed(3) : value}</span>
+            \`;
+            propsDiv.appendChild(propDiv);
+          });
+
+          groupDiv.appendChild(propsDiv);
+          container.appendChild(groupDiv);
+        });
+
+        document.getElementById('test-results').innerHTML = \`
+          <div class="p-2 bg-green-100 text-green-800 rounded text-sm">
+            ✅ System tested successfully!<br>
+            Generated \${Object.keys(result).length} property groups with \${
+              Object.values(result).reduce((sum, group) => sum + Object.keys(group).length, 0)
+            } total properties.
+          </div>
+        \`;
+      }
+
+      saveSystem() {
+        const systemTemplate = {
+          name: document.getElementById('system-name').value || 'Unnamed System',
+          description: document.getElementById('system-description').value || '',
+          version: document.getElementById('system-version').value || '1.0.0',
+          properties: Array.from(this.properties.values())
+        };
+
+        const blob = new Blob([JSON.stringify(systemTemplate, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = \`\${systemTemplate.name.replace(/\\s+/g, '-').toLowerCase()}.json\`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      loadSystem() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const systemTemplate = JSON.parse(e.target.result);
+                this.loadSystemTemplate(systemTemplate);
+              } catch (error) {
+                alert('Error loading system: ' + error.message);
+              }
+            };
+            reader.readAsText(file);
+          }
+        };
+        input.click();
+      }
+
+      loadSystemTemplate(systemTemplate) {
+        document.getElementById('system-name').value = systemTemplate.name || '';
+        document.getElementById('system-description').value = systemTemplate.description || '';
+        document.getElementById('system-version').value = systemTemplate.version || '1.0.0';
+
+        this.properties.clear();
+        this.selectedProperty = null;
+
+        systemTemplate.properties.forEach((prop, index) => {
+          // Ensure position
+          if (!prop.x) prop.x = (index % 4) * 250 + 50;
+          if (!prop.y) prop.y = Math.floor(index / 4) * 150 + 50;
+
+          this.properties.set(prop.id, prop);
+        });
+
+        this.nextPropertyId = Math.max(...Array.from(this.properties.keys()).map(id =>
+          parseInt(id.replace('property_', '')) || 0
+        )) + 1;
+
+        this.updateCanvas();
+        this.updateAnalysis();
+      }
+    }
+
+    // Initialize the system builder
+    window.addEventListener('load', () => {
+      new SystemBuilderUI();
+    });
+  </script>
+</body>
+</html>

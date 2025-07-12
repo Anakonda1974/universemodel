@@ -36,9 +36,15 @@ export class EnhancedSoccerPitch3D {
 
     // Initialize advanced grass system with error handling
     console.log('🌱 PITCH: About to create AdvancedGrassSystem...');
+    console.log('🌱 PITCH: Renderer available:', !!renderer);
+    console.log('🌱 PITCH: Field dimensions:', this.dimensions.width, 'x', this.dimensions.height);
+
     try {
       this.advancedGrass = new AdvancedGrassSystem(renderer, this.dimensions.width, this.dimensions.height);
       console.log('🌱 ADVANCED GRASS: Successfully initialized AAA grass system');
+      console.log('🌱 ADVANCED GRASS: LOD levels:', this.advancedGrass.lodLevels.length);
+      console.log('🌱 ADVANCED GRASS: Chunks created:', this.advancedGrass.chunks.size);
+      console.log('🌱 ADVANCED GRASS: Grass instances:', this.advancedGrass.grassInstances.size);
     } catch (error) {
       console.error('🌱 ADVANCED GRASS: Failed to initialize, using fallback:', error);
       console.error('🌱 ADVANCED GRASS: Error details:', error.stack);
@@ -267,16 +273,16 @@ export class EnhancedSoccerPitch3D {
   createGoals() {
     const { width } = this.dimensions;
 
-    // Left goal
+    // Left goal - properly aligned (no rotation needed)
     const leftGoal = this.createGoal('left');
     leftGoal.position.set(-width/2, 0, 0);
-    leftGoal.rotation.y = Math.PI/2;
+    // Remove the 90-degree rotation that was causing misalignment
     this.group.add(leftGoal);
 
-    // Right goal
+    // Right goal - properly aligned (no rotation needed)
     const rightGoal = this.createGoal('right');
     rightGoal.position.set(width/2, 0, 0);
-    rightGoal.rotation.y = Math.PI/2;
+    // Remove the 90-degree rotation that was causing misalignment
     this.group.add(rightGoal);
   }
 
@@ -402,18 +408,36 @@ export class EnhancedSoccerPitch3D {
 
     if (this.advancedGrass) {
       console.log('🌱 GRASS TEST: Advanced grass system exists');
+      console.log('🌱 GRASS TEST: Total chunks:', this.advancedGrass.chunks.size);
+      console.log('🌱 GRASS TEST: Visible chunks:', this.advancedGrass.visibleChunks.size);
 
       // Check if grass instances are in the scene
+      let totalVisible = 0;
       this.advancedGrass.grassInstances.forEach((instance, lodIndex) => {
         console.log(`🌱 GRASS TEST: LOD ${lodIndex} - Visible: ${instance.mesh.visible}, Count: ${instance.mesh.count}, Max: ${instance.maxInstances}`);
 
-        // Force visibility and set some instances for testing
+        // Force visibility and set substantial instances for testing
         instance.mesh.visible = true;
-        if (instance.mesh.count === 0) {
-          instance.mesh.count = Math.min(100, instance.maxInstances); // Show at least 100 instances
-          console.log(`🌱 GRASS TEST: Forced LOD ${lodIndex} to show ${instance.mesh.count} instances`);
-        }
+        instance.mesh.frustumCulled = false;
+        const forceCount = Math.min(1000 * (1 - lodIndex * 0.1), instance.maxInstances);
+        instance.mesh.count = forceCount;
+        totalVisible += forceCount;
+
+        console.log(`🌱 GRASS TEST: Forced LOD ${lodIndex} to show ${forceCount} instances`);
       });
+
+      console.log(`🌱 GRASS TEST: Total visible instances: ${totalVisible}`);
+
+      // Use the simplified force all chunks method
+      console.log('🌱 GRASS TEST: Ensuring all chunks have grass...');
+      const totalBlades = this.advancedGrass.forceAllChunksVisible();
+      console.log(`🌱 GRASS TEST: ${totalBlades} total grass blades now visible`);
+
+      if (totalBlades >= this.advancedGrass.minimumTotalBlades) {
+        console.log(`🌱 GRASS TEST: ✅ Minimum blade requirement met (${this.advancedGrass.minimumTotalBlades})`);
+      } else {
+        console.warn(`🌱 GRASS TEST: ❌ Minimum blade requirement not met (${this.advancedGrass.minimumTotalBlades})`);
+      }
 
       // Test wear at center of field
       console.log('🌱 GRASS TEST: Testing wear at field center...');

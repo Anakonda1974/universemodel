@@ -1,0 +1,85 @@
+{
+  "name": "Alien Creature Generator",
+  "description": "Generates diverse alien life forms with unique characteristics",
+  "version": "1.0.0",
+  "properties": [
+    {
+      "id": "size",
+      "name": "Body Size",
+      "description": "Overall size of the creature",
+      "outputType": "number",
+      "range": {
+        "min": 0.1,
+        "max": 10
+      },
+      "group": "physical",
+      "noiseType": "perlin",
+      "cache": {
+        "maxSize": 100
+      }
+    },
+    {
+      "id": "limb_count",
+      "name": "Number of Limbs",
+      "description": "How many limbs the creature has",
+      "outputType": "discrete",
+      "options": [
+        "2",
+        "4",
+        "6",
+        "8",
+        "many"
+      ],
+      "group": "physical",
+      "noiseType": "worley"
+    },
+    {
+      "id": "intelligence",
+      "name": "Intelligence Level",
+      "description": "Cognitive capabilities",
+      "outputType": "number",
+      "range": {
+        "min": 0,
+        "max": 1
+      },
+      "group": "mental",
+      "inputs": [
+        "size"
+      ],
+      "formula": "size > 1.0 ? min(1.0, size * 0.3 + noise(seed, \"intelligence_bonus\")) : noise(seed, \"intelligence_base\")"
+    },
+    {
+      "id": "habitat",
+      "name": "Preferred Habitat",
+      "description": "Where the creature lives",
+      "outputType": "discrete",
+      "options": [
+        "aquatic",
+        "terrestrial",
+        "aerial",
+        "subterranean",
+        "arboreal"
+      ],
+      "group": "environment",
+      "noiseType": "simplex"
+    },
+    {
+      "id": "social_structure",
+      "name": "Social Behavior",
+      "description": "How they interact with others",
+      "outputType": "discrete",
+      "options": [
+        "solitary",
+        "pair_bonded",
+        "small_groups",
+        "large_herds",
+        "hive_mind"
+      ],
+      "group": "behavior",
+      "inputs": [
+        "intelligence"
+      ],
+      "formula": "intelligence > 0.7 ? randomChoice(seed, \"social_smart\", [\"small_groups\", \"large_herds\", \"hive_mind\"]) : randomChoice(seed, \"social_simple\", [\"solitary\", \"pair_bonded\", \"small_groups\"])"
+    }
+  ]
+}

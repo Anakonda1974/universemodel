@@ -27,11 +27,18 @@ export class AdvancedGrassSystem {
 
     // Rendering options
     this.showWireframe = false;
-    this.densityMultiplier = 1.0; // Global density multiplier
+    this.densityMultiplier = 2.0; // Global density multiplier - increased for minimum 2000 blades
     this.isRegenerating = false; // Flag to prevent LOD updates during regeneration
+    this.manualLODMode = true; // Start in manual mode for better control
 
-    // Individual LOD density multipliers
-    this.lodDensityMultipliers = [1.0, 0.8, 0.6, 0.4, 0.2]; // Default values for each LOD level
+    // Individual LOD density multipliers - optimized for minimum 2000 blades total
+    this.lodDensityMultipliers = [1.5, 1.2, 1.0, 0.8, 0.6]; // Higher values to ensure visibility
+
+    // Screen-space LOD thresholds (in pixels) - very lenient to ensure all chunks get grass
+    this.lodThresholds = [100, 50, 25, 10, 2]; // Lower thresholds = more grass everywhere
+
+    // Minimum grass blade guarantee
+    this.minimumTotalBlades = 2000; // Ensure at least 2000 blades are always visible
     
     // Grass blade geometry cache
     this.grassGeometries = new Map();
@@ -170,9 +177,9 @@ export class AdvancedGrassSystem {
         },
         vertexShader: this.getAdvancedVertexShader(),
         fragmentShader: this.getAdvancedFragmentShader(),
-        transparent: false,
+        transparent: true, // Enable transparency for realistic grass alpha
         side: THREE.DoubleSide,
-        wireframe: true // Enable wireframe to see grass geometry
+        wireframe: false // Disable wireframe for normal grass rendering
       });
 
       // Add shader compilation error checking
@@ -356,9 +363,8 @@ export class AdvancedGrassSystem {
           if (bareNoise > 0.3) alpha = 0.0;
         }
         
-        // DEBUG: Use bright magenta color to make grass visible
-        gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0); // Bright magenta
-        // gl_FragColor = vec4(finalColor, alpha);
+        // Use the calculated grass color and alpha
+        gl_FragColor = vec4(finalColor, alpha);
       }
     `;
   }
@@ -504,12 +510,26 @@ export class AdvancedGrassSystem {
       return;
     }
 
-    // Calculate FOV-based distance scaling
-    const fov = camera.fov || 60; // Default FOV
-    const fovScale = Math.max(0.5, Math.min(2.0, fov / 60)); // Scale factor based on FOV
-    const heightScale = Math.max(0.5, Math.min(3.0, cameraPosition.y / 15)); // Scale based on camera height
+    // Get screen/viewport information for proper screen-space LOD
+    const canvas = this.renderer.domElement;
+    const screenWidth = canvas.width || 1920;
+    const screenHeight = canvas.height || 1080;
+    const aspect = screenWidth / screenHeight;
 
-    console.log(`🌾 LOD: Camera FOV: ${fov}°, Height: ${cameraPosition.y.toFixed(1)}, FOV Scale: ${fovScale.toFixed(2)}, Height Scale: ${heightScale.toFixed(2)}`);
+    // Camera properties
+    const fov = camera.fov || 60;
+    const fovRadians = (fov * Math.PI) / 180;
+
+    // Calculate screen-space scaling factors
+    const tanHalfFov = Math.tan(fovRadians / 2);
+
+    console.log(`🌾 LOD: Camera FOV: ${fov}°, Height: ${cameraPosition.y.toFixed(1)}, Screen: ${screenWidth}x${screenHeight}, Aspect: ${aspect.toFixed(2)}`);
+    console.log(`🌾 LOD: Camera at (${cameraPosition.x.toFixed(1)}, ${cameraPosition.y.toFixed(1)}, ${cameraPosition.z.toFixed(1)})`);
+
+    // Get camera direction for debugging
+    const debugCameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(debugCameraDirection);
+    console.log(`🌾 LOD: Camera looking (${debugCameraDirection.x.toFixed(2)}, ${debugCameraDirection.y.toFixed(2)}, ${debugCameraDirection.z.toFixed(2)})`);
 
     this.visibleChunks.clear();
 
@@ -518,37 +538,70 @@ export class AdvancedGrassSystem {
       instance.currentInstances = 0;
     });
 
-    // Process each chunk
+    // Process each chunk - NEVER completely cull, always render with appropriate density
     this.chunks.forEach(chunk => {
-      // Calculate distance to chunk center
+      // Calculate screen-space size for proper LOD determination
       const chunkCenter = chunk.boundingBox.getCenter(new THREE.Vector3());
-      const rawDistance = cameraPosition.distanceTo(chunkCenter);
+      const chunkSize = this.chunkSize; // 8x8 meter chunk
 
-      // Adjust distance based on FOV and camera height
-      const adjustedDistance = rawDistance / (fovScale * heightScale);
+      // Calculate distance from camera to chunk
+      const distance = cameraPosition.distanceTo(chunkCenter);
 
-      // Check if chunk is in frustum (be more lenient)
-      const isInFrustum = this.frustum.intersectsBox(chunk.boundingBox);
-      const maxDistance = this.lodLevels[this.lodLevels.length - 1].distance * 2.0; // Double max distance
-      const isExtremelyFar = adjustedDistance > maxDistance;
+      // Calculate the projected size of the chunk on screen (in pixels)
+      // This accounts for FOV, distance, and screen resolution
+      const projectedSize = (chunkSize * screenHeight) / (2 * distance * tanHalfFov);
 
-      // Very conservative culling - render almost everything
-      if (!isInFrustum && isExtremelyFar) {
-        return; // Only cull if outside frustum AND extremely far
+      // Calculate viewing angle factor (how directly we're looking at the chunk)
+      const cameraDirection = new THREE.Vector3();
+      camera.getWorldDirection(cameraDirection);
+      const chunkDirection = chunkCenter.clone().sub(cameraPosition).normalize();
+      const viewingAngle = cameraDirection.dot(chunkDirection);
+
+      // Proper viewing factor: prioritize chunks in view direction
+      // viewingAngle ranges from -1 (behind camera) to 1 (directly ahead)
+      let viewingFactor;
+      if (viewingAngle > 0) {
+        // Chunk is in front of camera - boost based on how centered it is
+        viewingFactor = 0.5 + (viewingAngle * 0.5); // Range: 0.5 to 1.0
+      } else {
+        // Chunk is behind camera - minimal visibility but not zero
+        viewingFactor = 0.1 + (Math.max(-1, viewingAngle) + 1) * 0.2; // Range: 0.1 to 0.3
       }
 
+      // Check if chunk is within camera frustum for additional boost
+      const isInFrustum = this.frustum.intersectsBox(chunk.boundingBox);
+      const frustumBoost = isInFrustum ? 1.5 : 0.8; // Boost chunks in frustum
+
+      // Calculate elevation factor (higher camera = can see more detail at distance)
+      const elevationFactor = Math.max(0.5, Math.min(2.0, cameraPosition.y / 10));
+
+      // Combined screen-space metric for LOD selection
+      const screenSpaceMetric = projectedSize * viewingFactor * frustumBoost * elevationFactor;
+
+      console.log(`🌾 LOD CHUNK: Distance: ${distance.toFixed(1)}m, Projected: ${projectedSize.toFixed(1)}px, ViewAngle: ${viewingAngle.toFixed(2)}, ViewFactor: ${viewingFactor.toFixed(2)}, FrustumBoost: ${frustumBoost.toFixed(1)}, Elevation: ${elevationFactor.toFixed(2)}, Metric: ${screenSpaceMetric.toFixed(1)}`);
+
+      // ALWAYS add chunk to visible chunks - never completely cull
       this.visibleChunks.add(chunk);
 
-      // Determine appropriate LOD level using adjusted distance
+      // Determine LOD level based on screen-space metric instead of raw distance
       let lodLevel = this.lodLevels.length - 1; // Start with lowest detail
-      for (let i = 0; i < this.lodLevels.length; i++) {
-        if (adjustedDistance < this.lodLevels[i].distance) {
+
+      // Use configurable screen-space thresholds for LOD levels (in pixels)
+      for (let i = 0; i < this.lodThresholds.length; i++) {
+        if (screenSpaceMetric > this.lodThresholds[i]) {
           lodLevel = i;
           break;
         }
       }
 
-      // Add instances for this LOD level
+      // Additional safety: ensure chunks in frustum get at least medium detail
+      if (isInFrustum && lodLevel > 2) {
+        lodLevel = 2; // Force at least LOD 2 for frustum chunks
+      }
+
+      console.log(`🌾 LOD RESULT: Chunk at (${chunkCenter.x.toFixed(1)}, ${chunkCenter.z.toFixed(1)}) -> LOD ${lodLevel}, InFrustum: ${isInFrustum}, ViewAngle: ${viewingAngle.toFixed(2)}`);
+
+      // Add instances for this LOD level - chunk is ALWAYS rendered
       this.addChunkInstances(chunk, lodLevel);
     });
 
@@ -572,13 +625,22 @@ export class AdvancedGrassSystem {
       console.warn(`🌾 LOD UPDATE: No grass visible! Forcing emergency visibility...`);
       this.grassInstances.forEach((instance, lodIndex) => {
         if (instance.maxInstances > 0) {
-          const emergencyCount = Math.min(100, instance.maxInstances);
+          const emergencyCount = Math.min(500, instance.maxInstances);
           instance.mesh.count = emergencyCount;
           instance.mesh.visible = true;
           instance.mesh.frustumCulled = false; // Disable culling
           console.log(`🌾 LOD UPDATE: EMERGENCY - LOD ${lodIndex} forced visible with ${emergencyCount} instances`);
         }
       });
+    }
+
+    // Additional safety: Always ensure at least LOD 0 has some grass visible
+    const lod0Instance = this.grassInstances.get(0);
+    if (lod0Instance && lod0Instance.mesh.count < 50) {
+      const minCount = Math.min(200, lod0Instance.maxInstances);
+      lod0Instance.mesh.count = minCount;
+      lod0Instance.mesh.visible = true;
+      console.log(`🌾 LOD UPDATE: Ensuring LOD 0 minimum visibility with ${minCount} instances`);
     }
   }
 
@@ -630,6 +692,8 @@ export class AdvancedGrassSystem {
   addToScene(scene) {
     this.scene = scene; // Store scene reference for later use
     console.log(`🌱 SCENE ADD: Adding ${this.grassInstances.size} grass LOD levels to scene`);
+
+    let totalInstancesAdded = 0;
     this.grassInstances.forEach((instance, lodIndex) => {
       console.log(`🌱 SCENE ADD: Adding LOD ${lodIndex} with ${instance.maxInstances} max instances`);
       console.log(`🌱 SCENE ADD: Mesh geometry vertices: ${instance.mesh.geometry.attributes.position.count}`);
@@ -637,11 +701,24 @@ export class AdvancedGrassSystem {
       console.log(`🌱 SCENE ADD: Mesh visible: ${instance.mesh.visible}, count: ${instance.mesh.count}`);
       console.log(`🌱 SCENE ADD: Mesh position: (${instance.mesh.position.x}, ${instance.mesh.position.y}, ${instance.mesh.position.z})`);
       console.log(`🌱 SCENE ADD: Mesh scale: (${instance.mesh.scale.x}, ${instance.mesh.scale.y}, ${instance.mesh.scale.z})`);
+
       scene.add(instance.mesh);
-      instance.mesh.visible = true; // Ensure visibility
-      instance.mesh.count = Math.min(100, instance.maxInstances); // Force some instances for testing
+
+      // Force initial visibility for testing - use different amounts per LOD
+      const initialCount = Math.min(500 * (1 - lodIndex * 0.15), instance.maxInstances);
+      instance.mesh.count = initialCount;
+      instance.mesh.visible = true;
+      instance.mesh.frustumCulled = false; // Disable frustum culling initially
+      totalInstancesAdded += initialCount;
+
+      console.log(`🌱 SCENE ADD: LOD ${lodIndex} forced to show ${initialCount} instances`);
     });
-    console.log('🌱 SCENE ADD: All grass meshes added to scene');
+
+    console.log(`🌱 SCENE ADD: All grass meshes added to scene - Total instances: ${totalInstancesAdded}`);
+
+    // Force immediate update to ensure grass is visible
+    console.log('🌱 SCENE ADD: Ensuring all chunks have grass with minimum blade count...');
+    this.forceAllChunksVisible();
   }
 
   update(deltaTime, camera, windDirection = { x: 1, y: 0.5 }, windStrength = 0.02) {
@@ -650,12 +727,15 @@ export class AdvancedGrassSystem {
     this.windStrength = windStrength;
 
     // Update LOD less frequently for performance (every 100ms)
-    if (!this.lastLODUpdate) this.lastLODUpdate = 0;
-    this.lastLODUpdate += deltaTime;
+    // Skip automatic LOD updates if in manual mode
+    if (!this.manualLODMode) {
+      if (!this.lastLODUpdate) this.lastLODUpdate = 0;
+      this.lastLODUpdate += deltaTime;
 
-    if (this.lastLODUpdate > 0.1 && camera && camera.position) { // 10 FPS LOD updates
-      this.updateLOD(camera);
-      this.lastLODUpdate = 0;
+      if (this.lastLODUpdate > 0.1 && camera && camera.position) { // 10 FPS LOD updates
+        this.updateLOD(camera);
+        this.lastLODUpdate = 0;
+      }
     }
 
     // Update shader uniforms
@@ -821,108 +901,336 @@ export class AdvancedGrassSystem {
     });
   }
 
-  // Update grass density and regenerate
+  // Update grass density without full regeneration
   updateDensity(newDensity) {
-    this.isRegenerating = true; // Prevent LOD updates during regeneration
     this.densityMultiplier = newDensity;
-    console.log(`🌾 GRASS DENSITY: Starting update to ${newDensity}x`);
+    console.log(`🌾 GRASS DENSITY: Global density updated to ${newDensity}x`);
+
+    // Instead of full regeneration, just force visibility
+    this.forceGrassVisibility();
+
+    // Force LOD update to apply new density
+    if (window.camera) {
+      this.updateLOD(window.camera);
+    }
+  }
+
+  // Update individual LOD density without full regeneration
+  updateLODDensity(lodIndex, newDensity) {
+    if (lodIndex >= 0 && lodIndex < this.lodDensityMultipliers.length) {
+      this.lodDensityMultipliers[lodIndex] = newDensity;
+      console.log(`🌾 LOD DENSITY: LOD ${lodIndex} density updated to ${newDensity}x`);
+
+      // Instead of full regeneration, just force visibility
+      this.forceGrassVisibility();
+
+      // Force LOD update to apply new density
+      if (window.camera) {
+        this.updateLOD(window.camera);
+      }
+    }
+  }
+
+  // Update individual LOD threshold
+  updateLODThreshold(lodIndex, newThreshold) {
+    if (lodIndex >= 0 && lodIndex < this.lodThresholds.length) {
+      this.lodThresholds[lodIndex] = newThreshold;
+      console.log(`📐 LOD THRESHOLD: LOD ${lodIndex} threshold updated to ${newThreshold}px`);
+      // No need to regenerate grass, just update thresholds
+      // Force immediate LOD update to apply new thresholds
+      if (window.camera) {
+        this.updateLOD(window.camera);
+      }
+    }
+  }
+
+  // Force grass visibility without regeneration (emergency method)
+  forceGrassVisibility() {
+    console.log(`🌾 FORCE VISIBILITY: Ensuring all grass is visible...`);
+
+    let totalForced = 0;
+    this.grassInstances.forEach((instance, lodIndex) => {
+      if (instance.mesh) {
+        // More aggressive forcing for higher LOD levels
+        const baseCount = 1000 * (1 - lodIndex * 0.15);
+        const forceCount = Math.min(baseCount, instance.maxInstances);
+        instance.mesh.count = forceCount;
+        instance.mesh.visible = true;
+        instance.mesh.frustumCulled = false;
+        totalForced += forceCount;
+
+        console.log(`🌾 FORCE VISIBILITY: LOD ${lodIndex} forced to ${forceCount} instances (max: ${instance.maxInstances})`);
+      }
+    });
+
+    console.log(`🌾 FORCE VISIBILITY: Total forced instances: ${totalForced}`);
+
+    // Also force an immediate LOD update if camera is available
+    if (window.camera) {
+      console.log(`🌾 FORCE VISIBILITY: Triggering LOD update...`);
+      this.updateLOD(window.camera);
+    }
+
+    return totalForced;
+  }
+
+  // Force ALL chunks to have grass - ensure minimum 2000 blades with more when close
+  forceAllChunksVisible() {
+    console.log(`🌾 FORCE ALL CHUNKS: Ensuring every chunk has grass with minimum ${this.minimumTotalBlades} blades total...`);
+
+    // Enable manual mode to prevent interference
+    this.manualLODMode = true;
+
+    // Reset all instances
+    this.grassInstances.forEach(instance => {
+      instance.currentInstances = 0;
+    });
+
+    let totalChunks = this.chunks.size;
+    let processedChunks = 0;
+
+    // First pass: Give every chunk basic grass
+    this.chunks.forEach(chunk => {
+      const chunkCenter = chunk.boundingBox.getCenter(new THREE.Vector3());
+      let lodLevel = 2; // Default to medium detail for all chunks
+
+      // If camera is available, improve detail for closer chunks
+      if (window.camera) {
+        const distance = window.camera.position.distanceTo(chunkCenter);
+        if (distance < 15) lodLevel = 0; // Highest detail for very close
+        else if (distance < 30) lodLevel = 1; // High detail for close
+        else if (distance < 60) lodLevel = 2; // Medium detail for medium distance
+        else lodLevel = 3; // Low detail but still visible for far
+      }
+
+      // Add instances for this chunk
+      this.addChunkInstances(chunk, lodLevel);
+      processedChunks++;
+
+      if (processedChunks <= 5) {
+        console.log(`🌾 FORCE ALL CHUNKS: Chunk ${processedChunks} at (${chunkCenter.x.toFixed(1)}, ${chunkCenter.z.toFixed(1)}) -> LOD ${lodLevel}`);
+      }
+    });
+
+    // Update mesh counts and check if we meet minimum requirement
+    let totalVisible = 0;
+    this.grassInstances.forEach((instance, lodIndex) => {
+      const clampedCount = Math.min(instance.currentInstances, instance.maxInstances);
+      instance.mesh.count = clampedCount;
+      instance.mesh.visible = clampedCount > 0;
+      instance.mesh.instanceMatrix.needsUpdate = true;
+      totalVisible += clampedCount;
+
+      console.log(`🌾 FORCE ALL CHUNKS: LOD ${lodIndex} -> ${clampedCount} instances`);
+    });
+
+    // If we don't have enough grass, boost all LOD levels
+    if (totalVisible < this.minimumTotalBlades) {
+      console.log(`🌾 FORCE ALL CHUNKS: Only ${totalVisible} blades, boosting to meet minimum ${this.minimumTotalBlades}...`);
+
+      // Boost all instances to ensure minimum
+      const boostFactor = Math.ceil(this.minimumTotalBlades / totalVisible);
+      totalVisible = 0;
+
+      this.grassInstances.forEach((instance, lodIndex) => {
+        const boostedCount = Math.min(instance.mesh.count * boostFactor, instance.maxInstances);
+        instance.mesh.count = boostedCount;
+        totalVisible += boostedCount;
+
+        console.log(`🌾 FORCE ALL CHUNKS: BOOSTED LOD ${lodIndex} -> ${boostedCount} instances (boost factor: ${boostFactor}x)`);
+      });
+    }
+
+    console.log(`🌾 FORCE ALL CHUNKS: Processed ${processedChunks}/${totalChunks} chunks, FINAL total: ${totalVisible} blades`);
+    console.log(`🌾 FORCE ALL CHUNKS: ${totalVisible >= this.minimumTotalBlades ? '✅ MINIMUM MET' : '❌ MINIMUM NOT MET'}`);
+
+    return totalVisible;
+  }
+
+  // Boost grass visibility in camera view direction
+  boostViewDirectionGrass(camera) {
+    if (!camera) return;
+
+    console.log(`🌾 VIEW BOOST: Boosting grass in camera view direction...`);
+
+    // Enable manual LOD mode to prevent automatic updates from interfering
+    this.manualLODMode = true;
+
+    const cameraPosition = camera.position;
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(cameraDirection);
+
+    console.log(`🌾 VIEW BOOST: Camera at (${cameraPosition.x.toFixed(1)}, ${cameraPosition.y.toFixed(1)}, ${cameraPosition.z.toFixed(1)})`);
+    console.log(`🌾 VIEW BOOST: Camera looking (${cameraDirection.x.toFixed(2)}, ${cameraDirection.y.toFixed(2)}, ${cameraDirection.z.toFixed(2)})`);
+
+    // Reset all instances first
+    this.grassInstances.forEach(instance => {
+      instance.currentInstances = 0;
+    });
+
+    let totalBoosted = 0;
+    let highDetailChunks = 0;
+
+    // Process chunks with view direction priority - ENSURE ALL CHUNKS GET GRASS
+    this.chunks.forEach(chunk => {
+      const chunkCenter = chunk.boundingBox.getCenter(new THREE.Vector3());
+      const chunkDirection = chunkCenter.clone().sub(cameraPosition).normalize();
+      const viewingAngle = cameraDirection.dot(chunkDirection);
+      const distance = cameraPosition.distanceTo(chunkCenter);
+
+      // Determine LOD based on view direction and distance
+      // IMPORTANT: Every chunk gets grass, just different amounts
+      let lodLevel = 4; // Start with lowest detail (but still visible)
+
+      if (viewingAngle > 0.7 && distance < 30) {
+        lodLevel = 0; // Highest detail for chunks directly ahead and close
+        highDetailChunks++;
+        console.log(`🌾 VIEW BOOST: HIGH DETAIL chunk at (${chunkCenter.x.toFixed(1)}, ${chunkCenter.z.toFixed(1)}) - ViewAngle: ${viewingAngle.toFixed(2)}, Distance: ${distance.toFixed(1)}`);
+      } else if (viewingAngle > 0.5 && distance < 50) {
+        lodLevel = 1; // High detail for chunks in view direction
+        highDetailChunks++;
+        console.log(`🌾 VIEW BOOST: MEDIUM-HIGH chunk at (${chunkCenter.x.toFixed(1)}, ${chunkCenter.z.toFixed(1)}) - ViewAngle: ${viewingAngle.toFixed(2)}, Distance: ${distance.toFixed(1)}`);
+      } else if (viewingAngle > 0.3 && distance < 80) {
+        lodLevel = 2; // Medium detail for chunks somewhat in view
+      } else if (viewingAngle > 0.1 || distance < 40) {
+        lodLevel = 3; // Low detail for peripheral or close chunks
+      }
+      // Note: lodLevel 4 (lowest detail) is used for all other chunks - they still get grass!
+
+      // Debug first few chunks
+      if (totalBoosted < 5) {
+        console.log(`🌾 VIEW BOOST: Chunk ${totalBoosted} at (${chunkCenter.x.toFixed(1)}, ${chunkCenter.z.toFixed(1)}) - ViewAngle: ${viewingAngle.toFixed(2)}, Distance: ${distance.toFixed(1)}, LOD: ${lodLevel}`);
+      }
+
+      // CRITICAL: Add instances for this chunk - EVERY chunk gets grass
+      this.addChunkInstances(chunk, lodLevel);
+      totalBoosted++;
+    });
+
+    // Update mesh counts
+    this.grassInstances.forEach((instance, lodIndex) => {
+      const clampedCount = Math.min(instance.currentInstances, instance.maxInstances);
+      instance.mesh.count = clampedCount;
+      instance.mesh.visible = clampedCount > 0;
+      instance.mesh.instanceMatrix.needsUpdate = true;
+
+      console.log(`🌾 VIEW BOOST: LOD ${lodIndex} -> ${clampedCount} instances`);
+    });
+
+    console.log(`🌾 VIEW BOOST: Processed ${totalBoosted} chunks with view direction priority`);
+    console.log(`🌾 VIEW BOOST: ${highDetailChunks} chunks got high detail (LOD 0-1)`);
+    console.log(`🌾 VIEW BOOST: Manual LOD mode enabled - automatic updates disabled`);
+  }
+
+  // Return to automatic LOD mode
+  enableAutomaticLOD() {
+    this.manualLODMode = false;
+    console.log(`🌾 AUTO LOD: Automatic LOD mode re-enabled`);
+
+    // Force immediate LOD update
+    if (window.camera) {
+      this.updateLOD(window.camera);
+    }
+  }
+
+  // Common regeneration method
+  regenerateGrass() {
+    this.isRegenerating = true; // Prevent LOD updates during regeneration
+    console.log(`🌾 GRASS REGEN: Starting regeneration...`);
+
+    // Store scene reference before clearing
+    const sceneRef = this.scene;
 
     // Clear existing grass instances
     const oldInstanceCount = this.grassInstances.size;
     this.grassInstances.forEach(instance => {
       if (instance.mesh) {
         // Only remove from scene if scene reference exists
-        if (this.scene) {
-          this.scene.remove(instance.mesh);
+        if (sceneRef) {
+          sceneRef.remove(instance.mesh);
+          console.log(`🌾 GRASS REGEN: Removed mesh from scene`);
         }
         // Dispose of geometry to free memory
         if (instance.mesh.geometry) {
           instance.mesh.geometry.dispose();
         }
+        // Dispose of material if needed
+        if (instance.mesh.material && instance.mesh.material.dispose) {
+          // Don't dispose shared materials, just the mesh reference
+        }
       }
     });
     this.grassInstances.clear();
-    console.log(`🌾 GRASS DENSITY: Cleared ${oldInstanceCount} old instances`);
+    console.log(`🌾 GRASS REGEN: Cleared ${oldInstanceCount} old instances`);
 
     // Clear visible chunks to force regeneration
     this.visibleChunks.clear();
 
     // Regenerate grass system (same as initialization)
-    console.log(`🌾 GRASS DENSITY: Regenerating chunks...`);
+    console.log(`🌾 GRASS REGEN: Regenerating chunks...`);
     this.generateGrassChunks();
-    console.log(`🌾 GRASS DENSITY: Generated ${this.chunks.size} chunks`);
+    console.log(`🌾 GRASS REGEN: Generated ${this.chunks.size} chunks`);
 
-    console.log(`🌾 GRASS DENSITY: Setting up instanced meshes...`);
+    console.log(`🌾 GRASS REGEN: Setting up instanced meshes...`);
     this.setupInstancedMeshes();
-    console.log(`🌾 GRASS DENSITY: Created ${this.grassInstances.size} new instances`);
+    console.log(`🌾 GRASS REGEN: Created ${this.grassInstances.size} new instances`);
 
     // Re-add to scene if scene reference exists
-    if (this.scene) {
-      console.log(`🌾 GRASS DENSITY: Adding to scene...`);
-      this.addToScene(this.scene);
-      console.log(`🌾 GRASS DENSITY: Added to scene successfully`);
+    if (sceneRef) {
+      console.log(`🌾 GRASS REGEN: Re-adding ${this.grassInstances.size} grass instances to scene...`);
+
+      let totalAdded = 0;
+      this.grassInstances.forEach((instance, lodIndex) => {
+        if (instance.mesh) {
+          sceneRef.add(instance.mesh);
+
+          // Force initial visibility
+          const initialCount = Math.min(500 * (1 - lodIndex * 0.15), instance.maxInstances);
+          instance.mesh.count = initialCount;
+          instance.mesh.visible = true;
+          instance.mesh.frustumCulled = false;
+          totalAdded++;
+
+          console.log(`🌾 GRASS REGEN: Re-added LOD ${lodIndex} with ${initialCount} instances`);
+        }
+      });
+
+      console.log(`🌾 GRASS REGEN: Successfully re-added ${totalAdded} grass meshes to scene`);
     } else {
-      console.warn(`🌾 GRASS DENSITY: No scene reference available`);
+      console.error(`🌾 GRASS REGEN: No scene reference available for re-adding grass!`);
     }
 
     this.isRegenerating = false; // Re-enable LOD updates
 
-    // Force an immediate LOD update to populate the instances
-    console.log(`🌾 GRASS DENSITY: Checking for camera - scene: ${!!this.scene}, camera: ${!!window.camera}`);
-
-    if (this.scene && window.camera) {
-      console.log(`🌾 GRASS DENSITY: Forcing initial LOD update...`);
-      // Reset LOD update timer to force immediate update
-      this.lastLODUpdate = 0.2; // Force update on next frame
+    // Force immediate LOD update with emergency fallback
+    if (sceneRef && window.camera) {
+      console.log(`🌾 GRASS REGEN: Forcing LOD update...`);
+      this.lastLODUpdate = 0.2;
       this.updateLOD(window.camera);
-      console.log(`🌾 GRASS DENSITY: LOD update complete - ${this.visibleChunks.size} visible chunks`);
-
-      // Debug: Check final mesh states
-      console.log(`🌾 GRASS DENSITY: Final mesh states:`);
-      this.grassInstances.forEach((instance, lodIndex) => {
-        const mesh = instance.mesh;
-        console.log(`🌾 GRASS DENSITY: LOD ${lodIndex} - count: ${mesh.count}, visible: ${mesh.visible}, inScene: ${this.scene.children.includes(mesh)}, frustumCulled: ${mesh.frustumCulled}`);
-        console.log(`🌾 GRASS DENSITY: LOD ${lodIndex} - position: (${mesh.position.x}, ${mesh.position.y}, ${mesh.position.z}), scale: (${mesh.scale.x}, ${mesh.scale.y}, ${mesh.scale.z})`);
-        console.log(`🌾 GRASS DENSITY: LOD ${lodIndex} - material visible: ${mesh.material.visible}, transparent: ${mesh.material.transparent}`);
-      });
-
-      // If still no visible chunks, force some visibility for debugging
-      if (this.visibleChunks.size === 0) {
-        console.warn(`🌾 GRASS DENSITY: No visible chunks after LOD update, forcing visibility...`);
-        this.grassInstances.forEach((instance, lodIndex) => {
-          if (instance.maxInstances > 0) {
-            instance.mesh.count = Math.min(100, instance.maxInstances);
-            instance.mesh.visible = true;
-            instance.mesh.frustumCulled = false; // Disable frustum culling for debugging
-            console.log(`🌾 GRASS DENSITY: Forced LOD ${lodIndex} visible with ${instance.mesh.count} instances`);
-          }
-        });
-      }
+      console.log(`🌾 GRASS REGEN: LOD update complete - ${this.visibleChunks.size} visible chunks`);
     } else {
-      // Fallback: Force visibility without LOD update
-      console.warn(`🌾 GRASS DENSITY: Camera not available, forcing visibility without LOD update...`);
-      this.grassInstances.forEach((instance, lodIndex) => {
-        if (instance.maxInstances > 0) {
-          instance.mesh.count = Math.min(200, instance.maxInstances);
+      console.warn(`🌾 GRASS REGEN: Cannot force LOD update - Scene: ${!!sceneRef}, Camera: ${!!window.camera}`);
+    }
+
+    // ALWAYS force some visibility to prevent disappearing grass
+    console.log(`🌾 GRASS REGEN: Final visibility check...`);
+    let totalVisible = 0;
+    this.grassInstances.forEach((instance, lodIndex) => {
+      if (instance.mesh) {
+        // Ensure minimum visibility
+        if (instance.mesh.count < 50) {
+          const forceCount = Math.min(200, instance.maxInstances);
+          instance.mesh.count = forceCount;
           instance.mesh.visible = true;
-          instance.mesh.frustumCulled = false; // Disable frustum culling
-          console.log(`🌾 GRASS DENSITY: Fallback - Forced LOD ${lodIndex} visible with ${instance.mesh.count} instances`);
+          instance.mesh.frustumCulled = false;
+          console.log(`🌾 GRASS REGEN: Forced LOD ${lodIndex} visible with ${forceCount} instances`);
         }
-      });
-    }
+        totalVisible += instance.mesh.count;
+        console.log(`🌾 GRASS REGEN: LOD ${lodIndex} final state - Count: ${instance.mesh.count}, Visible: ${instance.mesh.visible}, Max: ${instance.maxInstances}`);
+      }
+    });
 
-    // EMERGENCY: Force at least one LOD to be visible for debugging
-    console.log(`🌾 GRASS DENSITY: EMERGENCY - Forcing LOD 1 to be visible for debugging...`);
-    const emergencyInstance = this.grassInstances.get(1);
-    if (emergencyInstance) {
-      emergencyInstance.mesh.count = 100;
-      emergencyInstance.mesh.visible = true;
-      emergencyInstance.mesh.frustumCulled = false;
-      emergencyInstance.mesh.instanceMatrix.needsUpdate = true;
-      console.log(`🌾 GRASS DENSITY: EMERGENCY - LOD 1 forced visible with 100 instances`);
-    }
-
-    console.log(`🌾 GRASS DENSITY: Update complete - ${this.grassInstances.size} instances at ${newDensity}x density`);
+    console.log(`🌾 GRASS REGEN: Regeneration complete - Total visible instances: ${totalVisible}`);
   }
 
   // Get debug information about the grass system
@@ -938,7 +1246,9 @@ export class AdvancedGrassSystem {
       windStrength: this.windStrength,
       baseGrassHeight: this.baseGrassHeight,
       showWireframe: this.showWireframe,
-      densityMultiplier: this.densityMultiplier
+      densityMultiplier: this.densityMultiplier,
+      lodDensityMultipliers: this.lodDensityMultipliers.map((d, i) => `LOD${i}: ${d.toFixed(1)}x`).join(', '),
+      lodThresholds: this.lodThresholds.map((t, i) => `LOD${i}: ${t}px`).join(', ')
     };
 
     // Get material info

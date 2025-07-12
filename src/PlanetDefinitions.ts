@@ -462,8 +462,8 @@ export function createPlanetDefinitions(): PropertyDefinition[] {
     ...createBasicSubsystem(),
     ...createAtmosphereSubsystem(),
     ...createGeologySubsystem(),
+    ...createOrbitalSubsystem(), // Move orbital before climate
     ...createClimateSubsystem(),
-    ...createOrbitalSubsystem(),
     ...createHydrologySubsystem(),
     ...createBiosphereSubsystem(),
     ...createVisualSubsystem(),

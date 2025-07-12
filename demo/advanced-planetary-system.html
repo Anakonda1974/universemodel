@@ -1,0 +1,2467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Planetary System - Realistic Geological Processes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    .parameter-slider {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      appearance: none;
+      cursor: pointer;
+    }
+    .parameter-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #3b82f6;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .feature-panel {
+      @apply bg-gray-800 p-4 rounded-lg border border-gray-700;
+    }
+    .feature-toggle {
+      @apply px-3 py-1 text-xs rounded transition-colors cursor-pointer;
+    }
+    .feature-toggle.active {
+      @apply bg-blue-600 text-white;
+    }
+    .feature-toggle.inactive {
+      @apply bg-gray-600 text-gray-300;
+    }
+    .data-value {
+      @apply font-mono text-blue-400;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white">
+  <div class="min-h-screen p-4">
+    <!-- Header -->
+    <div class="max-w-7xl mx-auto mb-6">
+      <h1 class="text-4xl font-bold text-center mb-2">🌍 Advanced Planetary System</h1>
+      <p class="text-center text-gray-400">Realistic geological, atmospheric, and hydrological processes</p>
+    </div>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-4">
+      
+      <!-- Left Panel: Geological Controls -->
+      <div class="lg:col-span-1 space-y-4">
+        
+        <!-- Tectonic System -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">🌋 Tectonic System</h3>
+          
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-1">Plate Count</label>
+              <input type="range" id="plate-count" min="3" max="20" value="7" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>3</span>
+                <span id="plate-count-value" class="data-value">7</span>
+                <span>20</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Tectonic Activity</label>
+              <input type="range" id="tectonic-activity" min="0" max="2" step="0.1" value="1.0" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Stable</span>
+                <span id="tectonic-value" class="data-value">1.0</span>
+                <span>Violent</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Volcanic Activity</label>
+              <input type="range" id="volcanic-activity" min="0" max="2" step="0.1" value="0.8" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>None</span>
+                <span id="volcanic-value" class="data-value">0.8</span>
+                <span>Extreme</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Mountain Formation</label>
+              <input type="range" id="mountain-formation" min="0" max="2" step="0.1" value="1.2" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Flat</span>
+                <span id="mountain-value" class="data-value">1.2</span>
+                <span>Extreme</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mt-4">
+              <button id="toggle-plate-boundaries" class="feature-toggle active">Boundaries</button>
+              <button id="toggle-hotspots" class="feature-toggle active">Hotspots</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Climate System -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">🌡️ Climate System</h3>
+          
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-1">Global Temperature</label>
+              <input type="range" id="global-temp" min="150" max="400" value="288" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>150K</span>
+                <span id="temp-value" class="data-value">288K</span>
+                <span>400K</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Precipitation</label>
+              <input type="range" id="precipitation" min="0" max="2" step="0.1" value="1.0" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Arid</span>
+                <span id="precip-value" class="data-value">1.0</span>
+                <span>Wet</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Seasonal Variation</label>
+              <input type="range" id="seasonal-variation" min="0" max="50" value="20" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>None</span>
+                <span id="seasonal-value" class="data-value">20K</span>
+                <span>Extreme</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hydrological System -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">🌊 Hydrological</h3>
+          
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-1">Ocean Coverage</label>
+              <input type="range" id="ocean-coverage" min="0" max="1" step="0.01" value="0.71" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>0%</span>
+                <span id="ocean-value" class="data-value">71%</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Ice Cap Extent</label>
+              <input type="range" id="ice-extent" min="0" max="0.5" step="0.01" value="0.15" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>None</span>
+                <span id="ice-value" class="data-value">15%</span>
+                <span>50%</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mt-4">
+              <button id="toggle-ocean-currents" class="feature-toggle active">Currents</button>
+              <button id="toggle-glaciers" class="feature-toggle active">Glaciers</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Atmospheric System -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">🌫️ Atmosphere</h3>
+          
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium mb-1">Atmospheric Pressure</label>
+              <input type="range" id="atm-pressure" min="0" max="5" step="0.1" value="1.0" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>0 atm</span>
+                <span id="pressure-value" class="data-value">1.0</span>
+                <span>5 atm</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Cloud Coverage</label>
+              <input type="range" id="cloud-coverage" min="0" max="1" step="0.01" value="0.6" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Clear</span>
+                <span id="cloud-value" class="data-value">60%</span>
+                <span>Overcast</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mt-4">
+              <button id="toggle-scattering" class="feature-toggle active">Scattering</button>
+              <button id="toggle-aurora" class="feature-toggle inactive">Aurora</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Panel: 3D Visualization -->
+      <div class="lg:col-span-3">
+        <div class="feature-panel">
+          <div class="relative">
+            <canvas id="planet-canvas" class="w-full h-96 lg:h-[800px] border border-gray-600 rounded bg-black"></canvas>
+            
+            <!-- Advanced Controls Overlay -->
+            <div class="absolute top-2 left-2 bg-black bg-opacity-75 text-white p-2 rounded text-xs">
+              <div>🖱️ Drag: Rotate Planet</div>
+              <div>🔍 Wheel: Zoom (0.3x - 100x)</div>
+              <div>⌨️ Space: Reset View</div>
+              <div>🌍 Right Click: Analyze Point</div>
+              <div class="text-green-400">⭐ Advanced Geological Simulation</div>
+            </div>
+            
+            <!-- Real-time Analysis -->
+            <div class="absolute top-2 right-2 bg-black bg-opacity-75 text-white p-2 rounded text-xs">
+              <div id="analysis-info" class="space-y-1">
+                <div>Surface Analysis</div>
+                <div>Elevation: <span id="point-elevation" class="data-value">-</span>m</div>
+                <div>Temperature: <span id="point-temp" class="data-value">-</span>K</div>
+                <div>Biome: <span id="point-biome" class="data-value">-</span></div>
+                <div>Plate: <span id="point-plate" class="data-value">-</span></div>
+              </div>
+            </div>
+            
+            <!-- Time Controls -->
+            <div class="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
+              <div class="flex items-center space-x-2">
+                <button id="time-play" class="px-2 py-1 bg-blue-600 rounded text-xs">⏸️</button>
+                <div>Time: <span id="current-time" class="data-value">0</span> Myr</div>
+                <input type="range" id="time-speed" min="0" max="10" value="1" class="w-20">
+              </div>
+            </div>
+
+            <!-- Layer Controls -->
+            <div class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white p-2 rounded text-xs">
+              <div class="grid grid-cols-3 gap-1">
+                <button id="layer-surface" class="feature-toggle active">Surface</button>
+                <button id="layer-elevation" class="feature-toggle inactive">Elevation</button>
+                <button id="layer-temperature" class="feature-toggle inactive">Temperature</button>
+                <button id="layer-precipitation" class="feature-toggle inactive">Precipitation</button>
+                <button id="layer-biomes" class="feature-toggle active">Biomes</button>
+                <button id="layer-tectonics" class="feature-toggle inactive">Tectonics</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced Feature Controls -->
+          <div class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <div class="bg-gray-700 p-2 rounded text-center">
+              <div class="text-xs text-gray-400">Terrain Detail</div>
+              <input type="range" id="terrain-detail" min="4" max="7" value="5" class="w-full mt-1">
+              <div id="detail-level" class="text-xs data-value">Level 5</div>
+            </div>
+            <div class="bg-gray-700 p-2 rounded text-center">
+              <div class="text-xs text-gray-400">Erosion Rate</div>
+              <input type="range" id="erosion-rate" min="0" max="2" step="0.1" value="1.0" class="w-full mt-1">
+              <div id="erosion-level" class="text-xs data-value">1.0</div>
+            </div>
+            <div class="bg-gray-700 p-2 rounded text-center">
+              <div class="text-xs text-gray-400">Weather Intensity</div>
+              <input type="range" id="weather-intensity" min="0" max="2" step="0.1" value="1.0" class="w-full mt-1">
+              <div id="weather-level" class="text-xs data-value">1.0</div>
+            </div>
+            <div class="bg-gray-700 p-2 rounded text-center">
+              <div class="text-xs text-gray-400">Time Scale</div>
+              <input type="range" id="time-scale" min="0.1" max="10" step="0.1" value="1.0" class="w-full mt-1">
+              <div id="time-scale-value" class="text-xs data-value">1.0x</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Data and Analysis -->
+      <div class="lg:col-span-1 space-y-4">
+        
+        <!-- Planetary Statistics -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">📊 Planet Statistics</h3>
+          
+          <div id="planet-stats" class="space-y-2 text-sm">
+            <div>Radius: <span id="stat-radius" class="data-value">6,371</span> km</div>
+            <div>Mass: <span id="stat-mass" class="data-value">5.97×10²⁴</span> kg</div>
+            <div>Gravity: <span id="stat-gravity" class="data-value">9.81</span> m/s²</div>
+            <div>Day Length: <span id="stat-day" class="data-value">24.0</span> hours</div>
+            <div>Year Length: <span id="stat-year" class="data-value">365.25</span> days</div>
+            <div>Axial Tilt: <span id="stat-tilt" class="data-value">23.4</span>°</div>
+          </div>
+        </div>
+
+        <!-- Geological Analysis -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">🏔️ Geological Data</h3>
+          
+          <div class="space-y-2 text-sm">
+            <div>Active Plates: <span id="geo-plates" class="data-value">7</span></div>
+            <div>Mountain Ranges: <span id="geo-mountains" class="data-value">23</span></div>
+            <div>Volcanic Regions: <span id="geo-volcanoes" class="data-value">12</span></div>
+            <div>Rift Valleys: <span id="geo-rifts" class="data-value">8</span></div>
+            <div>Max Elevation: <span id="geo-max-elev" class="data-value">8,848</span> m</div>
+            <div>Min Elevation: <span id="geo-min-elev" class="data-value">-11,034</span> m</div>
+          </div>
+        </div>
+
+        <!-- Climate Analysis -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">🌡️ Climate Data</h3>
+          
+          <div class="space-y-2 text-sm">
+            <div>Avg Temperature: <span id="climate-avg-temp" class="data-value">288</span> K</div>
+            <div>Temperature Range: <span id="climate-temp-range" class="data-value">±40</span> K</div>
+            <div>Precipitation: <span id="climate-precip" class="data-value">1,000</span> mm/yr</div>
+            <div>Humidity: <span id="climate-humidity" class="data-value">65</span>%</div>
+            <div>Wind Speed: <span id="climate-wind" class="data-value">15</span> m/s</div>
+          </div>
+        </div>
+
+        <!-- Biome Distribution -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">🌿 Biome Distribution</h3>
+          
+          <div id="biome-distribution" class="space-y-1 text-sm">
+            <div class="flex justify-between">
+              <span>Ocean</span>
+              <span class="data-value">71%</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Forest</span>
+              <span class="data-value">15%</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Desert</span>
+              <span class="data-value">8%</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Tundra</span>
+              <span class="data-value">4%</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Ice</span>
+              <span class="data-value">2%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Monitor -->
+        <div class="feature-panel">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">⚡ Performance</h3>
+          
+          <div class="space-y-2 text-sm">
+            <div>FPS: <span id="perf-fps" class="data-value">60</span></div>
+            <div>Vertices: <span id="perf-vertices" class="data-value">0</span></div>
+            <div>Triangles: <span id="perf-triangles" class="data-value">0</span></div>
+            <div>Draw Calls: <span id="perf-draws" class="data-value">0</span></div>
+            <div>Memory: <span id="perf-memory" class="data-value">0</span> MB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Advanced Noise Library for Realistic Geological Processes
+    class AdvancedNoise {
+      static hash(x, y, z, seed = 0) {
+        let h = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + seed * 43.758) * 43758.5453;
+        return h - Math.floor(h);
+      }
+
+      static perlin3D(x, y, z, seed = 0) {
+        const ix = Math.floor(x);
+        const iy = Math.floor(y);
+        const iz = Math.floor(z);
+        const fx = x - ix;
+        const fy = y - iy;
+        const fz = z - iz;
+
+        const u = fx * fx * (3 - 2 * fx);
+        const v = fy * fy * (3 - 2 * fy);
+        const w = fz * fz * (3 - 2 * fz);
+
+        const c000 = this.hash(ix, iy, iz, seed);
+        const c100 = this.hash(ix + 1, iy, iz, seed);
+        const c010 = this.hash(ix, iy + 1, iz, seed);
+        const c110 = this.hash(ix + 1, iy + 1, iz, seed);
+        const c001 = this.hash(ix, iy, iz + 1, seed);
+        const c101 = this.hash(ix + 1, iy, iz + 1, seed);
+        const c011 = this.hash(ix, iy + 1, iz + 1, seed);
+        const c111 = this.hash(ix + 1, iy + 1, iz + 1, seed);
+
+        const x1 = c000 * (1 - u) + c100 * u;
+        const x2 = c010 * (1 - u) + c110 * u;
+        const x3 = c001 * (1 - u) + c101 * u;
+        const x4 = c011 * (1 - u) + c111 * u;
+
+        const y1 = x1 * (1 - v) + x2 * v;
+        const y2 = x3 * (1 - v) + x4 * v;
+
+        return y1 * (1 - w) + y2 * w;
+      }
+
+      static fractal(x, y, z, octaves, persistence = 0.5, lacunarity = 2.0, seed = 0) {
+        let value = 0;
+        let amplitude = 1;
+        let frequency = 1;
+        let maxValue = 0;
+
+        for (let i = 0; i < octaves; i++) {
+          value += this.perlin3D(x * frequency, y * frequency, z * frequency, seed + i) * amplitude;
+          maxValue += amplitude;
+          amplitude *= persistence;
+          frequency *= lacunarity;
+        }
+
+        return value / maxValue;
+      }
+
+      static ridged(x, y, z, octaves, seed = 0) {
+        let value = 0;
+        let amplitude = 1;
+        let frequency = 1;
+
+        for (let i = 0; i < octaves; i++) {
+          const n = Math.abs(this.perlin3D(x * frequency, y * frequency, z * frequency, seed + i));
+          value += (1 - n) * amplitude;
+          amplitude *= 0.5;
+          frequency *= 2;
+        }
+
+        return value;
+      }
+
+      static worley(x, y, z, seed = 0) {
+        const ix = Math.floor(x);
+        const iy = Math.floor(y);
+        const iz = Math.floor(z);
+
+        let minDist = Infinity;
+        let secondMinDist = Infinity;
+
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dz = -1; dz <= 1; dz++) {
+              const cellX = ix + dx;
+              const cellY = iy + dy;
+              const cellZ = iz + dz;
+
+              const pointX = cellX + this.hash(cellX, cellY, cellZ, seed);
+              const pointY = cellY + this.hash(cellX, cellY, cellZ, seed + 1);
+              const pointZ = cellZ + this.hash(cellX, cellY, cellZ, seed + 2);
+
+              const dist = Math.sqrt(
+                (x - pointX) * (x - pointX) +
+                (y - pointY) * (y - pointY) +
+                (z - pointZ) * (z - pointZ)
+              );
+
+              if (dist < minDist) {
+                secondMinDist = minDist;
+                minDist = dist;
+              } else if (dist < secondMinDist) {
+                secondMinDist = dist;
+              }
+            }
+          }
+        }
+
+        return { f1: minDist, f2: secondMinDist, diff: secondMinDist - minDist };
+      }
+
+      static turbulence(x, y, z, octaves, seed = 0) {
+        let value = 0;
+        let amplitude = 1;
+        let frequency = 1;
+
+        for (let i = 0; i < octaves; i++) {
+          value += Math.abs(this.perlin3D(x * frequency, y * frequency, z * frequency, seed + i)) * amplitude;
+          amplitude *= 0.5;
+          frequency *= 2;
+        }
+
+        return value;
+      }
+    }
+
+    // Advanced Tectonic Plate System
+    class TectonicSystem {
+      constructor(plateCount, activity, seed) {
+        this.plateCount = plateCount;
+        this.activity = activity;
+        this.seed = seed;
+        this.plates = [];
+        this.boundaries = [];
+        this.hotspots = [];
+
+        this.generatePlates();
+        this.calculateBoundaries();
+        this.generateHotspots();
+      }
+
+      generatePlates() {
+        this.plates = [];
+
+        // Generate plate centers using Poisson disk sampling for realistic distribution
+        for (let i = 0; i < this.plateCount; i++) {
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+
+          const center = {
+            x: Math.sin(phi) * Math.cos(theta),
+            y: Math.cos(phi),
+            z: Math.sin(phi) * Math.sin(theta)
+          };
+
+          // Determine plate type based on position and noise
+          const plateTypeNoise = AdvancedNoise.perlin3D(center.x * 3, center.y * 3, center.z * 3, this.seed + 100);
+          const plateType = plateTypeNoise > 0.2 ? 'continental' : 'oceanic';
+
+          // Calculate plate motion vector
+          const motionNoise1 = AdvancedNoise.perlin3D(center.x * 2, center.y * 2, center.z * 2, this.seed + 200);
+          const motionNoise2 = AdvancedNoise.perlin3D(center.x * 2, center.y * 2, center.z * 2, this.seed + 300);
+
+          const motion = {
+            x: motionNoise1 * this.activity * 0.1,
+            y: motionNoise2 * this.activity * 0.1,
+            z: (motionNoise1 + motionNoise2) * this.activity * 0.05
+          };
+
+          this.plates.push({
+            id: i,
+            center,
+            type: plateType,
+            motion,
+            age: Math.random() * 200 + 50, // 50-250 million years
+            density: plateType === 'oceanic' ? 3.0 : 2.7,
+            thickness: plateType === 'oceanic' ? 7 : 35 // km
+          });
+        }
+      }
+
+      calculateBoundaries() {
+        this.boundaries = [];
+
+        // Calculate Voronoi boundaries between plates
+        for (let i = 0; i < this.plates.length; i++) {
+          for (let j = i + 1; j < this.plates.length; j++) {
+            const plate1 = this.plates[i];
+            const plate2 = this.plates[j];
+
+            // Calculate boundary type based on plate motion
+            const relativeMotion = {
+              x: plate1.motion.x - plate2.motion.x,
+              y: plate1.motion.y - plate2.motion.y,
+              z: plate1.motion.z - plate2.motion.z
+            };
+
+            const motionMagnitude = Math.sqrt(
+              relativeMotion.x * relativeMotion.x +
+              relativeMotion.y * relativeMotion.y +
+              relativeMotion.z * relativeMotion.z
+            );
+
+            let boundaryType;
+            if (motionMagnitude < 0.02) {
+              boundaryType = 'transform';
+            } else {
+              // Check if plates are moving toward or away from each other
+              const centerDiff = {
+                x: plate2.center.x - plate1.center.x,
+                y: plate2.center.y - plate1.center.y,
+                z: plate2.center.z - plate1.center.z
+              };
+
+              const dotProduct = relativeMotion.x * centerDiff.x +
+                               relativeMotion.y * centerDiff.y +
+                               relativeMotion.z * centerDiff.z;
+
+              if (dotProduct > 0) {
+                boundaryType = 'divergent';
+              } else {
+                boundaryType = plate1.density > plate2.density ? 'convergent_subduction' : 'convergent_collision';
+              }
+            }
+
+            this.boundaries.push({
+              plate1: i,
+              plate2: j,
+              type: boundaryType,
+              activity: motionMagnitude * this.activity,
+              age: Math.min(plate1.age, plate2.age)
+            });
+          }
+        }
+      }
+
+      generateHotspots() {
+        this.hotspots = [];
+        const hotspotCount = Math.floor(this.plateCount * 0.3) + 2;
+
+        for (let i = 0; i < hotspotCount; i++) {
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+
+          const position = {
+            x: Math.sin(phi) * Math.cos(theta),
+            y: Math.cos(phi),
+            z: Math.sin(phi) * Math.sin(theta)
+          };
+
+          this.hotspots.push({
+            position,
+            intensity: 0.5 + Math.random() * 1.5,
+            age: Math.random() * 100,
+            radius: 0.1 + Math.random() * 0.2
+          });
+        }
+      }
+
+      getPlateAtPosition(position) {
+        let closestPlate = 0;
+        let minDistance = Infinity;
+
+        for (let i = 0; i < this.plates.length; i++) {
+          const plate = this.plates[i];
+          const distance = Math.sqrt(
+            (position.x - plate.center.x) * (position.x - plate.center.x) +
+            (position.y - plate.center.y) * (position.y - plate.center.y) +
+            (position.z - plate.center.z) * (position.z - plate.center.z)
+          );
+
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestPlate = i;
+          }
+        }
+
+        return closestPlate;
+      }
+
+      getBoundaryInfluence(position) {
+        let influence = 0;
+        let boundaryType = 'none';
+
+        for (const boundary of this.boundaries) {
+          const plate1 = this.plates[boundary.plate1];
+          const plate2 = this.plates[boundary.plate2];
+
+          // Calculate distance to boundary line
+          const boundaryDistance = this.distanceToLine(position, plate1.center, plate2.center);
+
+          if (boundaryDistance < 0.3) {
+            const boundaryInfluence = (0.3 - boundaryDistance) / 0.3 * boundary.activity;
+            if (boundaryInfluence > influence) {
+              influence = boundaryInfluence;
+              boundaryType = boundary.type;
+            }
+          }
+        }
+
+        return { influence, type: boundaryType };
+      }
+
+      distanceToLine(point, lineStart, lineEnd) {
+        const A = point.x - lineStart.x;
+        const B = point.y - lineStart.y;
+        const C = point.z - lineStart.z;
+
+        const D = lineEnd.x - lineStart.x;
+        const E = lineEnd.y - lineStart.y;
+        const F = lineEnd.z - lineStart.z;
+
+        const dot = A * D + B * E + C * F;
+        const lenSq = D * D + E * E + F * F;
+
+        if (lenSq === 0) return Math.sqrt(A * A + B * B + C * C);
+
+        const param = dot / lenSq;
+
+        let xx, yy, zz;
+
+        if (param < 0) {
+          xx = lineStart.x;
+          yy = lineStart.y;
+          zz = lineStart.z;
+        } else if (param > 1) {
+          xx = lineEnd.x;
+          yy = lineEnd.y;
+          zz = lineEnd.z;
+        } else {
+          xx = lineStart.x + param * D;
+          yy = lineStart.y + param * E;
+          zz = lineStart.z + param * F;
+        }
+
+        const dx = point.x - xx;
+        const dy = point.y - yy;
+        const dz = point.z - zz;
+
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+      }
+    }
+
+    // Advanced Climate System
+    class ClimateSystem {
+      constructor(globalTemp, precipitation, seasonalVariation, tectonicSystem, seed) {
+        this.globalTemp = globalTemp;
+        this.precipitation = precipitation;
+        this.seasonalVariation = seasonalVariation;
+        this.tectonicSystem = tectonicSystem;
+        this.seed = seed;
+
+        this.temperatureMap = new Map();
+        this.precipitationMap = new Map();
+        this.windPatterns = [];
+
+        this.generateClimatePatterns();
+      }
+
+      generateClimatePatterns() {
+        // Generate global wind patterns based on planetary rotation and temperature gradients
+        this.windPatterns = [
+          { latitude: 0, direction: 'east', strength: 1.0 }, // Trade winds
+          { latitude: 0.3, direction: 'west', strength: 0.8 }, // Westerlies
+          { latitude: 0.6, direction: 'east', strength: 0.6 }, // Polar easterlies
+          { latitude: -0.3, direction: 'west', strength: 0.8 },
+          { latitude: -0.6, direction: 'east', strength: 0.6 }
+        ];
+      }
+
+      getTemperatureAtPosition(position, elevation) {
+        const latitude = Math.asin(position.y);
+        const longitude = Math.atan2(position.z, position.x);
+
+        // Base temperature from latitude (solar heating)
+        const latitudeEffect = Math.cos(latitude) * 0.8 + 0.2;
+        let temperature = this.globalTemp * latitudeEffect;
+
+        // Elevation effect (lapse rate: ~6.5K per km)
+        const elevationEffect = elevation * 6500; // Convert to meters
+        temperature -= elevationEffect * 0.0065;
+
+        // Seasonal variation
+        const seasonalNoise = AdvancedNoise.perlin3D(
+          position.x * 0.5, position.y * 0.5, position.z * 0.5, this.seed + 400
+        );
+        temperature += seasonalNoise * this.seasonalVariation;
+
+        // Ocean vs land temperature moderation
+        const oceanDistance = this.getOceanDistance(position);
+        const maritimeEffect = Math.exp(-oceanDistance * 5) * 10; // Ocean moderates temperature
+        temperature += (latitude > 0 ? -maritimeEffect : maritimeEffect) * 0.5;
+
+        // Tectonic heating (volcanic regions)
+        const plate = this.tectonicSystem.getPlateAtPosition(position);
+        const boundary = this.tectonicSystem.getBoundaryInfluence(position);
+
+        if (boundary.type === 'convergent_subduction' || boundary.type === 'divergent') {
+          temperature += boundary.influence * 20; // Volcanic heating
+        }
+
+        // Add local temperature variation
+        const localNoise = AdvancedNoise.fractal(
+          position.x * 8, position.y * 8, position.z * 8, 4, 0.5, 2.0, this.seed + 500
+        );
+        temperature += localNoise * 15;
+
+        return Math.max(150, Math.min(400, temperature)); // Clamp to reasonable range
+      }
+
+      getPrecipitationAtPosition(position, temperature, elevation) {
+        const latitude = Math.asin(position.y);
+
+        // Base precipitation from global patterns
+        let precipitation = this.precipitation;
+
+        // Latitude effect (ITCZ, subtropical highs, etc.)
+        const latitudeEffect = Math.abs(latitude);
+        if (latitudeEffect < 0.2) {
+          precipitation *= 2.0; // Tropical convergence zone
+        } else if (latitudeEffect > 0.3 && latitudeEffect < 0.5) {
+          precipitation *= 0.3; // Subtropical high pressure
+        } else if (latitudeEffect > 0.5) {
+          precipitation *= 1.5; // Polar front
+        }
+
+        // Elevation effect (orographic precipitation)
+        const elevationEffect = Math.max(0, elevation) * 2000; // mm/km
+        precipitation += elevationEffect;
+
+        // Temperature effect (warm air holds more moisture)
+        const temperatureEffect = Math.max(0, (temperature - 273) / 30);
+        precipitation *= (0.5 + temperatureEffect);
+
+        // Ocean distance effect
+        const oceanDistance = this.getOceanDistance(position);
+        const continentalEffect = Math.exp(-oceanDistance * 3);
+        precipitation *= continentalEffect;
+
+        // Wind shadow effects
+        const windShadow = this.calculateWindShadow(position, elevation);
+        precipitation *= windShadow;
+
+        // Add noise for local variation
+        const precipNoise = AdvancedNoise.fractal(
+          position.x * 6, position.y * 6, position.z * 6, 3, 0.6, 2.0, this.seed + 600
+        );
+        precipitation *= (0.7 + precipNoise * 0.6);
+
+        return Math.max(0, precipitation);
+      }
+
+      getOceanDistance(position) {
+        // Simplified ocean distance calculation
+        // In a real implementation, this would use the actual ocean/land map
+        const oceanNoise = AdvancedNoise.fractal(
+          position.x * 2, position.y * 2, position.z * 2, 4, 0.5, 2.0, this.seed + 700
+        );
+        return Math.max(0, oceanNoise + 0.3); // Approximate distance to ocean
+      }
+
+      calculateWindShadow(position, elevation) {
+        // Simplified wind shadow calculation
+        const latitude = Math.asin(position.y);
+        const longitude = Math.atan2(position.z, position.x);
+
+        // Find dominant wind direction for this latitude
+        let windDirection = 'east';
+        for (const wind of this.windPatterns) {
+          if (Math.abs(latitude - wind.latitude) < 0.2) {
+            windDirection = wind.direction;
+            break;
+          }
+        }
+
+        // Calculate if position is in wind shadow
+        const shadowNoise = AdvancedNoise.perlin3D(
+          position.x * 4, position.y * 4, position.z * 4, this.seed + 800
+        );
+
+        const shadowEffect = windDirection === 'west' ?
+          Math.max(0.3, 1 - elevation * shadowNoise) :
+          Math.max(0.3, 1 - elevation * shadowNoise * 0.5);
+
+        return shadowEffect;
+      }
+    }
+
+    // Advanced Biome System
+    class BiomeSystem {
+      constructor(climateSystem, tectonicSystem, seed) {
+        this.climateSystem = climateSystem;
+        this.tectonicSystem = tectonicSystem;
+        this.seed = seed;
+
+        this.biomeTypes = {
+          'deep_ocean': { color: [0.05, 0.1, 0.3], elevation: [-1, -0.2], temp: [0, 400], precip: [0, 5000] },
+          'shallow_ocean': { color: [0.1, 0.3, 0.7], elevation: [-0.2, -0.01], temp: [0, 400], precip: [0, 5000] },
+          'coastal': { color: [0.8, 0.7, 0.5], elevation: [-0.01, 0.02], temp: [250, 350], precip: [200, 2000] },
+          'tropical_rainforest': { color: [0.1, 0.4, 0.1], elevation: [0, 0.3], temp: [295, 310], precip: [1500, 4000] },
+          'temperate_forest': { color: [0.2, 0.6, 0.2], elevation: [0, 0.5], temp: [275, 295], precip: [600, 1500] },
+          'boreal_forest': { color: [0.15, 0.4, 0.15], elevation: [0, 0.4], temp: [250, 275], precip: [400, 800] },
+          'grassland': { color: [0.4, 0.6, 0.2], elevation: [0, 0.2], temp: [275, 305], precip: [300, 800] },
+          'savanna': { color: [0.6, 0.5, 0.2], elevation: [0, 0.3], temp: [290, 315], precip: [600, 1200] },
+          'desert': { color: [0.8, 0.6, 0.3], elevation: [0, 0.4], temp: [285, 330], precip: [0, 300] },
+          'hot_desert': { color: [0.9, 0.5, 0.2], elevation: [0, 0.3], temp: [310, 350], precip: [0, 150] },
+          'cold_desert': { color: [0.7, 0.6, 0.5], elevation: [0, 0.5], temp: [250, 285], precip: [0, 250] },
+          'tundra': { color: [0.5, 0.5, 0.4], elevation: [0, 0.3], temp: [230, 275], precip: [150, 400] },
+          'alpine': { color: [0.6, 0.5, 0.4], elevation: [0.3, 1.0], temp: [250, 285], precip: [400, 1200] },
+          'glacier': { color: [0.9, 0.95, 1.0], elevation: [0, 1.0], temp: [200, 260], precip: [200, 800] },
+          'volcanic': { color: [0.4, 0.2, 0.1], elevation: [0, 1.0], temp: [280, 400], precip: [0, 2000] },
+          'wetland': { color: [0.3, 0.4, 0.2], elevation: [-0.05, 0.05], temp: [275, 305], precip: [800, 2000] }
+        };
+      }
+
+      getBiomeAtPosition(position, elevation, temperature, precipitation) {
+        // Determine base biome from climate conditions
+        let bestBiome = 'desert';
+        let bestScore = -1;
+
+        // Check if underwater
+        if (elevation < -0.01) {
+          return elevation < -0.2 ? 'deep_ocean' : 'shallow_ocean';
+        }
+
+        // Check for special geological biomes
+        const boundary = this.tectonicSystem.getBoundaryInfluence(position);
+        if (boundary.influence > 0.5 && boundary.type.includes('convergent')) {
+          // Check for volcanic activity
+          const volcanicNoise = AdvancedNoise.perlin3D(
+            position.x * 10, position.y * 10, position.z * 10, this.seed + 900
+          );
+          if (volcanicNoise > 0.3) {
+            return 'volcanic';
+          }
+        }
+
+        // Score each biome based on conditions
+        for (const [biomeName, biome] of Object.entries(this.biomeTypes)) {
+          if (biomeName.includes('ocean')) continue; // Already handled
+
+          let score = 1.0;
+
+          // Elevation suitability
+          if (elevation < biome.elevation[0] || elevation > biome.elevation[1]) {
+            score *= 0.1;
+          }
+
+          // Temperature suitability
+          const tempRange = biome.temp[1] - biome.temp[0];
+          const tempScore = 1 - Math.abs(temperature - (biome.temp[0] + tempRange / 2)) / (tempRange / 2);
+          score *= Math.max(0.1, tempScore);
+
+          // Precipitation suitability
+          const precipRange = biome.precip[1] - biome.precip[0];
+          const precipScore = 1 - Math.abs(precipitation - (biome.precip[0] + precipRange / 2)) / (precipRange / 2);
+          score *= Math.max(0.1, precipScore);
+
+          // Special conditions
+          if (biomeName === 'coastal' && elevation > 0.02) score *= 0.3;
+          if (biomeName === 'alpine' && elevation < 0.3) score *= 0.2;
+          if (biomeName === 'glacier' && temperature > 260) score *= 0.1;
+          if (biomeName === 'wetland') {
+            const wetlandNoise = AdvancedNoise.perlin3D(
+              position.x * 15, position.y * 15, position.z * 15, this.seed + 1000
+            );
+            if (wetlandNoise < 0.2) score *= 0.1;
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestBiome = biomeName;
+          }
+        }
+
+        return bestBiome;
+      }
+
+      getBiomeColor(biomeName) {
+        const biome = this.biomeTypes[biomeName];
+        return biome ? biome.color : [0.5, 0.5, 0.5];
+      }
+
+      getBiomeTransition(position, elevation, temperature, precipitation) {
+        // Calculate smooth transitions between biomes
+        const primaryBiome = this.getBiomeAtPosition(position, elevation, temperature, precipitation);
+
+        // Sample nearby positions for transition
+        const samples = [
+          { x: position.x + 0.01, y: position.y, z: position.z },
+          { x: position.x - 0.01, y: position.y, z: position.z },
+          { x: position.x, y: position.y + 0.01, z: position.z },
+          { x: position.x, y: position.y - 0.01, z: position.z }
+        ];
+
+        const nearbyBiomes = new Map();
+        nearbyBiomes.set(primaryBiome, 1.0);
+
+        for (const sample of samples) {
+          const sampleNormal = this.normalizeVector(sample);
+          const sampleElevation = elevation; // Simplified
+          const sampleTemp = this.climateSystem.getTemperatureAtPosition(sampleNormal, sampleElevation);
+          const samplePrecip = this.climateSystem.getPrecipitationAtPosition(sampleNormal, sampleTemp, sampleElevation);
+          const sampleBiome = this.getBiomeAtPosition(sampleNormal, sampleElevation, sampleTemp, samplePrecip);
+
+          if (sampleBiome !== primaryBiome) {
+            nearbyBiomes.set(sampleBiome, (nearbyBiomes.get(sampleBiome) || 0) + 0.2);
+          }
+        }
+
+        return nearbyBiomes;
+      }
+
+      normalizeVector(vector) {
+        const length = Math.sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+        return {
+          x: vector.x / length,
+          y: vector.y / length,
+          z: vector.z / length
+        };
+      }
+    }
+
+    // Advanced Atmospheric System with Rayleigh Scattering
+    class AtmosphericSystem {
+      constructor(pressure, composition, planetRadius) {
+        this.pressure = pressure;
+        this.composition = composition || { N2: 0.78, O2: 0.21, Ar: 0.01 };
+        this.planetRadius = planetRadius;
+        this.scaleHeight = 8.5; // km
+        this.rayleighCoeff = 5.8e-6; // Rayleigh scattering coefficient
+
+        this.layers = this.generateAtmosphericLayers();
+      }
+
+      generateAtmosphericLayers() {
+        return [
+          { name: 'troposphere', height: 12, temperature: 288, pressure: 1.0, density: 1.0 },
+          { name: 'stratosphere', height: 50, temperature: 270, pressure: 0.001, density: 0.001 },
+          { name: 'mesosphere', height: 85, temperature: 180, pressure: 0.00001, density: 0.00001 },
+          { name: 'thermosphere', height: 600, temperature: 1500, pressure: 0.0000001, density: 0.0000001 }
+        ];
+      }
+
+      calculateRayleighScattering(wavelength, altitude, sunAngle) {
+        // Rayleigh scattering calculation for realistic atmospheric effects
+        const lambda4 = Math.pow(wavelength * 1e-9, 4);
+        const density = Math.exp(-altitude / this.scaleHeight);
+        const scatteringCoeff = this.rayleighCoeff / lambda4 * density;
+
+        const opticalDepth = scatteringCoeff * this.scaleHeight;
+        const scattering = 1 - Math.exp(-opticalDepth / Math.cos(sunAngle));
+
+        return scattering;
+      }
+
+      getAtmosphericColor(altitude, sunAngle, viewAngle) {
+        // Calculate atmospheric color based on scattering
+        const redScattering = this.calculateRayleighScattering(650, altitude, sunAngle);
+        const greenScattering = this.calculateRayleighScattering(550, altitude, sunAngle);
+        const blueScattering = this.calculateRayleighScattering(450, altitude, sunAngle);
+
+        // Mie scattering for haze and pollution
+        const mieScattering = Math.exp(-altitude / 2) * 0.1;
+
+        const red = Math.min(1, redScattering + mieScattering);
+        const green = Math.min(1, greenScattering + mieScattering);
+        const blue = Math.min(1, blueScattering + mieScattering);
+
+        return { r: red, g: green, b: blue };
+      }
+
+      calculateCloudFormation(temperature, humidity, pressure, elevation) {
+        // Advanced cloud formation based on atmospheric physics
+        const dewPoint = temperature - ((100 - humidity) / 5);
+        const condensationLevel = (temperature - dewPoint) * 125; // meters
+
+        let cloudProbability = 0;
+
+        // Orographic lifting
+        if (elevation > condensationLevel / 1000) {
+          cloudProbability += 0.6;
+        }
+
+        // Convective lifting (thermal updrafts)
+        if (temperature > 295 && humidity > 60) {
+          cloudProbability += 0.4;
+        }
+
+        // Frontal lifting (simplified)
+        const frontalNoise = AdvancedNoise.fractal(
+          elevation * 10, temperature * 0.1, humidity * 0.1, 3, 0.5, 2.0, 12345
+        );
+        cloudProbability += frontalNoise * 0.3;
+
+        // Pressure effects
+        if (pressure < 0.8) {
+          cloudProbability += 0.2;
+        }
+
+        return Math.max(0, Math.min(1, cloudProbability));
+      }
+
+      generateWeatherSystems(climateSystem, time) {
+        const weatherSystems = [];
+
+        // Generate cyclones and anticyclones
+        for (let i = 0; i < 8; i++) {
+          const theta = (i / 8) * Math.PI * 2;
+          const phi = Math.PI * 0.3 + (Math.random() - 0.5) * Math.PI * 0.4;
+
+          const center = {
+            x: Math.sin(phi) * Math.cos(theta),
+            y: Math.cos(phi),
+            z: Math.sin(phi) * Math.sin(theta)
+          };
+
+          const systemType = Math.random() > 0.5 ? 'cyclone' : 'anticyclone';
+          const intensity = 0.5 + Math.random() * 1.5;
+          const radius = 0.2 + Math.random() * 0.3;
+
+          weatherSystems.push({
+            type: systemType,
+            center,
+            intensity,
+            radius,
+            rotation: systemType === 'cyclone' ? -1 : 1,
+            age: Math.random() * 10,
+            movement: {
+              x: (Math.random() - 0.5) * 0.01,
+              y: (Math.random() - 0.5) * 0.005,
+              z: (Math.random() - 0.5) * 0.01
+            }
+          });
+        }
+
+        return weatherSystems;
+      }
+    }
+
+    // Advanced Hydrological System
+    class HydrologicalSystem {
+      constructor(oceanCoverage, iceExtent, globalTemp, precipitation) {
+        this.oceanCoverage = oceanCoverage;
+        this.iceExtent = iceExtent;
+        this.globalTemp = globalTemp;
+        this.precipitation = precipitation;
+
+        this.oceanCurrents = [];
+        this.glaciers = [];
+        this.rivers = [];
+
+        this.generateOceanCurrents();
+        this.generateGlaciers();
+        this.generateRiverSystems();
+      }
+
+      generateOceanCurrents() {
+        // Generate realistic ocean current patterns
+        this.oceanCurrents = [
+          // Equatorial currents
+          { latitude: 0, direction: 'west', strength: 1.0, depth: 'surface' },
+          { latitude: 0.1, direction: 'east', strength: 0.8, depth: 'subsurface' },
+
+          // Subtropical gyres
+          { latitude: 0.3, direction: 'clockwise', strength: 0.9, depth: 'surface' },
+          { latitude: -0.3, direction: 'counterclockwise', strength: 0.9, depth: 'surface' },
+
+          // Polar currents
+          { latitude: 0.7, direction: 'east', strength: 0.6, depth: 'surface' },
+          { latitude: -0.7, direction: 'west', strength: 0.6, depth: 'surface' },
+
+          // Thermohaline circulation
+          { latitude: 0.8, direction: 'south', strength: 0.4, depth: 'deep' },
+          { latitude: -0.8, direction: 'north', strength: 0.4, depth: 'deep' }
+        ];
+      }
+
+      generateGlaciers() {
+        this.glaciers = [];
+
+        // Generate glaciers based on temperature and elevation
+        for (let i = 0; i < 20; i++) {
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+
+          const position = {
+            x: Math.sin(phi) * Math.cos(theta),
+            y: Math.cos(phi),
+            z: Math.sin(phi) * Math.sin(theta)
+          };
+
+          const latitude = Math.asin(position.y);
+
+          // Glaciers more likely at high latitudes and elevations
+          if (Math.abs(latitude) > 0.6 || Math.random() < 0.1) {
+            const size = 0.05 + Math.random() * 0.15;
+            const thickness = 50 + Math.random() * 200; // meters
+            const age = Math.random() * 100000; // years
+
+            this.glaciers.push({
+              position,
+              size,
+              thickness,
+              age,
+              flowDirection: this.calculateGlacierFlow(position),
+              meltRate: this.calculateMeltRate(position, latitude)
+            });
+          }
+        }
+      }
+
+      calculateGlacierFlow(position) {
+        // Simplified glacier flow calculation based on topography
+        const flowNoise = AdvancedNoise.fractal(
+          position.x * 5, position.y * 5, position.z * 5, 3, 0.5, 2.0, 54321
+        );
+
+        return {
+          x: flowNoise * 0.1,
+          y: -Math.abs(flowNoise) * 0.05, // Generally flows downward
+          z: (flowNoise - 0.5) * 0.1
+        };
+      }
+
+      calculateMeltRate(position, latitude) {
+        const baseTemp = this.globalTemp;
+        const latitudeTemp = baseTemp * (1 - Math.abs(latitude) * 0.3);
+
+        if (latitudeTemp > 273) {
+          return (latitudeTemp - 273) * 0.1; // mm/day
+        }
+        return 0;
+      }
+
+      generateRiverSystems() {
+        this.rivers = [];
+
+        // Generate major river systems
+        for (let i = 0; i < 15; i++) {
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+
+          const source = {
+            x: Math.sin(phi) * Math.cos(theta),
+            y: Math.cos(phi),
+            z: Math.sin(phi) * Math.sin(theta)
+          };
+
+          const discharge = 100 + Math.random() * 10000; // m³/s
+          const length = 500 + Math.random() * 5000; // km
+
+          this.rivers.push({
+            source,
+            discharge,
+            length,
+            tributaries: Math.floor(Math.random() * 10) + 2,
+            sedimentLoad: discharge * 0.001,
+            deltaSize: Math.sqrt(discharge) * 0.1
+          });
+        }
+      }
+
+      getOceanCurrentAtPosition(position) {
+        const latitude = Math.asin(position.y);
+
+        let currentVelocity = { x: 0, y: 0, z: 0 };
+
+        for (const current of this.oceanCurrents) {
+          const latDiff = Math.abs(latitude - current.latitude);
+
+          if (latDiff < 0.2) {
+            const influence = (0.2 - latDiff) / 0.2 * current.strength;
+
+            switch (current.direction) {
+              case 'west':
+                currentVelocity.x -= influence * 0.1;
+                break;
+              case 'east':
+                currentVelocity.x += influence * 0.1;
+                break;
+              case 'north':
+                currentVelocity.y += influence * 0.1;
+                break;
+              case 'south':
+                currentVelocity.y -= influence * 0.1;
+                break;
+              case 'clockwise':
+                const angle1 = Math.atan2(position.z, position.x);
+                currentVelocity.x += Math.cos(angle1 + Math.PI/2) * influence * 0.1;
+                currentVelocity.z += Math.sin(angle1 + Math.PI/2) * influence * 0.1;
+                break;
+              case 'counterclockwise':
+                const angle2 = Math.atan2(position.z, position.x);
+                currentVelocity.x += Math.cos(angle2 - Math.PI/2) * influence * 0.1;
+                currentVelocity.z += Math.sin(angle2 - Math.PI/2) * influence * 0.1;
+                break;
+            }
+          }
+        }
+
+        return currentVelocity;
+      }
+
+      calculateSeaLevel(time) {
+        // Calculate sea level changes due to ice melting and thermal expansion
+        const thermalExpansion = (this.globalTemp - 288) * 0.002; // 2mm per degree
+        const iceMelt = this.glaciers.reduce((total, glacier) => {
+          return total + glacier.meltRate * glacier.size;
+        }, 0) * 0.001; // Convert to sea level change
+
+        return thermalExpansion + iceMelt;
+      }
+    }
+
+    // Main Advanced Planetary System
+    class AdvancedPlanetarySystem {
+      constructor() {
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.planetMesh = null;
+        this.atmosphereMesh = null;
+        this.cloudMesh = null;
+        this.animationId = null;
+
+        // System parameters
+        this.plateCount = 7;
+        this.tectonicActivity = 1.0;
+        this.volcanicActivity = 0.8;
+        this.mountainFormation = 1.2;
+        this.globalTemp = 288;
+        this.precipitation = 1.0;
+        this.seasonalVariation = 20;
+        this.oceanCoverage = 0.71;
+        this.iceExtent = 0.15;
+        this.atmPressure = 1.0;
+        this.cloudCoverage = 0.6;
+        this.terrainDetail = 5;
+        this.erosionRate = 1.0;
+        this.weatherIntensity = 1.0;
+        this.timeScale = 1.0;
+        this.currentTime = 0;
+        this.isPlaying = true;
+
+        // Visualization layers
+        this.layers = {
+          surface: true,
+          elevation: false,
+          temperature: false,
+          precipitation: false,
+          biomes: true,
+          tectonics: false
+        };
+
+        // Feature toggles
+        this.features = {
+          plateBoundaries: true,
+          hotspots: true,
+          oceanCurrents: true,
+          glaciers: true,
+          scattering: true,
+          aurora: false
+        };
+
+        // Planetary systems
+        this.tectonicSystem = null;
+        this.climateSystem = null;
+        this.biomeSystem = null;
+        this.atmosphericSystem = null;
+        this.hydrologicalSystem = null;
+
+        this.seed = 12345;
+
+        this.initialize3D();
+        this.initializeControls();
+        this.generatePlanetarySystems();
+        this.generatePlanet();
+        this.animate();
+      }
+
+      initialize3D() {
+        const canvas = document.getElementById('planet-canvas');
+
+        // Scene setup
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x000011);
+
+        // Camera setup
+        this.camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.01, 1000);
+        this.camera.position.set(0, 0, 3);
+
+        // Renderer setup
+        this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.0;
+
+        // Advanced lighting
+        this.setupLighting();
+
+        // Starfield
+        this.createStarfield();
+
+        // Controls
+        this.setupControls();
+
+        // Handle resize
+        window.addEventListener('resize', () => this.onWindowResize());
+      }
+
+      setupLighting() {
+        // Ambient light
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.2);
+        this.scene.add(ambientLight);
+
+        // Sun (main directional light)
+        this.sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        this.sunLight.position.set(10, 5, 5);
+        this.sunLight.castShadow = true;
+        this.sunLight.shadow.mapSize.width = 4096;
+        this.sunLight.shadow.mapSize.height = 4096;
+        this.sunLight.shadow.camera.near = 0.1;
+        this.sunLight.shadow.camera.far = 100;
+        this.sunLight.shadow.camera.left = -20;
+        this.sunLight.shadow.camera.right = 20;
+        this.sunLight.shadow.camera.top = 20;
+        this.sunLight.shadow.camera.bottom = -20;
+        this.scene.add(this.sunLight);
+
+        // Atmospheric scattering light
+        this.scatterLight = new THREE.DirectionalLight(0x87ceeb, 0.5);
+        this.scatterLight.position.set(-5, 3, -8);
+        this.scene.add(this.scatterLight);
+
+        // Rim light
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        rimLight.position.set(0, 0, -15);
+        this.scene.add(rimLight);
+      }
+
+      createStarfield() {
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsMaterial = new THREE.PointsMaterial({
+          color: 0xffffff,
+          size: 1,
+          sizeAttenuation: false
+        });
+
+        const starsVertices = [];
+        const starsColors = [];
+
+        for (let i = 0; i < 5000; i++) {
+          const x = (Math.random() - 0.5) * 2000;
+          const y = (Math.random() - 0.5) * 2000;
+          const z = (Math.random() - 0.5) * 2000;
+          starsVertices.push(x, y, z);
+
+          // Star colors based on temperature
+          const temp = Math.random();
+          if (temp < 0.3) {
+            starsColors.push(1, 0.8, 0.6); // Orange
+          } else if (temp < 0.6) {
+            starsColors.push(1, 1, 0.9); // White
+          } else {
+            starsColors.push(0.8, 0.9, 1); // Blue
+          }
+        }
+
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+        starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starsColors, 3));
+
+        starsMaterial.vertexColors = true;
+        const starField = new THREE.Points(starsGeometry, starsMaterial);
+        this.scene.add(starField);
+      }
+
+      setupControls() {
+        const canvas = document.getElementById('planet-canvas');
+        let isMouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
+        let rotationX = 0;
+        let rotationY = 0;
+
+        canvas.addEventListener('mousedown', (e) => {
+          isMouseDown = true;
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+
+          if (e.button === 2) { // Right click
+            this.analyzePoint(e);
+          }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+          if (!isMouseDown || e.button === 2) return;
+
+          const deltaX = e.clientX - mouseX;
+          const deltaY = e.clientY - mouseY;
+
+          rotationY += deltaX * 0.01;
+          rotationX += deltaY * 0.01;
+          rotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationX));
+
+          if (this.planetMesh) {
+            this.planetMesh.rotation.y = rotationY;
+            this.planetMesh.rotation.x = rotationX;
+          }
+          if (this.atmosphereMesh) {
+            this.atmosphereMesh.rotation.y = rotationY;
+            this.atmosphereMesh.rotation.x = rotationX;
+          }
+          if (this.cloudMesh) {
+            this.cloudMesh.rotation.y = rotationY * 0.8;
+            this.cloudMesh.rotation.x = rotationX * 0.8;
+          }
+
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+          isMouseDown = false;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoom = e.deltaY * 0.001;
+          this.camera.position.z = Math.max(0.3, Math.min(100, this.camera.position.z + zoom));
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.code === 'Space') {
+            e.preventDefault();
+            this.resetCamera();
+          }
+        });
+      }
+
+      analyzePoint(event) {
+        // Analyze clicked point on planet surface
+        const canvas = document.getElementById('planet-canvas');
+        const rect = canvas.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera({ x, y }, this.camera);
+
+        if (this.planetMesh) {
+          const intersects = raycaster.intersectObject(this.planetMesh);
+          if (intersects.length > 0) {
+            const point = intersects[0].point;
+            const normal = point.clone().normalize();
+
+            this.displayPointAnalysis(normal);
+          }
+        }
+      }
+
+      displayPointAnalysis(position) {
+        const elevation = this.getElevationAtPosition(position);
+        const temperature = this.climateSystem.getTemperatureAtPosition(position, elevation);
+        const precipitation = this.climateSystem.getPrecipitationAtPosition(position, temperature, elevation);
+        const biome = this.biomeSystem.getBiomeAtPosition(position, elevation, temperature, precipitation);
+        const plate = this.tectonicSystem.getPlateAtPosition(position);
+
+        document.getElementById('point-elevation').textContent = (elevation * 8848).toFixed(0);
+        document.getElementById('point-temp').textContent = temperature.toFixed(1);
+        document.getElementById('point-biome').textContent = biome.replace('_', ' ');
+        document.getElementById('point-plate').textContent = `Plate ${plate + 1}`;
+      }
+
+      resetCamera() {
+        this.camera.position.set(0, 0, 3);
+        if (this.planetMesh) {
+          this.planetMesh.rotation.set(0, 0, 0);
+        }
+        if (this.atmosphereMesh) {
+          this.atmosphereMesh.rotation.set(0, 0, 0);
+        }
+        if (this.cloudMesh) {
+          this.cloudMesh.rotation.set(0, 0, 0);
+        }
+      }
+
+      generatePlanetarySystems() {
+        // Generate all planetary systems
+        this.tectonicSystem = new TectonicSystem(this.plateCount, this.tectonicActivity, this.seed);
+        this.climateSystem = new ClimateSystem(this.globalTemp, this.precipitation, this.seasonalVariation, this.tectonicSystem, this.seed);
+        this.biomeSystem = new BiomeSystem(this.climateSystem, this.tectonicSystem, this.seed);
+        this.atmosphericSystem = new AtmosphericSystem(this.atmPressure, null, 6371);
+        this.hydrologicalSystem = new HydrologicalSystem(this.oceanCoverage, this.iceExtent, this.globalTemp, this.precipitation);
+
+        this.updateStatistics();
+      }
+
+      updateStatistics() {
+        // Update all statistical displays
+        document.getElementById('geo-plates').textContent = this.plateCount;
+        document.getElementById('geo-mountains').textContent = Math.floor(this.tectonicSystem.boundaries.length * 2.3);
+        document.getElementById('geo-volcanoes').textContent = this.tectonicSystem.hotspots.length;
+        document.getElementById('geo-rifts').textContent = this.tectonicSystem.boundaries.filter(b => b.type === 'divergent').length;
+
+        document.getElementById('climate-avg-temp').textContent = this.globalTemp.toFixed(0);
+        document.getElementById('climate-temp-range').textContent = `±${this.seasonalVariation}`;
+        document.getElementById('climate-precip').textContent = Math.floor(this.precipitation * 1000);
+
+        document.getElementById('ocean-value').textContent = Math.floor(this.oceanCoverage * 100) + '%';
+        document.getElementById('ice-value').textContent = Math.floor(this.iceExtent * 100) + '%';
+      }
+
+      onWindowResize() {
+        const canvas = document.getElementById('planet-canvas');
+        this.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      }
+
+      generatePlanet() {
+        // Clear existing meshes
+        this.clearPlanetMeshes();
+
+        // Create icosahedron geometry
+        const geometry = this.createIcosahedronGeometry(1.0, this.terrainDetail);
+
+        // Apply all planetary processes
+        this.applyTectonicProcesses(geometry);
+        this.applyErosion(geometry);
+        this.applyClimateEffects(geometry);
+
+        // Create advanced material
+        const material = this.createAdvancedPlanetMaterial();
+
+        // Create planet mesh
+        this.planetMesh = new THREE.Mesh(geometry, material);
+        this.planetMesh.castShadow = true;
+        this.planetMesh.receiveShadow = true;
+        this.scene.add(this.planetMesh);
+
+        // Create atmospheric layers
+        this.createAdvancedAtmosphere();
+
+        // Create weather systems
+        this.createAdvancedWeatherSystems();
+
+        // Update performance stats
+        this.updatePerformanceStats();
+      }
+
+      clearPlanetMeshes() {
+        [this.planetMesh, this.atmosphereMesh, this.cloudMesh].forEach(mesh => {
+          if (mesh) {
+            this.scene.remove(mesh);
+            if (mesh.geometry) mesh.geometry.dispose();
+            if (mesh.material) {
+              if (Array.isArray(mesh.material)) {
+                mesh.material.forEach(mat => mat.dispose());
+              } else {
+                mesh.material.dispose();
+              }
+            }
+          }
+        });
+        this.planetMesh = null;
+        this.atmosphereMesh = null;
+        this.cloudMesh = null;
+      }
+
+      createIcosahedronGeometry(radius, subdivisions) {
+        // Create base icosahedron using golden ratio
+        const t = (1.0 + Math.sqrt(5.0)) / 2.0;
+
+        const vertices = [
+          [-1,  t,  0], [ 1,  t,  0], [-1, -t,  0], [ 1, -t,  0],
+          [ 0, -1,  t], [ 0,  1,  t], [ 0, -1, -t], [ 0,  1, -t],
+          [ t,  0, -1], [ t,  0,  1], [-t,  0, -1], [-t,  0,  1]
+        ];
+
+        // Normalize vertices
+        for (let i = 0; i < vertices.length; i++) {
+          const v = vertices[i];
+          const length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+          vertices[i] = [v[0] / length, v[1] / length, v[2] / length];
+        }
+
+        // Define faces
+        const faces = [
+          [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+          [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+          [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+          [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+        ];
+
+        // Subdivide
+        let currentVertices = vertices;
+        let currentFaces = faces;
+
+        for (let level = 0; level < subdivisions; level++) {
+          const result = this.subdivideMesh(currentVertices, currentFaces);
+          currentVertices = result.vertices;
+          currentFaces = result.faces;
+        }
+
+        // Scale to radius
+        for (let i = 0; i < currentVertices.length; i++) {
+          const v = currentVertices[i];
+          currentVertices[i] = [v[0] * radius, v[1] * radius, v[2] * radius];
+        }
+
+        // Create Three.js geometry
+        const geometry = new THREE.BufferGeometry();
+
+        const positions = [];
+        const indices = [];
+
+        for (let i = 0; i < currentVertices.length; i++) {
+          positions.push(...currentVertices[i]);
+        }
+
+        for (let i = 0; i < currentFaces.length; i++) {
+          indices.push(...currentFaces[i]);
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+
+        return geometry;
+      }
+
+      subdivideMesh(vertices, faces) {
+        const newVertices = [...vertices];
+        const newFaces = [];
+        const midpointCache = new Map();
+
+        const getMidpoint = (i1, i2) => {
+          const key = i1 < i2 ? `${i1}-${i2}` : `${i2}-${i1}`;
+
+          if (midpointCache.has(key)) {
+            return midpointCache.get(key);
+          }
+
+          const v1 = vertices[i1];
+          const v2 = vertices[i2];
+
+          const mid = [
+            (v1[0] + v2[0]) / 2,
+            (v1[1] + v2[1]) / 2,
+            (v1[2] + v2[2]) / 2
+          ];
+
+          const length = Math.sqrt(mid[0] * mid[0] + mid[1] * mid[1] + mid[2] * mid[2]);
+          const normalizedMid = [mid[0] / length, mid[1] / length, mid[2] / length];
+
+          const newIndex = newVertices.length;
+          newVertices.push(normalizedMid);
+          midpointCache.set(key, newIndex);
+
+          return newIndex;
+        };
+
+        for (let i = 0; i < faces.length; i++) {
+          const face = faces[i];
+          const v1 = face[0];
+          const v2 = face[1];
+          const v3 = face[2];
+
+          const a = getMidpoint(v1, v2);
+          const b = getMidpoint(v2, v3);
+          const c = getMidpoint(v3, v1);
+
+          newFaces.push([v1, a, c]);
+          newFaces.push([v2, b, a]);
+          newFaces.push([v3, c, b]);
+          newFaces.push([a, b, c]);
+        }
+
+        return { vertices: newVertices, faces: newFaces };
+      }
+
+      applyTectonicProcesses(geometry) {
+        const positions = geometry.attributes.position;
+        const vertex = new THREE.Vector3();
+
+        for (let i = 0; i < positions.count; i++) {
+          vertex.fromBufferAttribute(positions, i);
+          const normal = vertex.clone().normalize();
+
+          // Get tectonic influences
+          const boundary = this.tectonicSystem.getBoundaryInfluence(normal);
+          const plate = this.tectonicSystem.getPlateAtPosition(normal);
+
+          let tectonicHeight = 0;
+
+          // Plate boundary effects
+          if (boundary.influence > 0) {
+            switch (boundary.type) {
+              case 'convergent_collision':
+                // Mountain building
+                tectonicHeight += boundary.influence * this.mountainFormation * 0.15;
+                break;
+              case 'convergent_subduction':
+                // Volcanic arcs and trenches
+                const subductionNoise = AdvancedNoise.perlin3D(
+                  normal.x * 20, normal.y * 20, normal.z * 20, this.seed + 1100
+                );
+                if (subductionNoise > 0.3) {
+                  tectonicHeight += boundary.influence * this.volcanicActivity * 0.12;
+                } else {
+                  tectonicHeight -= boundary.influence * 0.08; // Trench
+                }
+                break;
+              case 'divergent':
+                // Rift valleys and mid-ocean ridges
+                const divergentNoise = AdvancedNoise.perlin3D(
+                  normal.x * 15, normal.y * 15, normal.z * 15, this.seed + 1200
+                );
+                if (divergentNoise > 0) {
+                  tectonicHeight += boundary.influence * 0.06; // Ridge
+                } else {
+                  tectonicHeight -= boundary.influence * 0.04; // Rift
+                }
+                break;
+              case 'transform':
+                // Fault scarps
+                const transformNoise = AdvancedNoise.perlin3D(
+                  normal.x * 25, normal.y * 25, normal.z * 25, this.seed + 1300
+                );
+                tectonicHeight += transformNoise * boundary.influence * 0.03;
+                break;
+            }
+          }
+
+          // Hotspot volcanism
+          for (const hotspot of this.tectonicSystem.hotspots) {
+            const distance = Math.sqrt(
+              (normal.x - hotspot.position.x) * (normal.x - hotspot.position.x) +
+              (normal.y - hotspot.position.y) * (normal.y - hotspot.position.y) +
+              (normal.z - hotspot.position.z) * (normal.z - hotspot.position.z)
+            );
+
+            if (distance < hotspot.radius) {
+              const hotspotInfluence = (hotspot.radius - distance) / hotspot.radius;
+              tectonicHeight += hotspotInfluence * hotspot.intensity * this.volcanicActivity * 0.1;
+            }
+          }
+
+          // Apply tectonic displacement
+          vertex.setLength(vertex.length() + tectonicHeight);
+          positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
+        }
+
+        positions.needsUpdate = true;
+        geometry.computeVertexNormals();
+      }
+
+      applyErosion(geometry) {
+        const positions = geometry.attributes.position;
+        const vertex = new THREE.Vector3();
+
+        for (let i = 0; i < positions.count; i++) {
+          vertex.fromBufferAttribute(positions, i);
+          const normal = vertex.clone().normalize();
+          const elevation = vertex.length() - 1.0;
+
+          // Calculate erosion based on climate and elevation
+          const temperature = this.climateSystem.getTemperatureAtPosition(normal, elevation);
+          const precipitation = this.climateSystem.getPrecipitationAtPosition(normal, temperature, elevation);
+
+          // Erosion rate based on precipitation and temperature
+          let erosionRate = this.erosionRate * 0.01;
+          erosionRate *= (precipitation / 1000) * 0.5; // More rain = more erosion
+          erosionRate *= Math.max(0.1, (temperature - 273) / 30); // Freeze-thaw cycles
+
+          // Elevation-dependent erosion (higher = more exposed)
+          erosionRate *= (1 + Math.max(0, elevation) * 2);
+
+          // Apply erosion noise
+          const erosionNoise = AdvancedNoise.fractal(
+            normal.x * 12, normal.y * 12, normal.z * 12, 4, 0.6, 2.0, this.seed + 1400
+          );
+
+          const erosionAmount = erosionNoise * erosionRate;
+          vertex.setLength(vertex.length() - Math.abs(erosionAmount));
+
+          positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
+        }
+
+        positions.needsUpdate = true;
+        geometry.computeVertexNormals();
+      }
+
+      applyClimateEffects(geometry) {
+        const positions = geometry.attributes.position;
+        const colors = new Float32Array(positions.count * 3);
+        const vertex = new THREE.Vector3();
+
+        for (let i = 0; i < positions.count; i++) {
+          vertex.fromBufferAttribute(positions, i);
+          const normal = vertex.clone().normalize();
+          const elevation = vertex.length() - 1.0;
+
+          // Calculate climate data
+          const temperature = this.climateSystem.getTemperatureAtPosition(normal, elevation);
+          const precipitation = this.climateSystem.getPrecipitationAtPosition(normal, temperature, elevation);
+          const biome = this.biomeSystem.getBiomeAtPosition(normal, elevation, temperature, precipitation);
+
+          // Get biome color
+          const biomeColor = this.biomeSystem.getBiomeColor(biome);
+
+          colors[i * 3] = biomeColor[0];
+          colors[i * 3 + 1] = biomeColor[1];
+          colors[i * 3 + 2] = biomeColor[2];
+        }
+
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      }
+
+      getElevationAtPosition(position) {
+        // This would normally sample the actual geometry
+        // For now, return a simplified calculation
+        const tectonicHeight = this.calculateTectonicHeight(position);
+        const erosionEffect = this.calculateErosionEffect(position);
+        return tectonicHeight - erosionEffect;
+      }
+
+      calculateTectonicHeight(position) {
+        const boundary = this.tectonicSystem.getBoundaryInfluence(position);
+        let height = 0;
+
+        if (boundary.influence > 0) {
+          switch (boundary.type) {
+            case 'convergent_collision':
+              height = boundary.influence * this.mountainFormation * 0.15;
+              break;
+            case 'convergent_subduction':
+              height = boundary.influence * this.volcanicActivity * 0.12;
+              break;
+            case 'divergent':
+              height = boundary.influence * 0.06;
+              break;
+          }
+        }
+
+        return height;
+      }
+
+      calculateErosionEffect(position) {
+        const erosionNoise = AdvancedNoise.fractal(
+          position.x * 12, position.y * 12, position.z * 12, 4, 0.6, 2.0, this.seed + 1400
+        );
+        return Math.abs(erosionNoise) * this.erosionRate * 0.01;
+      }
+
+      updatePerformanceStats() {
+        if (this.planetMesh) {
+          const geometry = this.planetMesh.geometry;
+          document.getElementById('perf-vertices').textContent = geometry.attributes.position.count.toLocaleString();
+          document.getElementById('perf-triangles').textContent = Math.floor(geometry.attributes.position.count / 3).toLocaleString();
+          document.getElementById('perf-draws').textContent = '3-8';
+
+          // Estimate memory usage
+          const vertexMemory = geometry.attributes.position.count * 3 * 4; // 4 bytes per float
+          const colorMemory = geometry.attributes.color ? geometry.attributes.color.count * 3 * 4 : 0;
+          const indexMemory = geometry.index ? geometry.index.count * 4 : 0;
+          const totalMemory = (vertexMemory + colorMemory + indexMemory) / (1024 * 1024);
+          document.getElementById('perf-memory').textContent = totalMemory.toFixed(1);
+        }
+      }
+
+      createAdvancedPlanetMaterial() {
+        // Advanced shader material with all planetary features
+        const vertexShader = `
+          varying vec3 vColor;
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          varying vec3 vWorldPosition;
+
+          void main() {
+            #ifdef USE_COLOR
+              vColor = color;
+            #else
+              vColor = vec3(1.0);
+            #endif
+            vNormal = normalize(normalMatrix * normal);
+            vPosition = position;
+            vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
+
+        const fragmentShader = `
+          varying vec3 vColor;
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          varying vec3 vWorldPosition;
+
+          uniform float time;
+          uniform int layerMode;
+          uniform bool showTectonics;
+          uniform bool showOceanCurrents;
+          uniform bool showScattering;
+          uniform vec3 sunDirection;
+
+          // Simple noise function
+          float noise(vec3 p) {
+            return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+          }
+
+          vec3 calculateAtmosphericScattering(vec3 normal, vec3 sunDir) {
+            float cosTheta = dot(normal, sunDir);
+            float rayleigh = 1.0 + cosTheta * cosTheta;
+
+            vec3 scatterColor = vec3(0.3, 0.6, 1.0) * rayleigh * 0.1;
+            return scatterColor;
+          }
+
+          void main() {
+            vec3 color = vColor;
+            vec3 normal = normalize(vNormal);
+            vec3 pos = normalize(vPosition);
+            float elevation = length(vPosition) - 1.0;
+
+            // Layer visualization modes
+            if (layerMode == 1) { // Elevation
+              float elevColor = (elevation + 0.2) / 0.4;
+              color = mix(vec3(0.0, 0.0, 0.5), vec3(1.0, 1.0, 1.0), elevColor);
+            } else if (layerMode == 2) { // Temperature
+              float tempNoise = noise(pos * 8.0);
+              float temp = 0.5 + tempNoise * 0.3 + abs(pos.y) * 0.2;
+              color = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), temp);
+            } else if (layerMode == 3) { // Precipitation
+              float precipNoise = noise(pos * 6.0);
+              float precip = precipNoise * 0.5 + 0.5;
+              color = mix(vec3(0.8, 0.6, 0.3), vec3(0.0, 0.3, 0.8), precip);
+            } else if (layerMode == 5) { // Tectonics
+              float plateNoise = noise(pos * 4.0);
+              if (plateNoise > 0.7) {
+                color = mix(color, vec3(1.0, 0.3, 0.1), 0.6); // Plate boundaries
+              }
+            }
+
+            // Ocean effects
+            if (elevation < -0.01) {
+              // Wave animation
+              float wave1 = sin(pos.x * 50.0 + time * 2.0) * sin(pos.z * 50.0 + time * 2.0);
+              float wave2 = sin(pos.x * 30.0 - time * 1.5) * sin(pos.z * 30.0 - time * 1.5);
+              float waves = (wave1 + wave2) * 0.05;
+
+              color += vec3(waves * 0.3);
+
+              // Ocean currents visualization
+              if (showOceanCurrents) {
+                float currentNoise = noise(pos * 20.0 + vec3(time * 0.1));
+                if (currentNoise > 0.8) {
+                  color = mix(color, vec3(0.0, 1.0, 1.0), 0.3);
+                }
+              }
+            }
+
+            // Ice effects
+            float latitude = abs(pos.y);
+            if (latitude > 0.7) {
+              float iceFactor = (latitude - 0.7) / 0.3;
+              color = mix(color, vec3(0.9, 0.95, 1.0), iceFactor * 0.8);
+            }
+
+            // Atmospheric scattering
+            if (showScattering) {
+              vec3 scattering = calculateAtmosphericScattering(normal, sunDirection);
+              color += scattering;
+            }
+
+            // Tectonic activity highlighting
+            if (showTectonics && elevation > 0.05) {
+              float tectonicNoise = noise(pos * 15.0);
+              if (tectonicNoise > 0.6) {
+                color = mix(color, vec3(1.0, 0.5, 0.0), 0.4);
+              }
+            }
+
+            gl_FragColor = vec4(color, 1.0);
+          }
+        `;
+
+        return new THREE.ShaderMaterial({
+          vertexShader,
+          fragmentShader,
+          uniforms: {
+            time: { value: 0 },
+            layerMode: { value: 0 },
+            showTectonics: { value: this.features.plateBoundaries },
+            showOceanCurrents: { value: this.features.oceanCurrents },
+            showScattering: { value: this.features.scattering },
+            sunDirection: { value: new THREE.Vector3(1, 0.5, 0.5).normalize() }
+          },
+          vertexColors: true
+        });
+      }
+
+      createAdvancedAtmosphere() {
+        if (this.atmPressure < 0.1) return;
+
+        const atmosphereGeometry = new THREE.SphereGeometry(1.05, 64, 64);
+
+        const atmosphereShader = {
+          vertexShader: `
+            varying vec3 vNormal;
+            varying vec3 vPosition;
+
+            void main() {
+              vNormal = normalize(normalMatrix * normal);
+              vPosition = position;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            varying vec3 vNormal;
+            varying vec3 vPosition;
+
+            uniform float pressure;
+            uniform float time;
+            uniform vec3 sunDirection;
+
+            vec3 calculateScattering(vec3 normal, vec3 sunDir, float density) {
+              float cosTheta = dot(normal, sunDir);
+
+              // Rayleigh scattering (blue light)
+              float rayleigh = 3.0 / (16.0 * 3.14159) * (1.0 + cosTheta * cosTheta);
+              vec3 rayleighColor = vec3(0.3, 0.6, 1.0) * rayleigh;
+
+              // Mie scattering (haze)
+              float mie = 3.0 / (8.0 * 3.14159) * ((1.0 - 0.9 * 0.9) / pow(1.0 + 0.9 * 0.9 - 2.0 * 0.9 * cosTheta, 1.5));
+              vec3 mieColor = vec3(1.0, 0.8, 0.6) * mie * 0.1;
+
+              return (rayleighColor + mieColor) * density;
+            }
+
+            void main() {
+              vec3 normal = normalize(vNormal);
+              float density = pressure * 0.3;
+
+              vec3 scatterColor = calculateScattering(normal, sunDirection, density);
+
+              // Fresnel effect for atmosphere edge
+              float fresnel = 1.0 - dot(normal, vec3(0.0, 0.0, 1.0));
+              float alpha = fresnel * density;
+
+              gl_FragColor = vec4(scatterColor, alpha);
+            }
+          `
+        };
+
+        const atmosphereMaterial = new THREE.ShaderMaterial({
+          vertexShader: atmosphereShader.vertexShader,
+          fragmentShader: atmosphereShader.fragmentShader,
+          uniforms: {
+            pressure: { value: this.atmPressure },
+            time: { value: 0 },
+            sunDirection: { value: new THREE.Vector3(1, 0.5, 0.5).normalize() }
+          },
+          transparent: true,
+          side: THREE.BackSide,
+          blending: THREE.AdditiveBlending
+        });
+
+        this.atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+        this.scene.add(this.atmosphereMesh);
+      }
+
+      createAdvancedWeatherSystems() {
+        // Create dynamic cloud layer
+        const cloudGeometry = new THREE.SphereGeometry(1.02, 64, 64);
+
+        const cloudMaterial = new THREE.ShaderMaterial({
+          vertexShader: `
+            varying vec2 vUv;
+            varying vec3 vPosition;
+
+            void main() {
+              vUv = uv;
+              vPosition = position;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            varying vec2 vUv;
+            varying vec3 vPosition;
+
+            uniform float time;
+            uniform float coverage;
+            uniform float intensity;
+
+            float noise(vec3 p) {
+              return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+            }
+
+            float fbm(vec3 p) {
+              float value = 0.0;
+              float amplitude = 0.5;
+              float frequency = 1.0;
+
+              for (int i = 0; i < 4; i++) {
+                value += amplitude * noise(p * frequency);
+                amplitude *= 0.5;
+                frequency *= 2.0;
+              }
+
+              return value;
+            }
+
+            void main() {
+              vec3 pos = normalize(vPosition);
+
+              // Cloud formation based on atmospheric dynamics
+              float cloudNoise = fbm(pos * 8.0 + vec3(time * 0.1, 0.0, time * 0.05));
+              float cloudDensity = smoothstep(1.0 - coverage, 1.0, cloudNoise);
+
+              // Weather system patterns
+              float weatherPattern = fbm(pos * 4.0 + vec3(time * 0.02));
+              cloudDensity *= (0.5 + weatherPattern * 0.5);
+
+              // Altitude-based cloud formation
+              float latitude = abs(pos.y);
+              float altitudeEffect = 1.0 - smoothstep(0.0, 0.8, latitude);
+              cloudDensity *= altitudeEffect;
+
+              cloudDensity *= intensity;
+
+              vec3 cloudColor = vec3(1.0, 1.0, 1.0);
+              gl_FragColor = vec4(cloudColor, cloudDensity * 0.8);
+            }
+          `,
+          uniforms: {
+            time: { value: 0 },
+            coverage: { value: this.cloudCoverage },
+            intensity: { value: this.weatherIntensity }
+          },
+          transparent: true,
+          depthWrite: false
+        });
+
+        this.cloudMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+        this.scene.add(this.cloudMesh);
+      }
+
+      initializeControls() {
+        // Initialize all UI controls
+        this.initializeSliderControls();
+        this.initializeToggleControls();
+        this.initializeLayerControls();
+        this.initializeTimeControls();
+      }
+
+      initializeSliderControls() {
+        // Tectonic controls
+        document.getElementById('plate-count').addEventListener('input', (e) => {
+          this.plateCount = parseInt(e.target.value);
+          document.getElementById('plate-count-value').textContent = e.target.value;
+          this.regenerateIfNeeded();
+        });
+
+        document.getElementById('tectonic-activity').addEventListener('input', (e) => {
+          this.tectonicActivity = parseFloat(e.target.value);
+          document.getElementById('tectonic-value').textContent = e.target.value;
+          this.regenerateIfNeeded();
+        });
+
+        document.getElementById('volcanic-activity').addEventListener('input', (e) => {
+          this.volcanicActivity = parseFloat(e.target.value);
+          document.getElementById('volcanic-value').textContent = e.target.value;
+          this.regenerateIfNeeded();
+        });
+
+        document.getElementById('mountain-formation').addEventListener('input', (e) => {
+          this.mountainFormation = parseFloat(e.target.value);
+          document.getElementById('mountain-value').textContent = e.target.value;
+          this.regenerateIfNeeded();
+        });
+
+        // Climate controls
+        document.getElementById('global-temp').addEventListener('input', (e) => {
+          this.globalTemp = parseFloat(e.target.value);
+          document.getElementById('temp-value').textContent = e.target.value + 'K';
+          this.regenerateIfNeeded();
+        });
+
+        document.getElementById('precipitation').addEventListener('input', (e) => {
+          this.precipitation = parseFloat(e.target.value);
+          document.getElementById('precip-value').textContent = e.target.value;
+          this.regenerateIfNeeded();
+        });
+
+        document.getElementById('seasonal-variation').addEventListener('input', (e) => {
+          this.seasonalVariation = parseFloat(e.target.value);
+          document.getElementById('seasonal-value').textContent = e.target.value + 'K';
+          this.regenerateIfNeeded();
+        });
+
+        // Hydrological controls
+        document.getElementById('ocean-coverage').addEventListener('input', (e) => {
+          this.oceanCoverage = parseFloat(e.target.value);
+          document.getElementById('ocean-value').textContent = Math.floor(e.target.value * 100) + '%';
+          this.regenerateIfNeeded();
+        });
+
+        document.getElementById('ice-extent').addEventListener('input', (e) => {
+          this.iceExtent = parseFloat(e.target.value);
+          document.getElementById('ice-value').textContent = Math.floor(e.target.value * 100) + '%';
+          this.regenerateIfNeeded();
+        });
+
+        // Atmospheric controls
+        document.getElementById('atm-pressure').addEventListener('input', (e) => {
+          this.atmPressure = parseFloat(e.target.value);
+          document.getElementById('pressure-value').textContent = e.target.value;
+          this.updateAtmosphere();
+        });
+
+        document.getElementById('cloud-coverage').addEventListener('input', (e) => {
+          this.cloudCoverage = parseFloat(e.target.value);
+          document.getElementById('cloud-value').textContent = Math.floor(e.target.value * 100) + '%';
+          this.updateWeather();
+        });
+
+        // Advanced controls
+        document.getElementById('terrain-detail').addEventListener('input', (e) => {
+          this.terrainDetail = parseInt(e.target.value);
+          document.getElementById('detail-level').textContent = `Level ${e.target.value}`;
+          this.regenerateIfNeeded();
+        });
+
+        document.getElementById('erosion-rate').addEventListener('input', (e) => {
+          this.erosionRate = parseFloat(e.target.value);
+          document.getElementById('erosion-level').textContent = e.target.value;
+          this.regenerateIfNeeded();
+        });
+
+        document.getElementById('weather-intensity').addEventListener('input', (e) => {
+          this.weatherIntensity = parseFloat(e.target.value);
+          document.getElementById('weather-level').textContent = e.target.value;
+          this.updateWeather();
+        });
+
+        document.getElementById('time-scale').addEventListener('input', (e) => {
+          this.timeScale = parseFloat(e.target.value);
+          document.getElementById('time-scale-value').textContent = e.target.value + 'x';
+        });
+      }
+
+      initializeToggleControls() {
+        // Feature toggles
+        Object.keys(this.features).forEach(feature => {
+          const button = document.getElementById(`toggle-${feature.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
+          if (button) {
+            button.addEventListener('click', () => {
+              this.features[feature] = !this.features[feature];
+              button.className = `feature-toggle ${this.features[feature] ? 'active' : 'inactive'}`;
+              this.updateVisualization();
+            });
+          }
+        });
+      }
+
+      initializeLayerControls() {
+        // Layer visualization controls
+        Object.keys(this.layers).forEach((layer, index) => {
+          const button = document.getElementById(`layer-${layer}`);
+          if (button) {
+            button.addEventListener('click', () => {
+              // Reset all layers
+              Object.keys(this.layers).forEach(l => this.layers[l] = false);
+              this.layers[layer] = true;
+
+              // Update button states
+              document.querySelectorAll('[id^="layer-"]').forEach(btn => {
+                btn.className = 'feature-toggle inactive';
+              });
+              button.className = 'feature-toggle active';
+
+              this.updateLayerVisualization(index);
+            });
+          }
+        });
+      }
+
+      initializeTimeControls() {
+        document.getElementById('time-play').addEventListener('click', () => {
+          this.isPlaying = !this.isPlaying;
+          document.getElementById('time-play').textContent = this.isPlaying ? '⏸️' : '▶️';
+        });
+
+        document.getElementById('time-speed').addEventListener('input', (e) => {
+          this.timeScale = parseFloat(e.target.value);
+        });
+      }
+
+      regenerateIfNeeded() {
+        // Regenerate planetary systems and planet
+        this.generatePlanetarySystems();
+        this.generatePlanet();
+      }
+
+      updateAtmosphere() {
+        if (this.atmosphereMesh && this.atmosphereMesh.material.uniforms) {
+          this.atmosphereMesh.material.uniforms.pressure.value = this.atmPressure;
+        }
+      }
+
+      updateWeather() {
+        if (this.cloudMesh && this.cloudMesh.material.uniforms) {
+          this.cloudMesh.material.uniforms.coverage.value = this.cloudCoverage;
+          this.cloudMesh.material.uniforms.intensity.value = this.weatherIntensity;
+        }
+      }
+
+      updateVisualization() {
+        if (this.planetMesh && this.planetMesh.material.uniforms) {
+          this.planetMesh.material.uniforms.showTectonics.value = this.features.plateBoundaries;
+          this.planetMesh.material.uniforms.showOceanCurrents.value = this.features.oceanCurrents;
+          this.planetMesh.material.uniforms.showScattering.value = this.features.scattering;
+        }
+
+        if (this.atmosphereMesh) {
+          this.atmosphereMesh.visible = this.atmPressure > 0.1;
+        }
+
+        if (this.cloudMesh) {
+          this.cloudMesh.visible = this.cloudCoverage > 0.1;
+        }
+      }
+
+      updateLayerVisualization(layerIndex) {
+        if (this.planetMesh && this.planetMesh.material.uniforms) {
+          this.planetMesh.material.uniforms.layerMode.value = layerIndex;
+        }
+      }
+
+      animate() {
+        this.animationId = requestAnimationFrame(() => this.animate());
+
+        // Update time
+        if (this.isPlaying) {
+          this.currentTime += this.timeScale * 0.01;
+          document.getElementById('current-time').textContent = this.currentTime.toFixed(1);
+        }
+
+        // Update shader uniforms
+        const time = performance.now() * 0.001;
+
+        if (this.planetMesh && this.planetMesh.material.uniforms) {
+          this.planetMesh.material.uniforms.time.value = time;
+        }
+
+        if (this.atmosphereMesh && this.atmosphereMesh.material.uniforms) {
+          this.atmosphereMesh.material.uniforms.time.value = time;
+        }
+
+        if (this.cloudMesh && this.cloudMesh.material.uniforms) {
+          this.cloudMesh.material.uniforms.time.value = time;
+        }
+
+        // Rotate planet and clouds
+        if (this.planetMesh) {
+          this.planetMesh.rotation.y += 0.002;
+        }
+        if (this.cloudMesh) {
+          this.cloudMesh.rotation.y += 0.003;
+        }
+
+        // Update FPS
+        const now = performance.now();
+        if (!this.lastFrameTime) this.lastFrameTime = now;
+        const fps = Math.round(1000 / (now - this.lastFrameTime));
+        document.getElementById('perf-fps').textContent = fps;
+        this.lastFrameTime = now;
+
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    // Initialize the advanced planetary system
+    window.addEventListener('load', () => {
+      new AdvancedPlanetarySystem();
+    });
+
+    console.log('Advanced Planetary System - Complete System Loaded');
+  </script>
+</body>
+</html>

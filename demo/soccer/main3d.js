@@ -3,6 +3,7 @@ import { Player3D } from './player3d.js';
 import { Ball3D } from './ball3d.js';
 import { SoccerPitch3D } from './pitch3d.js';
 import { EnhancedSoccerPitch3D } from './enhancedPitch3d.js';
+import { StadiumEnvironment } from './stadiumEnvironment.js';
 import { initMultiplayer } from './multiplayer.js';
 
 // Import all 2D components for reuse
@@ -34,6 +35,36 @@ let selectedPlayer2 = null;
 let allPlayers3D = [];
 let ball3D = null;
 let pitch = null;
+
+// ===== CONTROL MODE SYSTEM =====
+let controlMode = 'player'; // 'player' or 'camera'
+
+// ===== ENHANCED CAMERA NAVIGATION SYSTEM =====
+let cameraController = {
+  enabled: false,
+  moveSpeed: 50,
+  lookSpeed: 0.002,
+  keys: {
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    up: false,
+    down: false
+  },
+  mouse: {
+    x: 0,
+    y: 0,
+    isLocked: false
+  },
+  euler: new THREE.Euler(0, 0, 0, 'YXZ'),
+  velocity: new THREE.Vector3(),
+  direction: new THREE.Vector3(),
+  // Store camera state when switching modes
+  savedPosition: new THREE.Vector3(),
+  savedRotation: new THREE.Euler(),
+  hasStoredState: false
+};
 
 // Game timing and state
 let matchTime = 0;
@@ -81,7 +112,10 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+scene.background = new THREE.Color(0x87CEEB); // Sky blue background (will be replaced by stadium environment)
+
+// Stadium environment system
+let stadiumEnvironment = null;
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 window.camera = camera; // Make camera globally accessible
@@ -126,7 +160,43 @@ scene.add(stadiumLight2);
 // Create professional soccer pitch with advanced grass system, LOD, culling, and PBR
 pitch = new EnhancedSoccerPitch3D(renderer); // Use global variable
 console.log('🏟️ ENHANCED PITCH: Using AAA-quality grass system with LOD, culling, and PBR');
+console.log('🏟️ ENHANCED PITCH: Pitch created, advanced grass available:', !!pitch.advancedGrass);
+
+if (pitch.advancedGrass) {
+  console.log('🏟️ ENHANCED PITCH: Advanced grass system details:');
+  console.log('🏟️ ENHANCED PITCH: - LOD levels:', pitch.advancedGrass.lodLevels.length);
+  console.log('🏟️ ENHANCED PITCH: - Chunks:', pitch.advancedGrass.chunks.size);
+  console.log('🏟️ ENHANCED PITCH: - Grass instances:', pitch.advancedGrass.grassInstances.size);
+} else {
+  console.warn('🏟️ ENHANCED PITCH: Advanced grass system not available, using fallback');
+}
+
 pitch.addTo(scene);
+console.log('🏟️ ENHANCED PITCH: Pitch added to scene');
+
+// ===== STADIUM ENVIRONMENT SYSTEM =====
+// Create comprehensive stadium environment with skybox, lighting, weather, and atmosphere
+// TEMPORARILY DISABLED due to initialization error - uncomment after browser cache clear
+/*
+stadiumEnvironment = new StadiumEnvironment(scene, renderer);
+console.log('🏟️ STADIUM: Initializing comprehensive stadium environment...');
+
+// Initialize stadium environment (async)
+stadiumEnvironment.initialize().then(() => {
+  console.log('🏟️ STADIUM: Environment system fully loaded');
+
+  // Remove the basic sky background now that we have a proper skybox
+  scene.background = null;
+
+  // Set initial conditions
+  stadiumEnvironment.setTimeOfDay(14); // 2 PM
+  stadiumEnvironment.setWeather('clear', 0.2);
+  stadiumEnvironment.setStadiumLights(false); // Daylight game
+}).catch(error => {
+  console.error('🏟️ STADIUM: Failed to initialize environment:', error);
+});
+*/
+console.log('🏟️ STADIUM: Stadium environment temporarily disabled for testing');
 
 // Get field dimensions for coordinate conversion
 const fieldDimensions = pitch.getDimensions();
@@ -602,6 +672,27 @@ function initializeUI() {
     });
   }
 
+  // Navigation controls
+  const navSpeedSlider = document.getElementById('navSpeed');
+  const navSpeedValue = document.getElementById('navSpeedValue');
+  if (navSpeedSlider && navSpeedValue) {
+    navSpeedSlider.addEventListener('input', (e) => {
+      cameraController.moveSpeed = parseFloat(e.target.value);
+      navSpeedValue.textContent = cameraController.moveSpeed;
+      console.log(`🎮 NAV: Move speed set to ${cameraController.moveSpeed}`);
+    });
+  }
+
+  const lookSensitivitySlider = document.getElementById('lookSensitivity');
+  const lookSensitivityValue = document.getElementById('lookSensitivityValue');
+  if (lookSensitivitySlider && lookSensitivityValue) {
+    lookSensitivitySlider.addEventListener('input', (e) => {
+      cameraController.lookSpeed = parseFloat(e.target.value);
+      lookSensitivityValue.textContent = cameraController.lookSpeed.toFixed(3);
+      console.log(`🎮 NAV: Look sensitivity set to ${cameraController.lookSpeed}`);
+    });
+  }
+
   // Game speed control
   const gameSpeedSelect = document.getElementById('gameSpeed');
   if (gameSpeedSelect) {
@@ -635,13 +726,18 @@ window.autoFocus = false;
 
 // ===== ENHANCED CAMERA SYSTEM =====
 function updateCamera(snap = false) {
+  // Skip camera updates when in camera navigation mode
+  if (controlMode === 'camera' && cameraController.enabled) {
+    return; // Let camera navigation handle camera positioning
+  }
+
   const followPlayer = selectedPlayer?.player3D || teamHeim[0]?.player3D;
   const height = window.cameraHeightValue || 15;
   const distance = window.cameraDistanceValue || 10;
   const speed = window.smoothCamera ? (window.cameraSpeed || 0.1) : 1.0;
   const ballPos = ball3D?.mesh?.position || new THREE.Vector3(0, 0, 0);
 
-  // Update FOV
+  // Update FOV (always allow FOV changes)
   if (camera.fov !== window.cameraFOV) {
     camera.fov = window.cameraFOV;
     camera.updateProjectionMatrix();
@@ -728,7 +824,8 @@ window.addEventListener('keyup', e => keys[e.code] = false);
 
 // ===== ENHANCED PLAYER CONTROLS =====
 function updatePlayerControls(dt) {
-  if (!selectedPlayer || !selectedPlayer.player3D) return;
+  // Only allow player controls in player mode
+  if (controlMode !== 'player' || !selectedPlayer || !selectedPlayer.player3D) return;
 
   const player3D = selectedPlayer.player3D;
   const player2D = selectedPlayer;
@@ -944,6 +1041,9 @@ function enhancedLoop(now) {
     return;
   }
 
+  // Update enhanced camera navigation system
+  updateCameraNavigation(dt);
+
   // Update enhanced grass system with LOD, culling, and dynamic wear tracking
   pitch.update(dt, camera, { x: 1, y: 0.5 }, 0.02);
 
@@ -1009,13 +1109,13 @@ function enhancedLoop(now) {
     if (player.behaviorTree) {
       // Debug world object occasionally
       if (Math.random() < 0.001) {
-        console.log('World object for behavior tree:', {
+       /* console.log('World object for behavior tree:', {
           hasBall: !!world.ball,
           ballOwner: world.ball?.owner?.role || 'none',
           teammates: world.teammates?.length || 0,
           opponents: world.opponents?.length || 0
         });
-      }
+      }*/
 
       try {
         player.behaviorTree.tick(player, world);
@@ -1199,7 +1299,7 @@ function initializeWearTestMode() {
     });
   }
 
-  // Grass density slider
+  // Global grass density slider
   const grassDensitySlider = document.getElementById('grassDensity');
   const grassDensityValue = document.getElementById('grassDensityValue');
   if (grassDensitySlider && grassDensityValue) {
@@ -1209,11 +1309,51 @@ function initializeWearTestMode() {
 
       if (pitch && pitch.advancedGrass) {
         pitch.advancedGrass.updateDensity(density);
-        console.log(`🌾 GRASS DENSITY: Updated to ${density}x`);
+        console.log(`🌾 GLOBAL DENSITY: Updated to ${density}x`);
       } else {
-        console.warn('🌾 GRASS DENSITY: Advanced grass system not available');
+        console.warn('🌾 GLOBAL DENSITY: Advanced grass system not available');
       }
     });
+  }
+
+  // Individual LOD density sliders
+  for (let i = 0; i < 5; i++) {
+    const lodSlider = document.getElementById(`lodDensity${i}`);
+    const lodValue = document.getElementById(`lodDensity${i}Value`);
+
+    if (lodSlider && lodValue) {
+      lodSlider.addEventListener('input', (e) => {
+        const density = parseFloat(e.target.value);
+        lodValue.textContent = density.toFixed(1) + 'x';
+
+        if (pitch && pitch.advancedGrass) {
+          pitch.advancedGrass.updateLODDensity(i, density);
+          console.log(`🌾 LOD ${i} DENSITY: Updated to ${density}x`);
+        } else {
+          console.warn(`🌾 LOD ${i} DENSITY: Advanced grass system not available`);
+        }
+      });
+    }
+  }
+
+  // Individual LOD threshold sliders
+  for (let i = 0; i < 5; i++) {
+    const thresholdSlider = document.getElementById(`lodThreshold${i}`);
+    const thresholdValue = document.getElementById(`lodThreshold${i}Value`);
+
+    if (thresholdSlider && thresholdValue) {
+      thresholdSlider.addEventListener('input', (e) => {
+        const threshold = parseFloat(e.target.value);
+        thresholdValue.textContent = threshold + 'px';
+
+        if (pitch && pitch.advancedGrass) {
+          pitch.advancedGrass.updateLODThreshold(i, threshold);
+          console.log(`📐 LOD ${i} THRESHOLD: Updated to ${threshold}px`);
+        } else {
+          console.warn(`📐 LOD ${i} THRESHOLD: Advanced grass system not available`);
+        }
+      });
+    }
   }
 
   // Wireframe toggle
@@ -1334,6 +1474,97 @@ function initializeWearTestMode() {
     });
   }
 
+  // Test grass visibility button
+  const testGrassVisibilityButton = document.getElementById('testGrassVisibility');
+  if (testGrassVisibilityButton) {
+    testGrassVisibilityButton.addEventListener('click', () => {
+      console.log('🌱 GRASS TEST: Force grass visibility button clicked');
+
+      if (pitch && pitch.advancedGrass) {
+        console.log('🌱 GRASS TEST: Testing advanced grass system...');
+        pitch.testGrassVisibility();
+
+        // Also force an immediate LOD update
+        if (camera) {
+          pitch.advancedGrass.updateLOD(camera);
+          console.log('🌱 GRASS TEST: Forced LOD update');
+        }
+      } else if (pitch && pitch.testGrassVisibility) {
+        console.log('🌱 GRASS TEST: Testing enhanced pitch grass system...');
+        pitch.testGrassVisibility();
+      } else {
+        console.error('🌱 GRASS TEST: No grass system available for testing');
+        console.log('🌱 GRASS TEST: Available systems:', {
+          pitch: !!pitch,
+          advancedGrass: !!(pitch && pitch.advancedGrass),
+          testFunction: !!(pitch && pitch.testGrassVisibility)
+        });
+      }
+    });
+  }
+
+  // Boost view direction button
+  const boostViewDirectionButton = document.getElementById('boostViewDirection');
+  if (boostViewDirectionButton) {
+    boostViewDirectionButton.addEventListener('click', () => {
+      console.log('👁️ VIEW BOOST: Boost view direction button clicked');
+
+      if (pitch && pitch.advancedGrass && camera) {
+        console.log('👁️ VIEW BOOST: Boosting grass in camera view direction...');
+        pitch.advancedGrass.boostViewDirectionGrass(camera);
+        console.log('👁️ VIEW BOOST: View direction boost complete');
+      } else {
+        console.error('👁️ VIEW BOOST: Missing requirements:', {
+          pitch: !!pitch,
+          advancedGrass: !!(pitch && pitch.advancedGrass),
+          camera: !!camera
+        });
+      }
+    });
+  }
+
+  // Toggle LOD mode button
+  const toggleLODModeButton = document.getElementById('toggleLODMode');
+  if (toggleLODModeButton) {
+    toggleLODModeButton.addEventListener('click', () => {
+      console.log('🔄 LOD MODE: Toggle LOD mode button clicked');
+
+      if (pitch && pitch.advancedGrass) {
+        if (pitch.advancedGrass.manualLODMode) {
+          // Switch to automatic mode
+          pitch.advancedGrass.enableAutomaticLOD();
+          toggleLODModeButton.textContent = '👁️ Manual LOD';
+          toggleLODModeButton.style.background = '#FF5722';
+          console.log('🔄 LOD MODE: Switched to automatic LOD');
+        } else {
+          // Switch to manual mode (just set the flag, don't boost yet)
+          pitch.advancedGrass.manualLODMode = true;
+          toggleLODModeButton.textContent = '🔄 Auto LOD';
+          toggleLODModeButton.style.background = '#9C27B0';
+          console.log('🔄 LOD MODE: Switched to manual LOD mode');
+        }
+      } else {
+        console.error('🔄 LOD MODE: Advanced grass system not available');
+      }
+    });
+  }
+
+  // Force all chunks button
+  const forceAllChunksButton = document.getElementById('forceAllChunks');
+  if (forceAllChunksButton) {
+    forceAllChunksButton.addEventListener('click', () => {
+      console.log('🌾 FORCE ALL: Force all chunks button clicked');
+
+      if (pitch && pitch.advancedGrass) {
+        console.log('🌾 FORCE ALL: Forcing all chunks to have grass...');
+        const totalVisible = pitch.advancedGrass.forceAllChunksVisible();
+        console.log(`🌾 FORCE ALL: Completed with ${totalVisible} total instances`);
+      } else {
+        console.error('🌾 FORCE ALL: Advanced grass system not available');
+      }
+    });
+  }
+
   // Debug mode cycling removed - not applicable to AdvancedGrassSystem
 
   // Test displacement pattern removed - not applicable to AdvancedGrassSystem
@@ -1341,6 +1572,7 @@ function initializeWearTestMode() {
   // Quick access panel buttons
   const toggleCameraPanel = document.getElementById('toggleCameraPanel');
   const toggleGrassPanel = document.getElementById('toggleGrassPanel');
+  const toggleStadiumPanel = document.getElementById('toggleStadiumPanel');
   const toggleDebugPanel = document.getElementById('toggleDebugPanel');
   const toggleGamePanel = document.getElementById('toggleGamePanel');
 
@@ -1349,9 +1581,10 @@ function initializeWearTestMode() {
       // Find camera section by text content
       const summaries = document.querySelectorAll('summary');
       for (let summary of summaries) {
-        if (summary.textContent.includes('Camera')) {
+        if (summary.textContent.includes('Camera Settings')) {
           summary.parentElement.open = !summary.parentElement.open;
           summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          console.log('📹 QUICK ACCESS: Opened Camera Settings');
           break;
         }
       }
@@ -1360,11 +1593,28 @@ function initializeWearTestMode() {
 
   if (toggleGrassPanel) {
     toggleGrassPanel.addEventListener('click', () => {
+      // Grass controls are now in their own section
       const summaries = document.querySelectorAll('summary');
       for (let summary of summaries) {
-        if (summary.textContent.includes('Grass')) {
+        if (summary.textContent.includes('Grass Settings')) {
           summary.parentElement.open = !summary.parentElement.open;
           summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          console.log('🌱 QUICK ACCESS: Opened Grass Settings');
+          break;
+        }
+      }
+    });
+  }
+
+  if (toggleStadiumPanel) {
+    toggleStadiumPanel.addEventListener('click', () => {
+      // Stadium environment controls
+      const summaries = document.querySelectorAll('summary');
+      for (let summary of summaries) {
+        if (summary.textContent.includes('Stadium Environment')) {
+          summary.parentElement.open = !summary.parentElement.open;
+          summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          console.log('🏟️ QUICK ACCESS: Opened Stadium Environment');
           break;
         }
       }
@@ -1378,6 +1628,7 @@ function initializeWearTestMode() {
         if (summary.textContent.includes('Debug')) {
           summary.parentElement.open = !summary.parentElement.open;
           summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          console.log('🔧 QUICK ACCESS: Opened Debug Options');
           break;
         }
       }
@@ -1388,17 +1639,481 @@ function initializeWearTestMode() {
     toggleGamePanel.addEventListener('click', () => {
       const summaries = document.querySelectorAll('summary');
       for (let summary of summaries) {
-        if (summary.textContent.includes('Game')) {
+        if (summary.textContent.includes('Game') && summary.textContent.includes('Settings')) {
           summary.parentElement.open = !summary.parentElement.open;
           summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          console.log('⚽ QUICK ACCESS: Opened Game Settings');
           break;
         }
       }
     });
   }
 
-  // Mouse move handler for wear test mode
-  renderer.domElement.addEventListener('mousemove', handleWearTestMouseMove);
+  // Stadium environment controls
+  setupStadiumEnvironmentControls();
+
+  // Initialize enhanced camera navigation system
+  initCameraNavigation();
+
+  // Control mode toggle button
+  const toggleControlModeButton = document.getElementById('toggleControlMode');
+  if (toggleControlModeButton) {
+    toggleControlModeButton.addEventListener('click', () => {
+      toggleControlMode();
+      updateControlModeButton();
+    });
+  }
+
+  // Initialize control mode button
+  updateControlModeButton();
+}
+
+// Setup stadium environment control handlers
+function setupStadiumEnvironmentControls() {
+  // Time of day slider
+  const timeOfDaySlider = document.getElementById('timeOfDay');
+  const timeOfDayValue = document.getElementById('timeOfDayValue');
+  if (timeOfDaySlider && timeOfDayValue) {
+    timeOfDaySlider.addEventListener('input', (e) => {
+      const time = parseFloat(e.target.value);
+      const hours = Math.floor(time);
+      const minutes = Math.floor((time - hours) * 60);
+      timeOfDayValue.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+      if (stadiumEnvironment) {
+        stadiumEnvironment.setTimeOfDay(time);
+        console.log(`🕐 TIME: Set to ${hours}:${minutes.toString().padStart(2, '0')}`);
+      }
+    });
+  }
+
+  // Weather type selector
+  const weatherTypeSelect = document.getElementById('weatherType');
+  if (weatherTypeSelect) {
+    weatherTypeSelect.addEventListener('change', (e) => {
+      const weatherType = e.target.value;
+      const intensity = document.getElementById('weatherIntensity')?.value || 0.5;
+
+      if (stadiumEnvironment) {
+        stadiumEnvironment.setWeather(weatherType, parseFloat(intensity));
+        console.log(`🌦️ WEATHER: Changed to ${weatherType}`);
+      }
+    });
+  }
+
+  // Weather intensity slider
+  const weatherIntensitySlider = document.getElementById('weatherIntensity');
+  const weatherIntensityValue = document.getElementById('weatherIntensityValue');
+  if (weatherIntensitySlider && weatherIntensityValue) {
+    weatherIntensitySlider.addEventListener('input', (e) => {
+      const intensity = parseFloat(e.target.value);
+      weatherIntensityValue.textContent = intensity.toFixed(1);
+
+      const weatherType = document.getElementById('weatherType')?.value || 'clear';
+      if (stadiumEnvironment) {
+        stadiumEnvironment.setWeather(weatherType, intensity);
+        console.log(`🌪️ WEATHER INTENSITY: Set to ${intensity}`);
+      }
+    });
+  }
+
+  // Stadium lights toggle
+  const stadiumLightsCheckbox = document.getElementById('stadiumLights');
+  if (stadiumLightsCheckbox) {
+    stadiumLightsCheckbox.addEventListener('change', (e) => {
+      const enabled = e.target.checked;
+
+      if (stadiumEnvironment) {
+        stadiumEnvironment.setStadiumLights(enabled);
+        console.log(`💡 STADIUM LIGHTS: ${enabled ? 'ON' : 'OFF'}`);
+      }
+    });
+  }
+
+  // Floodlight intensity control
+  const floodlightIntensitySlider = document.getElementById('floodlightIntensity');
+  const floodlightIntensityValue = document.getElementById('floodlightIntensityValue');
+  if (floodlightIntensitySlider && floodlightIntensityValue) {
+    floodlightIntensitySlider.addEventListener('input', (e) => {
+      const intensity = parseFloat(e.target.value);
+      floodlightIntensityValue.textContent = intensity.toFixed(1);
+
+      if (stadiumEnvironment) {
+        stadiumEnvironment.setFloodlightIntensity(intensity);
+      }
+    });
+  }
+
+  // Floodlight color control
+  const floodlightColorSelect = document.getElementById('floodlightColor');
+  if (floodlightColorSelect) {
+    floodlightColorSelect.addEventListener('change', (e) => {
+      const colorHex = e.target.value;
+      const color = parseInt(colorHex, 16);
+
+      if (stadiumEnvironment) {
+        stadiumEnvironment.setFloodlightColor(color);
+      }
+    });
+  }
+
+  // Stadium style selector (placeholder for future implementation)
+  const stadiumStyleSelect = document.getElementById('stadiumStyle');
+  if (stadiumStyleSelect) {
+    stadiumStyleSelect.addEventListener('change', (e) => {
+      const style = e.target.value;
+      console.log(`🏟️ STADIUM STYLE: ${style} (feature coming soon)`);
+    });
+  }
+
+  // Debug stadium info button
+  const debugStadiumButton = document.getElementById('debugStadiumInfo');
+  if (debugStadiumButton) {
+    debugStadiumButton.addEventListener('click', () => {
+      if (stadiumEnvironment) {
+        const debugInfo = stadiumEnvironment.getDebugInfo();
+        console.log('🏟️ STADIUM DEBUG: ===== STADIUM ENVIRONMENT REPORT =====');
+        console.log(`🏟️ STADIUM DEBUG: - Time of day: ${debugInfo.timeOfDay}:00`);
+        console.log(`🏟️ STADIUM DEBUG: - Weather: ${debugInfo.weather} (intensity: ${debugInfo.weatherIntensity})`);
+        console.log(`🏟️ STADIUM DEBUG: - Cloud count: ${debugInfo.cloudCount}`);
+        console.log(`🏟️ STADIUM DEBUG: - Stadium lights: ${debugInfo.stadiumLights} total`);
+        console.log(`🏟️ STADIUM DEBUG: - Floodlights active: ${debugInfo.floodlightsOn}/${debugInfo.stadiumLights}`);
+        console.log(`🏟️ STADIUM DEBUG: - Floodlight intensity: ${debugInfo.floodlightIntensity.toFixed(2)}`);
+        console.log(`🏟️ STADIUM DEBUG: - Sun intensity: ${debugInfo.sunIntensity.toFixed(2)}`);
+        console.log(`🏟️ STADIUM DEBUG: - Ambient intensity: ${debugInfo.ambientIntensity.toFixed(2)}`);
+        console.log('🏟️ STADIUM DEBUG: ===== PERFORMANCE STATISTICS =====');
+        console.log(`🏟️ STADIUM DEBUG: - Stadium capacity: ${debugInfo.performance.capacity.toLocaleString()} spectators`);
+        console.log(`🏟️ STADIUM DEBUG: - Stadium radius: ${debugInfo.performance.stadiumRadius}m`);
+        console.log(`🏟️ STADIUM DEBUG: - Stadium tiers: ${debugInfo.performance.tiers}`);
+        console.log(`🏟️ STADIUM DEBUG: - Roof coverage: ${debugInfo.performance.roofCoverage}`);
+        console.log(`🏟️ STADIUM DEBUG: - Total geometry objects: ${debugInfo.performance.totalGeometry}`);
+        console.log(`🏟️ STADIUM DEBUG: - Visible geometry objects: ${debugInfo.performance.visibleGeometry}`);
+        console.log(`🏟️ STADIUM DEBUG: - Current LOD level: ${debugInfo.performance.lodLevel}`);
+        console.log(`🏟️ STADIUM DEBUG: - Performance optimization: ${((1 - debugInfo.performance.visibleGeometry / debugInfo.performance.totalGeometry) * 100).toFixed(1)}% geometry culled`);
+        console.log('🏟️ STADIUM DEBUG: ===== END STADIUM REPORT =====');
+      } else {
+        console.error('🏟️ STADIUM DEBUG: Stadium environment not available');
+      }
+    });
+  }
+
+  // FIFA compliance validation button
+  const validateFIFAButton = document.getElementById('validateFIFACompliance');
+  if (validateFIFAButton) {
+    validateFIFAButton.addEventListener('click', () => {
+      if (stadiumEnvironment) {
+        stadiumEnvironment.validateFIFACompliance();
+      } else {
+        console.error('⚽ FIFA VALIDATION: Stadium environment not available');
+      }
+    });
+  }
+}
+
+// ===== ENHANCED CAMERA NAVIGATION SYSTEM =====
+
+// Initialize camera navigation controls
+function initCameraNavigation() {
+  // Keyboard event listeners
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+
+  // Mouse event listeners
+  renderer.domElement.addEventListener('click', onCanvasClick);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('pointerlockchange', onPointerLockChange);
+
+  console.log('🎮 CAMERA NAV: Enhanced navigation system initialized');
+  console.log('🎮 CAMERA NAV: Click canvas and use WASD + mouse to navigate');
+  console.log('🎮 CAMERA NAV: Press ESC to exit navigation mode');
+}
+
+// Handle keyboard input
+function onKeyDown(event) {
+  // Handle mode switching
+  if (event.code === 'KeyC' && event.ctrlKey) {
+    toggleControlMode();
+    event.preventDefault();
+    return;
+  }
+
+  // Only handle camera navigation keys when in camera mode and enabled
+  if (controlMode === 'camera' && cameraController.enabled) {
+    switch (event.code) {
+      case 'KeyW': cameraController.keys.forward = true; break;
+      case 'KeyS': cameraController.keys.backward = true; break;
+      case 'KeyA': cameraController.keys.left = true; break;
+      case 'KeyD': cameraController.keys.right = true; break;
+      case 'KeyQ': cameraController.keys.down = true; break;
+      case 'KeyE': cameraController.keys.up = true; break;
+      case 'Escape': exitCameraNavigation(); break;
+    }
+  }
+}
+
+function onKeyUp(event) {
+  // Only handle camera navigation keys when in camera mode and enabled
+  if (controlMode === 'camera' && cameraController.enabled) {
+    switch (event.code) {
+      case 'KeyW': cameraController.keys.forward = false; break;
+      case 'KeyS': cameraController.keys.backward = false; break;
+      case 'KeyA': cameraController.keys.left = false; break;
+      case 'KeyD': cameraController.keys.right = false; break;
+      case 'KeyQ': cameraController.keys.down = false; break;
+      case 'KeyE': cameraController.keys.up = false; break;
+    }
+  }
+}
+
+// Toggle between player control and camera navigation modes
+function toggleControlMode() {
+  if (controlMode === 'player') {
+    // Switching to camera mode - save current camera state if needed
+    if (!cameraController.hasStoredState) {
+      cameraController.savedPosition.copy(camera.position);
+      cameraController.savedRotation.copy(camera.rotation);
+      cameraController.hasStoredState = true;
+    }
+
+    controlMode = 'camera';
+    console.log('🎮 CONTROL MODE: Switched to CAMERA NAVIGATION');
+    console.log('🎮 CONTROL MODE: Click canvas to start flying around');
+    console.log('🎮 CONTROL MODE: Camera is now independent from player');
+    showControlModeHint('camera');
+  } else {
+    // Switching to player mode - exit camera navigation and restore normal camera
+    controlMode = 'player';
+    exitCameraNavigation(); // Exit camera nav if active
+
+    // Resume normal camera following
+    updateCamera(true); // Force immediate camera update to follow player
+
+    console.log('🎮 CONTROL MODE: Switched to PLAYER CONTROL');
+    console.log('🎮 CONTROL MODE: Use WASD to control selected player');
+    console.log('🎮 CONTROL MODE: Camera will follow player again');
+    showControlModeHint('player');
+  }
+}
+
+// Handle canvas click to enter navigation mode (only in camera mode)
+function onCanvasClick() {
+  if (controlMode === 'camera' && !cameraController.enabled && !wearTestMode) {
+    enterCameraNavigation();
+  }
+}
+
+// Enter camera navigation mode
+function enterCameraNavigation() {
+  renderer.domElement.requestPointerLock();
+}
+
+// Exit camera navigation mode
+function exitCameraNavigation() {
+  if (document.pointerLockElement) {
+    document.exitPointerLock();
+  }
+}
+
+// Handle pointer lock changes
+function onPointerLockChange() {
+  cameraController.enabled = document.pointerLockElement === renderer.domElement;
+  cameraController.mouse.isLocked = cameraController.enabled;
+
+  if (cameraController.enabled) {
+    // Initialize camera navigation - set up euler from current camera rotation
+    cameraController.euler.setFromQuaternion(camera.quaternion);
+
+    console.log('🎮 CAMERA NAV: Navigation mode ACTIVE (WASD + mouse)');
+    console.log('🎮 CAMERA NAV: Camera is now independent and steerable');
+    console.log(`🎮 CAMERA NAV: Starting position: (${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`);
+    showNavigationHint(true);
+  } else {
+    console.log('🎮 CAMERA NAV: Navigation mode INACTIVE');
+    console.log('🎮 CAMERA NAV: Camera navigation paused');
+    showNavigationHint(false);
+  }
+}
+
+// Handle mouse movement for look controls
+function onMouseMove(event) {
+  if (cameraController.enabled && cameraController.mouse.isLocked) {
+    // Mouse look
+    const movementX = event.movementX || 0;
+    const movementY = event.movementY || 0;
+
+    cameraController.euler.setFromQuaternion(camera.quaternion);
+    cameraController.euler.y -= movementX * cameraController.lookSpeed;
+    cameraController.euler.x -= movementY * cameraController.lookSpeed;
+    cameraController.euler.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraController.euler.x));
+
+    camera.quaternion.setFromEuler(cameraController.euler);
+  } else if (!cameraController.enabled) {
+    // Handle wear test mode
+    handleWearTestMouseMove(event);
+  }
+}
+
+// Update camera position based on input
+function updateCameraNavigation(deltaTime) {
+  // Only allow camera navigation in camera mode
+  if (controlMode !== 'camera' || !cameraController.enabled) return;
+
+  const speed = cameraController.moveSpeed * deltaTime;
+
+  // Reset velocity
+  cameraController.velocity.set(0, 0, 0);
+
+  // Calculate movement direction (fixed inverted controls)
+  cameraController.direction.set(0, 0, 0);
+
+  if (cameraController.keys.forward) cameraController.direction.z += 1;  // Fixed: W moves forward
+  if (cameraController.keys.backward) cameraController.direction.z -= 1; // Fixed: S moves backward
+  if (cameraController.keys.left) cameraController.direction.x -= 1;
+  if (cameraController.keys.right) cameraController.direction.x += 1;
+  if (cameraController.keys.up) cameraController.direction.y += 1;
+  if (cameraController.keys.down) cameraController.direction.y -= 1;
+
+  // Normalize direction
+  if (cameraController.direction.length() > 0) {
+    cameraController.direction.normalize();
+  }
+
+  // Apply camera rotation to movement direction
+  const forward = new THREE.Vector3(0, 0, -1);
+  const right = new THREE.Vector3(1, 0, 0);
+  const up = new THREE.Vector3(0, 1, 0);
+
+  forward.applyQuaternion(camera.quaternion);
+  right.applyQuaternion(camera.quaternion);
+
+  // Calculate final velocity
+  cameraController.velocity.addScaledVector(forward, cameraController.direction.z * speed);
+  cameraController.velocity.addScaledVector(right, cameraController.direction.x * speed);
+  cameraController.velocity.addScaledVector(up, cameraController.direction.y * speed);
+
+  // Apply movement
+  camera.position.add(cameraController.velocity);
+}
+
+// Show/hide navigation hint
+function showNavigationHint(show) {
+  let hint = document.getElementById('navigationHint');
+
+  if (show && !hint) {
+    hint = document.createElement('div');
+    hint.id = 'navigationHint';
+    hint.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      z-index: 2000;
+      pointer-events: none;
+    `;
+    hint.innerHTML = `
+      <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">🎥 Independent Camera Active</div>
+      <div style="font-size: 14px;">
+        <strong>WASD</strong> - Fly around stadium<br>
+        <strong>QE</strong> - Up/Down movement<br>
+        <strong>Mouse</strong> - Free look (independent)<br>
+        <strong>ESC</strong> - Exit free camera<br>
+        <em>Camera is now independent from players</em>
+      </div>
+    `;
+    document.body.appendChild(hint);
+
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      if (hint && hint.parentNode) {
+        hint.style.opacity = '0.3';
+      }
+    }, 3000);
+  } else if (!show && hint) {
+    hint.remove();
+  }
+}
+
+// Show control mode hint
+function showControlModeHint(mode) {
+  let hint = document.getElementById('controlModeHint');
+
+  // Remove existing hint
+  if (hint) {
+    hint.remove();
+  }
+
+  hint = document.createElement('div');
+  hint.id = 'controlModeHint';
+  hint.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    z-index: 2000;
+    pointer-events: none;
+    border: 2px solid ${mode === 'camera' ? '#4CAF50' : '#2196F3'};
+  `;
+
+  if (mode === 'camera') {
+    hint.innerHTML = `
+      <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">🎥 Independent Camera Navigation</div>
+      <div style="font-size: 12px;">
+        Click canvas to fly around • WASD + Mouse for free movement<br>
+        Camera is <strong>independent</strong> from players • ESC to exit<br>
+        <strong>Ctrl+C</strong> to switch back to Player Control
+      </div>
+    `;
+  } else {
+    hint.innerHTML = `
+      <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">🎮 Player Control Mode</div>
+      <div style="font-size: 12px;">
+        WASD to control selected player • Camera follows player<br>
+        <strong>Ctrl+C</strong> to switch to Independent Camera Navigation
+      </div>
+    `;
+  }
+
+  document.body.appendChild(hint);
+
+  // Auto-hide after 4 seconds
+  setTimeout(() => {
+    if (hint && hint.parentNode) {
+      hint.style.opacity = '0';
+      setTimeout(() => {
+        if (hint && hint.parentNode) {
+          hint.remove();
+        }
+      }, 500);
+    }
+  }, 4000);
+}
+
+// Update control mode button appearance
+function updateControlModeButton() {
+  const button = document.getElementById('toggleControlMode');
+  if (!button) return;
+
+  if (controlMode === 'player') {
+    button.textContent = '🎮 Player Mode';
+    button.style.background = '#2196F3';
+    button.title = 'Currently controlling player. Click to switch to camera navigation.';
+  } else {
+    button.textContent = '🎥 Camera Mode';
+    button.style.background = '#4CAF50';
+    button.title = 'Currently in camera navigation. Click to switch to player control.';
+  }
 }
 
 function handleWearTestMouseMove(event) {

@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "serve": "node scripts/serve-demo.js",
+    "demo": "npm run build && npm run serve"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

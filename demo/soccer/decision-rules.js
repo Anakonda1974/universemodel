@@ -315,11 +315,97 @@ function decideBallOwnerAction(player, world) {
   const passThreshold = Math.max(0.2, 0.6 - playerIntelligence * 0.4 - currentPressure * 0.3);
 
   if (bestPass) {
-    const passScore = evaluatePassOpportunity(player, bestPass, world, world.opponentGoal, playerVision, playerIntelligence);
+    let passScore = evaluatePassOpportunity(player, bestPass, world, world.opponentGoal, playerVision, playerIntelligence);
 
-    // Intelligent players make better passing decisions
-    if (passScore > passThreshold * 100 || currentPressure > 0.7) {
-      return boundedIntent(player, "pass", bestPass.x, bestPass.y, world);
+    // Enhanced coordination bonuses + TIKI-TAKA elements
+    if (player.pendingPassTarget === bestPass) {
+      passScore += 30; // Bonus for requested passes
+      console.log(`📞 PASS REQUEST: Bonus for ${bestPass.role} request`);
+    }
+
+    if (player.availableSupport && player.availableSupport.player === bestPass) {
+      passScore += 20; // Bonus for support positions
+      console.log(`🤝 SUPPORT: Bonus for ${bestPass.role} support`);
+    }
+
+    if (bestPass.currentAction === 'overlap') {
+      passScore += 35; // High bonus for overlapping runs
+      console.log(`🏃‍♂️ OVERLAP: Bonus for ${bestPass.role} overlap`);
+    }
+
+    // TIKI-TAKA BONUSES
+    const tikitakaBonus = calculateTikiTakaBonus(player, bestPass, world);
+    passScore += tikitakaBonus;
+
+    if (tikitakaBonus > 0) {
+      console.log(`⚽ TIKI-TAKA: +${tikitakaBonus.toFixed(1)} bonus for ${bestPass.role}`);
+    }
+
+    // Check for overlap timing
+    if (player.overlapTiming && performance.now() >= player.overlapTiming - 500) {
+      if (player.overlapRunner === bestPass) {
+        passScore += 50; // Very high bonus for timed overlaps
+        console.log(`⏰ TIMED OVERLAP: Executing timed pass to ${bestPass.role}`);
+      }
+    }
+
+    // Intelligent players make better passing decisions with coordination
+    const enhancedThreshold = passThreshold * 100 * 0.8; // Lower threshold for coordinated play
+    if (passScore > enhancedThreshold || currentPressure > 0.7) {
+      // Execute coordinated pass
+      const result = boundedIntent(player, "pass", bestPass.x, bestPass.y, world);
+
+      // Clear coordination states after pass
+      if (player.pendingPassTarget === bestPass) {
+        player.pendingPassTarget = null;
+        console.log(`✅ PASS REQUEST: Fulfilled request from ${bestPass.role}`);
+      }
+
+      if (player.overlapTiming && player.overlapRunner === bestPass) {
+        player.overlapTiming = null;
+        player.overlapRunner = null;
+        console.log(`✅ OVERLAP: Completed timed overlap pass`);
+      }
+
+      return result;
+    }
+  }
+
+  // No good pass available - consider coordination actions
+  if (Math.random() < 0.15) { // 15% chance for coordination actions
+    const teammates = world.teammates.filter(t => t !== player);
+
+    if (teammates.length > 0) {
+      const nearbyTeammates = teammates.filter(t =>
+        Math.hypot(player.x - t.x, player.y - t.y) < 50
+      );
+
+      if (nearbyTeammates.length > 0) {
+        const teammate = nearbyTeammates[Math.floor(Math.random() * nearbyTeammates.length)];
+
+        // Randomly choose coordination action
+        const actions = ['createSpace', 'supportBallCarrier', 'requestPass'];
+        const action = actions[Math.floor(Math.random() * actions.length)];
+
+        switch (action) {
+          case 'createSpace':
+            Capabilities.createSpace(player, world, teammate);
+            console.log(`🏃 COORDINATION: ${player.role} creating space for ${teammate.role}`);
+            break;
+          case 'supportBallCarrier':
+            if (world.ball?.owner && world.teammates.includes(world.ball.owner)) {
+              Capabilities.supportBallCarrier(player, world);
+              console.log(`🤝 COORDINATION: ${player.role} supporting ball carrier`);
+            }
+            break;
+          case 'requestPass':
+            if (world.ball?.owner && world.teammates.includes(world.ball.owner)) {
+              Capabilities.requestPass(player, world);
+              console.log(`📞 COORDINATION: ${player.role} requesting pass`);
+            }
+            break;
+        }
+      }
     }
   }
 
@@ -387,7 +473,7 @@ export function findBestPass(player, teammates, world) {
   return best;
 }
 
-// Comprehensive pass evaluation considering multiple factors
+// Enhanced pass evaluation with realistic factors
 function evaluatePassOpportunity(passer, receiver, world, goal, vision, intelligence) {
   const distance = Math.hypot(passer.x - receiver.x, passer.y - receiver.y);
 
@@ -400,32 +486,158 @@ function evaluatePassOpportunity(passer, receiver, world, goal, vision, intellig
   // 2. Shooting Opportunity Score
   const shootingScore = evaluateShootingOpportunity(receiver, world, goal) * 150; // 0-150 points
 
-  // 3. Space and Marking Score
-  const spaceScore = evaluateReceiverSpace(receiver, world) * 80; // 0-80 points
+  // 3. Pass Difficulty Score (NEW)
+  const passDifficulty = evaluatePassDifficulty(passer, receiver, world);
+  const difficultyPenalty = passDifficulty * 50; // 0-50 point penalty
 
-  // 4. Pass Safety Score (clear path, no interceptions)
-  const safetyScore = evaluatePassSafety(passer, receiver, world) * 60; // 0-60 points
+  // 4. Receiver Pressure Score (NEW)
+  const receiverPressure = evaluateReceiverPressure(receiver, world);
+  const pressurePenalty = receiverPressure * 30; // 0-30 point penalty
 
-  // 5. Tactical Position Score (receiver's role and position)
-  const tacticalScore = evaluateTacticalPosition(receiver, world, goal) * 40; // 0-40 points
+  // 5. Pass Lane Clearance (NEW)
+  const laneClearance = evaluatePassLane(passer, receiver, world);
+  const laneBonus = laneClearance * 40; // 0-40 point bonus
 
-  // 6. Player Ability Score (receiver's skill to use the pass)
-  const abilityScore = evaluateReceiverAbility(receiver) * 30; // 0-30 points
+  // 6. Receiver Movement Score (NEW)
+  const movementScore = evaluateReceiverMovement(receiver, goal) * 25; // 0-25 points
 
-  // Weight factors based on passer's vision and intelligence
-  const visionWeight = 0.5 + vision * 0.5; // 0.5 to 1.0
-  const intelligenceWeight = 0.5 + intelligence * 0.5; // 0.5 to 1.0
+  // Calculate final score with all factors
+  const totalScore = advancementScore + shootingScore + laneBonus + movementScore - difficultyPenalty - pressurePenalty;
 
-  // Combine scores with intelligence-based weighting
-  const totalScore =
-    advancementScore * 1.0 +
-    shootingScore * intelligenceWeight * 1.2 +
-    spaceScore * visionWeight * 1.0 +
-    safetyScore * 1.0 +
-    tacticalScore * intelligenceWeight * 0.8 +
-    abilityScore * 0.6;
+  return Math.max(0, totalScore);
+}
 
-  return totalScore;
+// Evaluate how difficult the pass is to execute
+function evaluatePassDifficulty(passer, receiver, world) {
+  const distance = Math.hypot(passer.x - receiver.x, passer.y - receiver.y);
+
+  // Distance difficulty (0-1, higher is more difficult)
+  let difficulty = Math.min(1, distance / 80); // Max difficulty at 80m
+
+  // Angle difficulty (passes behind or to the side are harder)
+  const passerToGoal = Math.atan2(world.opponentGoal.y - passer.y, world.opponentGoal.x - passer.x);
+  const passerToReceiver = Math.atan2(receiver.y - passer.y, receiver.x - passer.x);
+  let angleDiff = Math.abs(passerToGoal - passerToReceiver);
+  if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+
+  // Backward passes are more difficult
+  if (angleDiff > Math.PI / 2) {
+    difficulty += 0.3;
+  }
+
+  // Passer pressure increases difficulty
+  const passerPressure = evaluatePlayerPressure(passer, world);
+  difficulty += passerPressure * 0.4;
+
+  return Math.min(1, difficulty);
+}
+
+// Evaluate pressure on the potential receiver
+function evaluateReceiverPressure(receiver, world) {
+  let pressure = 0;
+  const opponents = world.players ? world.players.filter(p => p.team !== receiver.team) : [];
+
+  opponents.forEach(opponent => {
+    const distance = Math.hypot(receiver.x - opponent.x, receiver.y - opponent.y);
+    if (distance < 10) {
+      pressure += 0.8; // Very close opponent
+    } else if (distance < 20) {
+      pressure += 0.4; // Nearby opponent
+    }
+  });
+
+  return Math.min(1, pressure);
+}
+
+// Evaluate if the pass lane is clear of opponents
+function evaluatePassLane(passer, receiver, world) {
+  const opponents = world.players ? world.players.filter(p => p.team !== passer.team) : [];
+  let clearance = 1.0;
+
+  // Check for opponents in the pass lane
+  opponents.forEach(opponent => {
+    const distanceToLane = distancePointToLine(
+      opponent.x, opponent.y,
+      passer.x, passer.y,
+      receiver.x, receiver.y
+    );
+
+    if (distanceToLane < 8) { // Opponent within 8m of pass lane
+      const positionOnLane = getPositionOnLine(
+        opponent.x, opponent.y,
+        passer.x, passer.y,
+        receiver.x, receiver.y
+      );
+
+      // Only count opponents between passer and receiver
+      if (positionOnLane > 0 && positionOnLane < 1) {
+        clearance -= 0.3; // Reduce clearance for each blocking opponent
+      }
+    }
+  });
+
+  return Math.max(0, clearance);
+}
+
+// Evaluate receiver's movement toward goal
+function evaluateReceiverMovement(receiver, goal) {
+  if (!receiver.targetX || !receiver.targetY) return 0;
+
+  // Calculate if receiver is moving toward goal
+  const currentGoalDist = Math.hypot(receiver.x - goal.x, receiver.y - goal.y);
+  const targetGoalDist = Math.hypot(receiver.targetX - goal.x, receiver.targetY - goal.y);
+
+  if (targetGoalDist < currentGoalDist) {
+    return 1.0; // Moving toward goal
+  } else if (targetGoalDist > currentGoalDist + 10) {
+    return 0.2; // Moving away from goal
+  } else {
+    return 0.6; // Lateral movement
+  }
+}
+
+// Helper function: distance from point to line
+function distancePointToLine(px, py, x1, y1, x2, y2) {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+
+  const dot = A * C + B * D;
+  const lenSq = C * C + D * D;
+
+  if (lenSq === 0) return Math.hypot(A, B);
+
+  const param = dot / lenSq;
+  let xx, yy;
+
+  if (param < 0) {
+    xx = x1;
+    yy = y1;
+  } else if (param > 1) {
+    xx = x2;
+    yy = y2;
+  } else {
+    xx = x1 + param * C;
+    yy = y1 + param * D;
+  }
+
+  return Math.hypot(px - xx, py - yy);
+}
+
+// Helper function: get position on line (0 = start, 1 = end)
+function getPositionOnLine(px, py, x1, y1, x2, y2) {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+
+  const dot = A * C + B * D;
+  const lenSq = C * C + D * D;
+
+  if (lenSq === 0) return 0;
+
+  return dot / lenSq;
 }
 
 // Evaluate if receiver has a good shooting opportunity

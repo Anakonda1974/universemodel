@@ -2,601 +2,378 @@ import * as THREE from 'https://unpkg.com/three@0.156.1/build/three.module.js';
 import { GrassShader } from './grassShader.js';
 
 /**
- * Professional 3D Soccer Pitch Component with Advanced Grass Shader
- * FIFA-compliant dimensions and markings with dynamic wear tracking
+ * Professional 3D Soccer Pitch Component – Refactored 2025‑07‑09
+ * -----------------------------------------------------------------------------
+ * ✅  Correct, single‑source dimensions (FIFA‑compliant)
+ * ✅  Clear length (X) vs width (Z) naming
+ * ✅  Dead‑code removal & API cleanup
+ * ✅  Radian rotations, no silent method clashes
+ * ✅  Optional performance dials (segment density / batched markings)
+ * -----------------------------------------------------------------------------
  */
 export class SoccerPitch3D {
-  constructor(renderer = null) {
-    // FIFA standard dimensions (in meters)
-    // CORRECTED: Swapping width/height to match visual perspective
+  /**
+   * @param {THREE.WebGLRenderer|null} renderer – needed for GrassShader
+   * @param {object} options
+   *   @property {number} [scale=0.5]          – 1 = real size (105×68 m)
+   *   @property {number} [segments=256]       – grass geometry subdivisions per side
+   *   @property {boolean} [batchedLines=true] – collapse markings into one geometry
+   */
+  constructor(renderer = null, options = {}) {
+    const {
+      scale = 0.5,
+      segments = 256,
+      batchedLines = true
+    } = options;
+
+    /**
+     * Dimensions use clear names:
+     *  length  – goal to goal direction (X‑axis, FIFA 105 m)
+     *  width   – sideline to sideline (Z‑axis, FIFA 68 m)
+     */
     this.dimensions = {
-      width: 52.5,    // 105m / 2 (scaled down) - GOAL TO GOAL (shorter dimension with goals)
-      height: 34,     // 68m / 2 (scaled down) - SIDELINE TO SIDELINE (longer dimension bisected by center line)
-      lineWidth: 0.12,
+      length: 105 * scale,
+      width: 68 * scale,
+      lineWidth: 0.12 * scale,
 
-      // Goal dimensions (goals are on the width sides - shorter dimension)
-      goalWidth: 7.32,
-      goalHeight: 2.44,
-      goalDepth: 2.0,
-      postRadius: 0.06,
+      // Goal dimensions
+      goalWidth: 7.32 * scale,
+      goalHeight: 2.44 * scale,
+      goalDepth: 2 * scale,
+      postRadius: 0.06 * scale,
 
-      // Area dimensions (penalty areas extend into the field from goal lines)
-      penaltyAreaWidth: 40.3,   // Width of penalty area (parallel to goal line)
-      penaltyAreaHeight: 16.5,  // Distance from goal line into field
-      goalAreaWidth: 18.3,      // Width of goal area (parallel to goal line)
-      goalAreaHeight: 5.5,      // Distance from goal line into field
+      // Areas
+      penaltyAreaDepth: 16.5 * scale,      // distance into field
+      penaltyAreaWidth: 40.3 * scale,      // along goal line (Z)
+      goalAreaDepth: 5.5 * scale,
+      goalAreaWidth: 18.32 * scale,
 
-      // Circle and arc dimensions
-      centerCircleRadius: 9.15,
-      cornerArcRadius: 1.0,
-      penaltySpotDistance: 11.0  // Distance from goal line
+      // Circle & spots
+      centerCircleRadius: 9.15 * scale,
+      cornerArcRadius: 1.0 * scale,
+      penaltySpotFromGoal: 11 * scale,
     };
 
     this.group = new THREE.Group();
 
-    // Initialize advanced grass shader system
-    this.grassShader = new GrassShader(renderer, this.dimensions.width, this.dimensions.height);
+    // ───────────────────────────────── Grass & dirt materials
+    this.grassShader = new GrassShader(renderer, this.dimensions.length, this.dimensions.width);
+    this.materials = this._createMaterials();
 
-    this.materials = this.createMaterials();
+    // ───────────────────────────────── Build pitch
+    this._buildField(segments);
+    this._buildMarkings(batchedLines);
+    this._buildGoals();
+    this._buildCornerFlags();
+    this._buildCornerArcs();
 
-    this.buildPitch();
+    // debug helpers
+    this._buildDebugHelpers();
   }
-  
-  createMaterials() {
+
+  /*───────────────────────────── PUBLIC API */
+  addTo(scene) { scene.add(this.group); }
+
+  /** Toggle debug helpers. Pass a boolean to force state. Returns new visibility. */
+  toggleDebugHelpers(force) {
+    if (!this.debugHelpers) return false;
+    this.debugHelpers.visible = (typeof force === 'boolean') ? force : !this.debugHelpers.visible;
+    return this.debugHelpers.visible;
+  }
+
+  /** World‑space bounds, handy for AI & collisions */
+  getBounds() {
+    const { length, width } = this.dimensions;
     return {
-      // Advanced grass shader with wear tracking
-      grass: this.grassShader.createGrassMaterial(),
-
-      // Ground/dirt layer underneath grass
-      dirt: this.createDirtMaterial(),
-
-      // White markings
-      marking: new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: false,
-        opacity: 1.0
-      }),
-      
-      // Goal materials
-      goalPost: new THREE.MeshStandardMaterial({ 
-        color: 0xffffff,
-        roughness: 0.3,
-        metalness: 0.1
-      }),
-      
-      goalNet: new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.6,
-        side: THREE.DoubleSide
-      }),
-      
-      // Corner flag materials
-      flagPole: new THREE.MeshStandardMaterial({ color: 0xffffff }),
-      flag: new THREE.MeshBasicMaterial({ 
-        color: 0xff0000,
-        side: THREE.DoubleSide
-      })
+      minX: -length / 2,
+      maxX: length / 2,
+      minZ: -width / 2,
+      maxZ: width / 2
     };
   }
-  
-  createGrassMaterial() {
-    // Return the advanced grass shader material with dynamic wear tracking
-    return this.grassShader.getMaterial();
-  }
 
-  createDirtMaterial() {
-    // Create realistic dirt/ground material that shows when grass is worn away
-    return new THREE.MeshLambertMaterial({
-      color: 0x8b4513, // Saddle brown dirt color
-      roughness: 0.9,
-      metalness: 0.0
+  /** Grass interaction helpers – thin wrappers around GrassShader */
+  recordPlayerActivity(x, z, activity = 'walk', intensity = 1) {
+    this.grassShader.recordPlayerActivity(x, z, activity, intensity);
+  }
+  update(delta, windDir = { x: 1, y: 0.5 }, windPow = 0.02) {
+    this.grassShader.update(delta, windDir, windPow);
+  }
+  getWearAt(x, z) { return this.grassShader.getWearAt(x, z); }
+  resetWear() { this.grassShader.resetWear(); }
+
+  /** Manual cleanup */
+  dispose() {
+    this.grassShader.dispose();
+    this.group.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose?.();
+      if (obj.material) {
+        (Array.isArray(obj.material) ? obj.material : [obj.material])
+          .forEach(mat => mat.dispose?.());
+      }
     });
   }
-  
-  buildPitch() {
-    this.createField();
-    this.createBoundaryLines();
-    this.createCenterMarkings();
-    this.createPenaltyAreas();
-    this.createGoalAreas();
-    this.createPenaltySpots();
-    this.createGoals();
-    this.createCornerFlags();
-    this.createCornerArcs();
 
-    // Create visual debug helpers
-    this.createVisualHelpers();
+  /*───────────────────────────── INTERNAL BUILDERS */
+  _createMaterials() {
+    return {
+      grass: this.grassShader.createGrassMaterial(),
+      dirt: new THREE.MeshLambertMaterial({ color: 0x8b4513, roughness: 0.9 }),
+      marking: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+      goalPost: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.1 }),
+      goalNet: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide }),
+      flagPole: new THREE.MeshStandardMaterial({ color: 0xffffff }),
+      flag: new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide })
+    };
   }
-  
-  createField() {
-    // Create two-layer field system: dirt base + grass overlay
 
-    // Layer 1: Ground/Dirt base (always visible)
-    const groundGeo = new THREE.PlaneGeometry(
-      this.dimensions.width,
-      this.dimensions.height
+  /** Ground layers */
+  _buildField(segments) {
+    const { length, width } = this.dimensions;
+
+    // Dirt base
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(length, width),
+      this.materials.dirt
     );
-    this.groundMesh = new THREE.Mesh(groundGeo, this.materials.dirt);
-    this.groundMesh.rotation.x = -Math.PI/2;
-    this.groundMesh.position.y = -0.01; // Slightly below grass
-    this.groundMesh.receiveShadow = true;
-    this.groundMesh.name = 'ground';
-    this.group.add(this.groundMesh);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.01;
+    ground.receiveShadow = true;
+    this.group.add(ground);
 
-    // Layer 2: Grass overlay (can be worn away to reveal dirt)
-    const segments = 512; // High resolution for detailed grass displacement
-    const grassGeo = new THREE.PlaneGeometry(
-      this.dimensions.width,
-      this.dimensions.height,
-      segments,
-      segments
+    // Grass overlay
+    const grass = new THREE.Mesh(
+      new THREE.PlaneGeometry(length, width, segments, segments),
+      this.materials.grass
     );
-    this.grassMesh = new THREE.Mesh(grassGeo, this.materials.grass);
-    this.grassMesh.rotation.x = -Math.PI/2;
-    this.grassMesh.position.y = 0; // On top of dirt
-    this.grassMesh.receiveShadow = true;
-    this.grassMesh.castShadow = false; // Grass doesn't cast shadows, only receives
-    this.grassMesh.name = 'grass';
-    this.group.add(this.grassMesh);
-
-    // Debug grass mesh creation
-    console.log('🏔️ DISPLACEMENT DEBUG: Grass mesh created:');
-    console.log(`🏔️ DISPLACEMENT DEBUG: - Geometry: ${grassGeo.parameters.width}x${grassGeo.parameters.height} with ${segments}x${segments} segments`);
-    console.log(`🏔️ DISPLACEMENT DEBUG: - Vertices: ${grassGeo.attributes.position.count}`);
-    console.log(`🏔️ DISPLACEMENT DEBUG: - Material: ${this.materials.grass.type}`);
-    console.log(`🏔️ DISPLACEMENT DEBUG: - Position: (${this.grassMesh.position.x}, ${this.grassMesh.position.y}, ${this.grassMesh.position.z})`);
-    console.log(`🏔️ DISPLACEMENT DEBUG: - Rotation: (${this.grassMesh.rotation.x}, ${this.grassMesh.rotation.y}, ${this.grassMesh.rotation.z})`);
-    console.log(`🏔️ DISPLACEMENT DEBUG: - Scale: (${this.grassMesh.scale.x}, ${this.grassMesh.scale.y}, ${this.grassMesh.scale.z})`);
-  }
-  
-  createBoundaryLines() {
-    const { width, height, lineWidth } = this.dimensions;
-
-    // Touchlines (sidelines) - now the longer sides
-    const topTouchline = this.createLine(width, lineWidth, 0, height/2);
-    const bottomTouchline = this.createLine(width, lineWidth, 0, -height/2);
-
-    // Goal lines - now the shorter sides
-    const leftGoalLine = this.createLine(lineWidth, height, -width/2, 0);
-    const rightGoalLine = this.createLine(lineWidth, height, width/2, 0);
-
-    this.group.add(topTouchline, bottomTouchline, leftGoalLine, rightGoalLine);
-  }
-  
-  createCenterMarkings() {
-    const { lineWidth, centerCircleRadius } = this.dimensions;
-
-    // Center line - now runs across the width (goal to goal)
-    const centerLine = this.createLine(lineWidth, this.dimensions.height, 0, 0);
-    this.group.add(centerLine);
-    
-    // Center circle
-    const centerCircleGeo = new THREE.RingGeometry(centerCircleRadius - 0.05, centerCircleRadius, 64);
-    const centerCircle = new THREE.Mesh(centerCircleGeo, this.materials.marking);
-    centerCircle.rotation.x = -Math.PI/2;
-    centerCircle.position.set(0, 0.01, 0);
-    centerCircle.name = 'centerCircle';
-    this.group.add(centerCircle);
-    
-    // Center spot
-    const centerSpotGeo = new THREE.CircleGeometry(0.15, 32);
-    const centerSpot = new THREE.Mesh(centerSpotGeo, this.materials.marking);
-    centerSpot.rotation.x = -Math.PI/2;
-    centerSpot.position.set(0, 0.01, 0);
-    centerSpot.name = 'centerSpot';
-    this.group.add(centerSpot);
-  }
-  
-  createPenaltyAreas() {
-    const { width, lineWidth, penaltyAreaWidth, penaltyAreaHeight } = this.dimensions;
-
-    // Left penalty area (extends from left goal line)
-    this.createAreaLines(-width/2, penaltyAreaHeight, penaltyAreaWidth, 'leftPenaltyArea');
-
-    // Right penalty area (extends from right goal line)
-    this.createAreaLines(width/2, -penaltyAreaHeight, penaltyAreaWidth, 'rightPenaltyArea');
-  }
-  
-  createGoalAreas() {
-    const { width, goalAreaWidth, goalAreaHeight } = this.dimensions;
-
-    // Left goal area (extends from left goal line)
-    this.createAreaLines(-width/2, goalAreaHeight, goalAreaWidth, 'leftGoalArea');
-
-    // Right goal area (extends from right goal line)
-    this.createAreaLines(width/2, -goalAreaHeight, goalAreaWidth, 'rightGoalArea');
-  }
-  
-  createAreaLines(startX, areaWidth, areaHeight, name) {
-    const { lineWidth } = this.dimensions;
-    const direction = Math.sign(areaWidth);
-    const absWidth = Math.abs(areaWidth);
-    
-    // Front line (parallel to goal)
-    const frontLine = this.createLine(lineWidth, areaHeight, startX + direction * absWidth, 0);
-    frontLine.name = `${name}_front`;
-    
-    // Top line
-    const topLine = this.createLine(absWidth, lineWidth, startX + direction * absWidth/2, areaHeight/2);
-    topLine.name = `${name}_top`;
-    
-    // Bottom line
-    const bottomLine = this.createLine(absWidth, lineWidth, startX + direction * absWidth/2, -areaHeight/2);
-    bottomLine.name = `${name}_bottom`;
-    
-    this.group.add(frontLine, topLine, bottomLine);
-  }
-  
-  createPenaltySpots() {
-    const { width, penaltySpotDistance } = this.dimensions;
-    
-    // Left penalty spot
-    const leftSpot = this.createSpot(-width/2 + penaltySpotDistance, 0, 'leftPenaltySpot');
-    
-    // Right penalty spot
-    const rightSpot = this.createSpot(width/2 - penaltySpotDistance, 0, 'rightPenaltySpot');
-    
-    this.group.add(leftSpot, rightSpot);
-  }
-  
-  createLine(width, height, x, z) {
-    const lineGeo = new THREE.PlaneGeometry(width, height);
-    const line = new THREE.Mesh(lineGeo, this.materials.marking);
-    line.rotation.x = -Math.PI/2;
-    line.position.set(x, 0.01, z);
-    return line;
-  }
-  
-  createSpot(x, z, name) {
-    const spotGeo = new THREE.CircleGeometry(0.15, 16);
-    const spot = new THREE.Mesh(spotGeo, this.materials.marking);
-    spot.rotation.x = -Math.PI/2;
-    spot.position.set(x, 0.01, z);
-    spot.name = name;
-    return spot;
+    grass.rotation.x = -Math.PI / 2;
+    grass.receiveShadow = true;
+    this.group.add(grass);
   }
 
-  createGoals() {
-    const { width } = this.dimensions;
+  /** Lines & areas */
+  _buildMarkings(batched) {
+    const g = new THREE.BufferGeometry();
+    const verts = [];
+    const idx = [];
+    const pushQuad = (x, z, w, h) => {
+      const y = 0.02; // hover slightly
+      const i = verts.length / 3;
+      verts.push(
+        x - w / 2, y, z - h / 2, // 0
+        x + w / 2, y, z - h / 2, // 1
+        x + w / 2, y, z + h / 2, // 2
+        x - w / 2, y, z + h / 2  // 3
+      );
+      idx.push(i, i + 1, i + 2, i, i + 2, i + 3);
+    };
 
-    // Left goal
-    const leftGoal = this.createGoal('left');
-    leftGoal.position.set(-width/2, 0, 0);
-    leftGoal.rotation.y = 90;
-    this.group.add(leftGoal);
+    const addLine = (x, z, w, h) => batched ? pushQuad(x, z, w, h) : this.group.add(this._makeQuadMesh(x, z, w, h));
 
-    // Right goal
-    const rightGoal = this.createGoal('right');
-    rightGoal.position.set(width/2, 0, 0);
-    rightGoal.rotation.y = Math.PI/2;
-    this.group.add(rightGoal);
+    const d = this.dimensions;
+    // Outer lines
+    addLine(0,  d.width / 2,  d.length, d.lineWidth); // top touch
+    addLine(0, -d.width / 2,  d.length, d.lineWidth); // bottom touch
+    addLine(-d.length / 2, 0, d.lineWidth, d.width); // left goal line
+    addLine( d.length / 2, 0, d.lineWidth, d.width); // right goal line
+
+    // Centre line & circle
+    addLine(0, 0, d.lineWidth, d.width);
+    this.group.add(this._ring(d.centerCircleRadius));
+    this.group.add(this._spot(0, 0));
+
+    // Penalty & goal areas (left & right)
+    ['left', 'right'].forEach(side => {
+      const sgn = side === 'left' ? -1 : 1;
+      const xFront = sgn * (d.length / 2 - d.penaltyAreaDepth);
+      const xFrontG = sgn * (d.length / 2 - d.goalAreaDepth);
+
+      // Penalty rectangle
+      addLine(xFront, 0, d.lineWidth, d.penaltyAreaWidth);
+      addLine(xFront + sgn * d.penaltyAreaDepth / 2,  d.penaltyAreaWidth / 2, d.penaltyAreaDepth, d.lineWidth);
+      addLine(xFront + sgn * d.penaltyAreaDepth / 2, -d.penaltyAreaWidth / 2, d.penaltyAreaDepth, d.lineWidth);
+
+      // Goal rectangle
+      addLine(xFrontG, 0, d.lineWidth, d.goalAreaWidth);
+      addLine(xFrontG + sgn * d.goalAreaDepth / 2,  d.goalAreaWidth / 2, d.goalAreaDepth, d.lineWidth);
+      addLine(xFrontG + sgn * d.goalAreaDepth / 2, -d.goalAreaWidth / 2, d.goalAreaDepth, d.lineWidth);
+
+      // Spots
+      const spotX = sgn * (d.length / 2 - d.penaltySpotFromGoal);
+      this.group.add(this._spot(spotX, 0));
+    });
+
+    if (batched) {
+      g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      const mesh = new THREE.Mesh(g, this.materials.marking);
+      mesh.rotation.x = -Math.PI / 2;
+      this.group.add(mesh);
+    }
   }
 
-  createGoal(side) {
-    const { goalWidth, goalHeight, goalDepth, postRadius } = this.dimensions;
-    const goalGroup = new THREE.Group();
-    goalGroup.name = `${side}Goal`;
-
-    // Goal posts
-    const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, goalHeight);
-
-    const leftPost = new THREE.Mesh(postGeo, this.materials.goalPost);
-    leftPost.position.set(0, goalHeight/2, -goalWidth/2);
-    leftPost.castShadow = true;
-
-    const rightPost = new THREE.Mesh(postGeo, this.materials.goalPost);
-    rightPost.position.set(0, goalHeight/2, goalWidth/2);
-    rightPost.castShadow = true;
-
-    // Crossbar
-    const crossbarGeo = new THREE.CylinderGeometry(postRadius, postRadius, goalWidth);
-    const crossbar = new THREE.Mesh(crossbarGeo, this.materials.goalPost);
-    crossbar.rotation.z = Math.PI/2;
-    crossbar.position.set(0, goalHeight, 0);
-    crossbar.castShadow = true;
-
-    // Back posts
-    const backLeftPost = new THREE.Mesh(postGeo, this.materials.goalPost);
-    backLeftPost.position.set(-goalDepth, goalHeight/2, -goalWidth/2);
-    backLeftPost.castShadow = true;
-
-    const backRightPost = new THREE.Mesh(postGeo, this.materials.goalPost);
-    backRightPost.position.set(-goalDepth, goalHeight/2, goalWidth/2);
-    backRightPost.castShadow = true;
-
-    // Back crossbar
-    const backCrossbar = new THREE.Mesh(crossbarGeo, this.materials.goalPost);
-    backCrossbar.rotation.z = Math.PI/2;
-    backCrossbar.position.set(-goalDepth, goalHeight, 0);
-    backCrossbar.castShadow = true;
-
-    // Side bars
-    const sideBarGeo = new THREE.CylinderGeometry(postRadius, postRadius, goalDepth);
-    const topLeftBar = new THREE.Mesh(sideBarGeo, this.materials.goalPost);
-    topLeftBar.rotation.z = Math.PI/2;
-    topLeftBar.position.set(-goalDepth/2, goalHeight, -goalWidth/2);
-    topLeftBar.castShadow = true;
-
-    const topRightBar = new THREE.Mesh(sideBarGeo, this.materials.goalPost);
-    topRightBar.rotation.z = Math.PI/2;
-    topRightBar.position.set(-goalDepth/2, goalHeight, goalWidth/2);
-    topRightBar.castShadow = true;
-
-    // Goal nets
-    const netBack = this.createNetPanel(goalWidth, goalHeight, -goalDepth, goalHeight/2, 0);
-    const netLeft = this.createNetPanel(goalDepth, goalHeight, -goalDepth/2, goalHeight/2, -goalWidth/2, Math.PI/2);
-    const netRight = this.createNetPanel(goalDepth, goalHeight, -goalDepth/2, goalHeight/2, goalWidth/2, -Math.PI/2);
-    const netTop = this.createNetPanel(goalWidth, goalDepth, -goalDepth/2, goalHeight, 0, Math.PI/2, -Math.PI/2);
-
-    goalGroup.add(leftPost, rightPost, crossbar);
-    goalGroup.add(backLeftPost, backRightPost, backCrossbar);
-    goalGroup.add(topLeftBar, topRightBar);
-    goalGroup.add(netBack, netLeft, netRight, netTop);
-
-    return goalGroup;
+  _makeQuadMesh(x, z, w, h) {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, h),
+      this.materials.marking
+    );
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(x, 0.02, z);
+    return m;
   }
 
-  createNetPanel(width, height, x, y, z, rotY = 0, rotX = 0) {
-    const netGeo = new THREE.PlaneGeometry(width, height);
-    const net = new THREE.Mesh(netGeo, this.materials.goalNet);
-    net.position.set(x, y, z);
-    if (rotY !== 0) net.rotation.y = rotY;
-    if (rotX !== 0) net.rotation.x = rotX;
-    return net;
+  _ring(radius) {
+    const geo = new THREE.RingGeometry(radius - 0.05, radius, 64);
+    const mesh = new THREE.Mesh(geo, this.materials.marking);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = 0.02;
+    return mesh;
   }
 
-  createCornerFlags() {
-    const { width, height } = this.dimensions;
+  _spot(x, z) {
+    const mesh = new THREE.Mesh(new THREE.CircleGeometry(0.15, 16), this.materials.marking);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(x, 0.02, z);
+    return mesh;
+  }
 
-    const corners = [
-      { x: -width/2, z: -height/2, name: 'bottomLeft' },
-      { x: -width/2, z: height/2, name: 'topLeft' },
-      { x: width/2, z: -height/2, name: 'bottomRight' },
-      { x: width/2, z: height/2, name: 'topRight' }
+  /*───────────────────────────── Goals */
+  _buildGoals() {
+    const { length } = this.dimensions;
+    const left = this._makeGoal();
+    left.position.x = -length / 2;
+    this.group.add(left);
+
+    const right = this._makeGoal();
+    right.position.x =  length / 2;
+    right.rotation.y =  Math.PI; // face inward
+    this.group.add(right);
+  }
+
+  _makeGoal() {
+    const d = this.dimensions;
+    const g = new THREE.Group();
+
+    // Posts & crossbar
+    const postGeo = new THREE.CylinderGeometry(d.postRadius, d.postRadius, d.goalHeight, 8);
+    const crossGeo = new THREE.CylinderGeometry(d.postRadius, d.postRadius, d.goalWidth, 8);
+
+    const lp = new THREE.Mesh(postGeo, this.materials.goalPost);
+    const rp = lp.clone();
+    const cb = new THREE.Mesh(crossGeo, this.materials.goalPost);
+
+    lp.position.set(0, d.goalHeight / 2, -d.goalWidth / 2);
+    rp.position.set(0, d.goalHeight / 2,  d.goalWidth / 2);
+    cb.rotation.z = Math.PI / 2;
+    cb.position.set(0, d.goalHeight, 0);
+
+    g.add(lp, rp, cb);
+
+    // Side & back frame
+    const sideGeo = new THREE.CylinderGeometry(d.postRadius, d.postRadius, d.goalDepth, 8);
+    const backGeo = new THREE.CylinderGeometry(d.postRadius, d.postRadius, d.goalWidth, 8);
+
+    const tl = new THREE.Mesh(sideGeo, this.materials.goalPost);
+    const tr = tl.clone();
+    const bc = new THREE.Mesh(backGeo, this.materials.goalPost);
+
+    tl.rotation.z = Math.PI / 2;
+    tr.rotation.z = Math.PI / 2;
+    tl.position.set(-d.goalDepth / 2, d.goalHeight, -d.goalWidth / 2);
+    tr.position.set(-d.goalDepth / 2, d.goalHeight,  d.goalWidth / 2);
+    bc.rotation.z = Math.PI / 2;
+    bc.position.set(-d.goalDepth, d.goalHeight, 0);
+
+    g.add(tl, tr, bc);
+
+    // Net planes
+    const netBack = this._makeNet(d.goalWidth, d.goalHeight);
+    netBack.position.set(-d.goalDepth, d.goalHeight / 2, 0);
+    netBack.rotation.y = Math.PI / 2;
+
+    const netLeft = this._makeNet(d.goalDepth, d.goalHeight);
+    netLeft.position.set(-d.goalDepth / 2, d.goalHeight / 2, -d.goalWidth / 2);
+    netLeft.rotation.y = 0;
+
+    const netRight = netLeft.clone();
+    netRight.position.z = d.goalWidth / 2;
+    netRight.rotation.y = Math.PI;
+
+    g.add(netBack, netLeft, netRight);
+
+    return g;
+  }
+
+  _makeNet(w, h) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), this.materials.goalNet);
+    m.receiveShadow = false;
+    return m;
+  }
+
+  /*───────────────────────────── Flags & Arcs */
+  _buildCornerFlags() {
+    const { length, width } = this.dimensions;
+    const positions = [
+      [-length / 2, -width / 2],
+      [-length / 2,  width / 2],
+      [ length / 2, -width / 2],
+      [ length / 2,  width / 2]
     ];
-
-    corners.forEach(corner => {
-      const flag = this.createCornerFlag(corner.name);
-      flag.position.set(corner.x, 0, corner.z);
-      this.group.add(flag);
-    });
+    positions.forEach(([x, z]) => this.group.add(this._makeFlag(x, z)));
   }
 
-  createCornerFlag(name) {
-    const flagGroup = new THREE.Group();
-    flagGroup.name = `${name}Flag`;
+  _makeFlag(x, z) {
+    const flag = new THREE.Group();
 
-    // Flag pole
-    const poleGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.5);
-    const pole = new THREE.Mesh(poleGeo, this.materials.flagPole);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.5), this.materials.flagPole);
     pole.position.y = 0.75;
-    pole.castShadow = true;
 
-    // Flag
-    const flagGeo = new THREE.PlaneGeometry(0.3, 0.2);
-    const flag = new THREE.Mesh(flagGeo, this.materials.flag);
-    flag.position.set(0.15, 1.3, 0);
+    const cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.2), this.materials.flag);
+    cloth.position.set(0.15, 1.3, 0);
 
-    flagGroup.add(pole, flag);
-    return flagGroup;
+    flag.add(pole, cloth);
+    flag.position.set(x, 0, z);
+    return flag;
   }
 
-  createCornerArcs() {
-    const { width, height, cornerArcRadius } = this.dimensions;
-
-    const corners = [
-      { x: -width/2, z: -height/2, rotation: -Math.PI/2 },        // Bottom-left: arc into field (+X, +Z)
-      { x: -width/2, z: height/2, rotation: 0 },                  // Top-left: arc into field (+X, -Z)
-      { x: width/2, z: -height/2, rotation: Math.PI },            // Bottom-right: arc into field (-X, +Z)
-      { x: width/2, z: height/2, rotation: Math.PI/2 }            // Top-right: arc into field (-X, -Z)
+  _buildCornerArcs() {
+    const { length, width, cornerArcRadius } = this.dimensions;
+    const arcs = [
+      [-length / 2, -width / 2, -Math.PI / 2],
+      [-length / 2,  width / 2, 0],
+      [ length / 2, -width / 2, Math.PI],
+      [ length / 2,  width / 2,  Math.PI / 2]
     ];
-
-    corners.forEach((corner, index) => {
-      const arc = this.createCornerArc(index);
-      arc.rotation.z = corner.rotation;
-      arc.position.set(corner.x, 0.01, corner.z);
+    arcs.forEach(([x, z, rot]) => {
+      const arc = new THREE.Mesh(
+        new THREE.RingGeometry(cornerArcRadius - 0.05, cornerArcRadius, 16, 1, 0, Math.PI / 2),
+        this.materials.marking
+      );
+      arc.rotation.set(-Math.PI / 2, 0, rot);
+      arc.position.set(x, 0.02, z);
       this.group.add(arc);
     });
   }
 
-  createCornerArc(index) {
-    const { cornerArcRadius } = this.dimensions;
-    const arcGeo = new THREE.RingGeometry(cornerArcRadius - 0.05, cornerArcRadius, 16, 1, 0, Math.PI/2);
-    const arc = new THREE.Mesh(arcGeo, this.materials.marking);
-    arc.rotation.x = -Math.PI/2;
-    arc.name = `cornerArc${index}`;
-    return arc;
-  }
-
-  addTo(scene) {
-    scene.add(this.group);
-  }
-
-  getDimensions() {
-    return { ...this.dimensions };
-  }
-
-  getFieldBounds() {
-    return {
-      minX: -this.dimensions.width / 2,
-      maxX: this.dimensions.width / 2,
-      minZ: -this.dimensions.height / 2,
-      maxZ: this.dimensions.height / 2
-    };
-  }
-
-  // Track player activity for grass wear
-  recordPlayerActivity(x, z, activityType = 'walk', intensity = 1.0) {
-    this.grassShader.recordPlayerActivity(x, z, activityType, intensity);
-  }
-
-  // Update grass shader (call this in your game loop)
-  update(deltaTime, windDirection = { x: 1, y: 0.5 }, windStrength = 0.02) {
-    this.grassShader.update(deltaTime, windDirection, windStrength);
-  }
-
-  // Get wear intensity at a position (for gameplay effects)
-  getWearAt(x, z) {
-    return this.grassShader.getWearAt(x, z);
-  }
-
-  // Reset wear for new match
-  resetWear() {
-    this.grassShader.resetWear();
-  }
-
-  // Get field bounds for collision detection and wear testing
-  getBounds() {
-    return {
-      minX: -this.dimensions.width / 2,
-      maxX: this.dimensions.width / 2,
-      minZ: -this.dimensions.height / 2,
-      maxZ: this.dimensions.height / 2
-    };
-  }
-
-  // Get field dimensions
-  getDimensions() {
-    return { ...this.dimensions };
-  }
-
-  // Create visual debug helpers
-  createVisualHelpers() {
-    console.log('🔍 DEBUG: Creating visual debug helpers...');
+  /*───────────────────────────── Debug helpers (optional) */
+  _buildDebugHelpers() {
     this.debugHelpers = new THREE.Group();
-    this.debugHelpers.name = 'debugHelpers';
-    this.debugHelpers.visible = false; // Hidden by default
+    this.debugHelpers.visible = false;
 
-    // Create coordinate system axes
-    this.createCoordinateAxes();
-
-    // Create UV mapping grid
-    this.createUVGrid();
-
-    // Create displacement visualization points
-    this.createDisplacementPoints();
-
-    // Create field orientation markers
-    this.createOrientationMarkers();
+    // Axes lines
+    const axisMat = new THREE.LineBasicMaterial({ linewidth: 3 });
+    const makeAxis = (from, to, col) => {
+      const g = new THREE.BufferGeometry().setFromPoints([from, to]);
+      const m = axisMat.clone();
+      m.color = new THREE.Color(col);
+      const l = new THREE.Line(g, m);
+      this.debugHelpers.add(l);
+    };
+    makeAxis(new THREE.Vector3(-this.dimensions.length / 2, 0.5, 0), new THREE.Vector3(this.dimensions.length / 2, 0.5, 0), 0xff0000); // X
+    makeAxis(new THREE.Vector3(0, 0.5, -this.dimensions.width / 2), new THREE.Vector3(0, 0.5, this.dimensions.width / 2), 0x0000ff);  // Z
+    makeAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 5, 0), 0x00ff00);                                                    // Y
 
     this.group.add(this.debugHelpers);
-    console.log('🔍 DEBUG: Debug helpers created and added to group');
-    console.log('🔍 DEBUG: Debug helpers children count:', this.debugHelpers.children.length);
-  }
-
-  createCoordinateAxes() {
-    // X-axis (red) - left to right
-    const xAxisGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-this.dimensions.width/2, 0.5, 0),
-      new THREE.Vector3(this.dimensions.width/2, 0.5, 0)
-    ]);
-    const xAxisMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 });
-    const xAxis = new THREE.Line(xAxisGeometry, xAxisMaterial);
-    xAxis.name = 'xAxis';
-    this.debugHelpers.add(xAxis);
-
-    // Z-axis (blue) - front to back
-    const zAxisGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, 0.5, -this.dimensions.height/2),
-      new THREE.Vector3(0, 0.5, this.dimensions.height/2)
-    ]);
-    const zAxisMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 3 });
-    const zAxis = new THREE.Line(zAxisGeometry, zAxisMaterial);
-    zAxis.name = 'zAxis';
-    this.debugHelpers.add(zAxis);
-
-    // Y-axis (green) - up
-    const yAxisGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 5, 0)
-    ]);
-    const yAxisMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 3 });
-    const yAxis = new THREE.Line(yAxisGeometry, yAxisMaterial);
-    yAxis.name = 'yAxis';
-    this.debugHelpers.add(yAxis);
-  }
-
-  createUVGrid() {
-    // Create a grid showing UV coordinates
-    const gridSize = 8;
-    const stepX = this.dimensions.width / gridSize;
-    const stepZ = this.dimensions.height / gridSize;
-
-    for (let i = 0; i <= gridSize; i++) {
-      for (let j = 0; j <= gridSize; j++) {
-        const x = -this.dimensions.width/2 + i * stepX;
-        const z = -this.dimensions.height/2 + j * stepZ;
-
-        // Calculate UV coordinates
-        const u = i / gridSize;
-        const v = j / gridSize;
-
-        // Create a small sphere at each grid point
-        const sphereGeometry = new THREE.SphereGeometry(0.3, 8, 8);
-        const sphereMaterial = new THREE.MeshBasicMaterial({
-          color: new THREE.Color(u, v, 0.5) // Color based on UV
-        });
-        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-        sphere.position.set(x, 1, z);
-        sphere.name = `uvPoint_${u.toFixed(2)}_${v.toFixed(2)}`;
-        this.debugHelpers.add(sphere);
-      }
-    }
-  }
-
-  createDisplacementPoints() {
-    // Create points that show displacement values
-    // Updated for new field dimensions: width=52.5 (goal to goal), height=34 (sideline to sideline)
-    const testPoints = [
-      { x: 0, z: 0, name: 'Center' },
-      { x: 25, z: 0, name: 'Right_Goal_Area' },
-      { x: -25, z: 0, name: 'Left_Goal_Area' },
-      { x: 0, z: 15, name: 'Top_Sideline' },
-      { x: 0, z: -15, name: 'Bottom_Sideline' }
-    ];
-
-    testPoints.forEach(point => {
-      const geometry = new THREE.ConeGeometry(1, 3, 8);
-      const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-      const cone = new THREE.Mesh(geometry, material);
-      cone.position.set(point.x, 2, point.z);
-      cone.name = `displacementPoint_${point.name}`;
-      this.debugHelpers.add(cone);
-    });
-  }
-
-  createOrientationMarkers() {
-    // Create text-like markers showing field orientation
-    const markerGeometry = new THREE.BoxGeometry(2, 0.5, 4);
-
-    // Blue team side marker (left)
-    const blueMarker = new THREE.Mesh(markerGeometry,
-      new THREE.MeshBasicMaterial({ color: 0x0066cc }));
-    blueMarker.position.set(-this.dimensions.width/4, 1.5, 0);
-    blueMarker.name = 'blueTeamMarker';
-    this.debugHelpers.add(blueMarker);
-
-    // Red team side marker (right)
-    const redMarker = new THREE.Mesh(markerGeometry,
-      new THREE.MeshBasicMaterial({ color: 0xcc0000 }));
-    redMarker.position.set(this.dimensions.width/4, 1.5, 0);
-    redMarker.name = 'redTeamMarker';
-    this.debugHelpers.add(redMarker);
-  }
-
-  // Toggle debug helpers visibility
-  toggleDebugHelpers() {
-    if (this.debugHelpers) {
-      this.debugHelpers.visible = !this.debugHelpers.visible;
-      console.log(`🔍 DEBUG HELPERS: ${this.debugHelpers.visible ? 'ENABLED' : 'DISABLED'}`);
-      return this.debugHelpers.visible;
-    }
-    return false;
-  }
-
-  // Dispose of resources
-  dispose() {
-    this.grassShader.dispose();
   }
 }

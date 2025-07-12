@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Terrain Generation Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    .parameter-slider {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      appearance: none;
+      cursor: pointer;
+    }
+    .parameter-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #3b82f6;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white">
+  <div class="min-h-screen p-4">
+    <!-- Header -->
+    <div class="max-w-7xl mx-auto mb-6">
+      <h1 class="text-4xl font-bold text-center mb-2">🏔️ Advanced Procedural Terrain Demo</h1>
+      <p class="text-center text-gray-400">State-of-the-art terrain generation with multi-layered noise</p>
+    </div>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
+      
+      <!-- Controls Panel -->
+      <div class="lg:col-span-1 space-y-4">
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">🎛️ Terrain Controls</h3>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Planet Type</label>
+              <select id="planet-type" class="w-full p-2 bg-gray-700 border border-gray-600 rounded">
+                <option value="earth">Earth-like</option>
+                <option value="volcanic">Volcanic</option>
+                <option value="desert">Desert</option>
+                <option value="ocean">Ocean World</option>
+                <option value="glacier">Ice World</option>
+                <option value="forest">Forest World</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Terrain Detail (Icosahedron)</label>
+              <input type="range" id="terrain-detail" min="32" max="256" value="128" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Low (320v)</span>
+                <span id="detail-value">Med (1.3Kv)</span>
+                <span>High (20Kv)</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Mountain Height</label>
+              <input type="range" id="terrain-height" min="0" max="0.4" step="0.01" value="0.12" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Flat</span>
+                <span id="height-value">0.12</span>
+                <span>Extreme</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Terrain Complexity</label>
+              <input type="range" id="terrain-octaves" min="4" max="12" value="8" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Simple</span>
+                <span id="octaves-value">8</span>
+                <span>Complex</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Surface Roughness</label>
+              <input type="range" id="terrain-roughness" min="0.1" max="2.0" step="0.1" value="0.8" class="parameter-slider">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Smooth</span>
+                <span id="roughness-value">0.8</span>
+                <span>Rough</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mt-4">
+              <button id="toggle-wireframe" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                Wireframe
+              </button>
+              <button id="regenerate" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-sm">
+                Regenerate
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Panel -->
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold mb-3 pb-2 border-b border-gray-600">📊 Stats</h3>
+          <div class="space-y-2 text-sm">
+            <div>FPS: <span id="fps-counter" class="font-mono">60</span></div>
+            <div>Triangles: <span id="triangle-count" class="font-mono">0</span></div>
+            <div>Vertices: <span id="vertex-count" class="font-mono">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3D Canvas -->
+      <div class="lg:col-span-3">
+        <div class="bg-gray-800 p-4 rounded-lg">
+          <div class="relative">
+            <canvas id="terrain-canvas" class="w-full h-96 lg:h-[600px] border border-gray-600 rounded bg-black"></canvas>
+            
+            <!-- Controls Overlay -->
+            <div class="absolute top-2 left-2 bg-black bg-opacity-75 text-white p-2 rounded text-xs">
+              <div>🖱️ Drag: Rotate</div>
+              <div>🔍 Wheel: Zoom (0.6x - 20x)</div>
+              <div>⌨️ Space: Reset View</div>
+              <div class="text-yellow-400">🏔️ Zoom close for detail!</div>
+              <div class="text-green-400">⭐ Icosahedron - No poles/seams!</div>
+            </div>
+            
+            <!-- Info Overlay -->
+            <div class="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white p-2 rounded text-sm">
+              <div id="planet-info" class="font-bold">Earth-like Planet</div>
+              <div class="text-xs opacity-75">Advanced Multi-layer Terrain</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simple noise functions (embedded for standalone demo)
+    function hash(x, y, z) {
+      let h = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+      return h - Math.floor(h);
+    }
+
+    function noise3D(x, y, z) {
+      const ix = Math.floor(x);
+      const iy = Math.floor(y);
+      const iz = Math.floor(z);
+      const fx = x - ix;
+      const fy = y - iy;
+      const fz = z - iz;
+
+      const u = fx * fx * (3 - 2 * fx);
+      const v = fy * fy * (3 - 2 * fy);
+      const w = fz * fz * (3 - 2 * fz);
+
+      const c000 = hash(ix, iy, iz);
+      const c100 = hash(ix + 1, iy, iz);
+      const c010 = hash(ix, iy + 1, iz);
+      const c110 = hash(ix + 1, iy + 1, iz);
+      const c001 = hash(ix, iy, iz + 1);
+      const c101 = hash(ix + 1, iy, iz + 1);
+      const c011 = hash(ix, iy + 1, iz + 1);
+      const c111 = hash(ix + 1, iy + 1, iz + 1);
+
+      const x1 = c000 * (1 - u) + c100 * u;
+      const x2 = c010 * (1 - u) + c110 * u;
+      const x3 = c001 * (1 - u) + c101 * u;
+      const x4 = c011 * (1 - u) + c111 * u;
+
+      const y1 = x1 * (1 - v) + x2 * v;
+      const y2 = x3 * (1 - v) + x4 * v;
+
+      return y1 * (1 - w) + y2 * w;
+    }
+
+    function fractalNoise(x, y, z, octaves, persistence = 0.5) {
+      let value = 0;
+      let amplitude = 1;
+      let frequency = 1;
+      let maxValue = 0;
+
+      for (let i = 0; i < octaves; i++) {
+        value += noise3D(x * frequency, y * frequency, z * frequency) * amplitude;
+        maxValue += amplitude;
+        amplitude *= persistence;
+        frequency *= 2;
+      }
+
+      return value / maxValue;
+    }
+
+    function ridgedNoise(x, y, z, octaves) {
+      let value = 0;
+      let amplitude = 1;
+      let frequency = 1;
+
+      for (let i = 0; i < octaves; i++) {
+        const n = Math.abs(noise3D(x * frequency, y * frequency, z * frequency));
+        value += (1 - n) * amplitude;
+        amplitude *= 0.5;
+        frequency *= 2;
+      }
+
+      return value;
+    }
+
+    // Terrain Generator Class
+    class AdvancedTerrainGenerator {
+      constructor() {
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.planetMesh = null;
+        this.animationId = null;
+        
+        // Terrain parameters
+        this.terrainDetail = 128;
+        this.terrainHeight = 0.12;
+        this.terrainOctaves = 8;
+        this.terrainRoughness = 0.8;
+        this.wireframeMode = false;
+        this.planetType = 'earth';
+        
+        this.initialize3D();
+        this.initializeControls();
+        this.generateTerrain();
+        this.animate();
+      }
+
+      initialize3D() {
+        const canvas = document.getElementById('terrain-canvas');
+        
+        // Scene setup
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x000011);
+        
+        // Camera setup
+        this.camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.01, 1000);
+        this.camera.position.set(0, 0, 2.5);
+        
+        // Renderer setup
+        this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Enhanced lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+        this.scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        directionalLight.position.set(5, 5, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 4096;
+        directionalLight.shadow.mapSize.height = 4096;
+        this.scene.add(directionalLight);
+        
+        const secondaryLight = new THREE.DirectionalLight(0x8888ff, 0.3);
+        secondaryLight.position.set(-3, 2, -4);
+        this.scene.add(secondaryLight);
+        
+        // Starfield
+        this.createStarfield();
+        
+        // Mouse controls
+        this.setupControls();
+        
+        // Handle resize
+        window.addEventListener('resize', () => this.onWindowResize());
+      }
+
+      createStarfield() {
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1 });
+        
+        const starsVertices = [];
+        for (let i = 0; i < 2000; i++) {
+          const x = (Math.random() - 0.5) * 2000;
+          const y = (Math.random() - 0.5) * 2000;
+          const z = (Math.random() - 0.5) * 2000;
+          starsVertices.push(x, y, z);
+        }
+        
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+        const starField = new THREE.Points(starsGeometry, starsMaterial);
+        this.scene.add(starField);
+      }
+
+      setupControls() {
+        const canvas = document.getElementById('terrain-canvas');
+        let isMouseDown = false;
+        let mouseX = 0;
+        let mouseY = 0;
+        let rotationX = 0;
+        let rotationY = 0;
+        
+        canvas.addEventListener('mousedown', (e) => {
+          isMouseDown = true;
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+          if (!isMouseDown) return;
+          
+          const deltaX = e.clientX - mouseX;
+          const deltaY = e.clientY - mouseY;
+          
+          rotationY += deltaX * 0.01;
+          rotationX += deltaY * 0.01;
+          rotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationX));
+          
+          if (this.planetMesh) {
+            this.planetMesh.rotation.y = rotationY;
+            this.planetMesh.rotation.x = rotationX;
+          }
+          
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+          isMouseDown = false;
+        });
+        
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoom = e.deltaY * 0.001;
+          this.camera.position.z = Math.max(0.6, Math.min(20, this.camera.position.z + zoom));
+        });
+        
+        document.addEventListener('keydown', (e) => {
+          if (e.code === 'Space') {
+            e.preventDefault();
+            this.resetCamera();
+          }
+        });
+      }
+
+      resetCamera() {
+        this.camera.position.set(0, 0, 2.5);
+        if (this.planetMesh) {
+          this.planetMesh.rotation.set(0, 0, 0);
+        }
+      }
+
+      initializeControls() {
+        document.getElementById('planet-type').addEventListener('change', (e) => {
+          this.planetType = e.target.value;
+          this.generateTerrain();
+        });
+        
+        document.getElementById('terrain-detail').addEventListener('input', (e) => {
+          this.terrainDetail = parseInt(e.target.value);
+          const level = this.getSubdivisionLevel();
+          const vertexCount = this.getVertexCountForLevel(level);
+          document.getElementById('detail-value').textContent = `L${level} (${vertexCount}v)`;
+          this.generateTerrain();
+        });
+        
+        document.getElementById('terrain-height').addEventListener('input', (e) => {
+          this.terrainHeight = parseFloat(e.target.value);
+          document.getElementById('height-value').textContent = e.target.value;
+          this.generateTerrain();
+        });
+        
+        document.getElementById('terrain-octaves').addEventListener('input', (e) => {
+          this.terrainOctaves = parseInt(e.target.value);
+          document.getElementById('octaves-value').textContent = e.target.value;
+          this.generateTerrain();
+        });
+        
+        document.getElementById('terrain-roughness').addEventListener('input', (e) => {
+          this.terrainRoughness = parseFloat(e.target.value);
+          document.getElementById('roughness-value').textContent = e.target.value;
+          this.generateTerrain();
+        });
+        
+        document.getElementById('toggle-wireframe').addEventListener('click', () => {
+          this.wireframeMode = !this.wireframeMode;
+          if (this.planetMesh) {
+            this.planetMesh.material.wireframe = this.wireframeMode;
+          }
+        });
+        
+        document.getElementById('regenerate').addEventListener('click', () => {
+          this.generateTerrain();
+        });
+      }
+
+      generateTerrain() {
+        // Remove existing planet
+        if (this.planetMesh) {
+          this.scene.remove(this.planetMesh);
+          this.planetMesh.geometry.dispose();
+          this.planetMesh.material.dispose();
+        }
+
+        // Create icosahedron-based geometry (no poles, no seams!)
+        const radius = 1.0;
+        const geometry = this.createIcosahedronGeometry(radius, this.getSubdivisionLevel());
+
+        // Apply advanced terrain
+        this.applyAdvancedTerrain(geometry);
+
+        // Create material based on planet type
+        const material = this.createPlanetMaterial();
+
+        // Create mesh
+        this.planetMesh = new THREE.Mesh(geometry, material);
+        this.planetMesh.castShadow = true;
+        this.planetMesh.receiveShadow = true;
+        this.scene.add(this.planetMesh);
+
+        // Update stats
+        document.getElementById('triangle-count').textContent = Math.floor(geometry.attributes.position.count / 3);
+        document.getElementById('vertex-count').textContent = geometry.attributes.position.count;
+        document.getElementById('planet-info').textContent = this.getPlanetTypeName();
+      }
+
+      getSubdivisionLevel() {
+        // Map terrain detail slider to icosahedron subdivision levels
+        if (this.terrainDetail <= 32) return 2;      // ~80 vertices
+        if (this.terrainDetail <= 64) return 3;      // ~320 vertices
+        if (this.terrainDetail <= 128) return 4;     // ~1,280 vertices
+        if (this.terrainDetail <= 192) return 5;     // ~5,120 vertices
+        return 6;                                    // ~20,480 vertices
+      }
+
+      getVertexCountForLevel(level) {
+        // Calculate approximate vertex count for icosahedron subdivision level
+        const baseVertices = 12;
+        const baseFaces = 20;
+        let vertices = baseVertices;
+        let faces = baseFaces;
+
+        for (let i = 0; i < level; i++) {
+          const newVertices = vertices + faces * 3 / 2; // Each face adds 3 midpoints, shared between faces
+          vertices = newVertices;
+          faces *= 4;
+        }
+
+        return Math.floor(vertices);
+      }
+
+      createIcosahedronGeometry(radius, subdivisions) {
+        // Create base icosahedron vertices
+        const t = (1.0 + Math.sqrt(5.0)) / 2.0; // Golden ratio
+
+        const vertices = [
+          [-1,  t,  0], [ 1,  t,  0], [-1, -t,  0], [ 1, -t,  0],
+          [ 0, -1,  t], [ 0,  1,  t], [ 0, -1, -t], [ 0,  1, -t],
+          [ t,  0, -1], [ t,  0,  1], [-t,  0, -1], [-t,  0,  1]
+        ];
+
+        // Normalize vertices to unit sphere
+        for (let i = 0; i < vertices.length; i++) {
+          const v = vertices[i];
+          const length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+          vertices[i] = [v[0] / length, v[1] / length, v[2] / length];
+        }
+
+        // Define icosahedron faces (20 triangles)
+        const faces = [
+          [0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11],
+          [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+          [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9],
+          [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]
+        ];
+
+        // Subdivide faces
+        let currentVertices = vertices;
+        let currentFaces = faces;
+
+        for (let level = 0; level < subdivisions; level++) {
+          const result = this.subdivideMesh(currentVertices, currentFaces);
+          currentVertices = result.vertices;
+          currentFaces = result.faces;
+        }
+
+        // Scale to desired radius
+        for (let i = 0; i < currentVertices.length; i++) {
+          const v = currentVertices[i];
+          currentVertices[i] = [v[0] * radius, v[1] * radius, v[2] * radius];
+        }
+
+        // Create Three.js geometry
+        const geometry = new THREE.BufferGeometry();
+
+        // Flatten vertices for BufferGeometry
+        const positions = [];
+        const indices = [];
+
+        for (let i = 0; i < currentVertices.length; i++) {
+          positions.push(...currentVertices[i]);
+        }
+
+        for (let i = 0; i < currentFaces.length; i++) {
+          indices.push(...currentFaces[i]);
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+
+        return geometry;
+      }
+
+      subdivideMesh(vertices, faces) {
+        const newVertices = [...vertices];
+        const newFaces = [];
+        const midpointCache = new Map();
+
+        // Helper function to get or create midpoint
+        const getMidpoint = (i1, i2) => {
+          const key = i1 < i2 ? `${i1}-${i2}` : `${i2}-${i1}`;
+
+          if (midpointCache.has(key)) {
+            return midpointCache.get(key);
+          }
+
+          const v1 = vertices[i1];
+          const v2 = vertices[i2];
+
+          // Calculate midpoint
+          const mid = [
+            (v1[0] + v2[0]) / 2,
+            (v1[1] + v2[1]) / 2,
+            (v1[2] + v2[2]) / 2
+          ];
+
+          // Normalize to unit sphere
+          const length = Math.sqrt(mid[0] * mid[0] + mid[1] * mid[1] + mid[2] * mid[2]);
+          const normalizedMid = [mid[0] / length, mid[1] / length, mid[2] / length];
+
+          const newIndex = newVertices.length;
+          newVertices.push(normalizedMid);
+          midpointCache.set(key, newIndex);
+
+          return newIndex;
+        };
+
+        // Subdivide each face into 4 triangles
+        for (let i = 0; i < faces.length; i++) {
+          const face = faces[i];
+          const v1 = face[0];
+          const v2 = face[1];
+          const v3 = face[2];
+
+          // Get midpoints
+          const a = getMidpoint(v1, v2);
+          const b = getMidpoint(v2, v3);
+          const c = getMidpoint(v3, v1);
+
+          // Create 4 new triangles
+          newFaces.push([v1, a, c]);
+          newFaces.push([v2, b, a]);
+          newFaces.push([v3, c, b]);
+          newFaces.push([a, b, c]);
+        }
+
+        return { vertices: newVertices, faces: newFaces };
+      }
+
+      applyAdvancedTerrain(geometry) {
+        const positions = geometry.attributes.position;
+        const vertex = new THREE.Vector3();
+        
+        for (let i = 0; i < positions.count; i++) {
+          vertex.fromBufferAttribute(positions, i);
+          const normal = vertex.clone().normalize();
+          
+          // Generate advanced terrain height
+          const terrainHeight = this.generateAdvancedTerrainHeight(normal);
+          
+          // Apply displacement
+          vertex.setLength(vertex.length() + terrainHeight);
+          positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
+        }
+        
+        geometry.attributes.position.needsUpdate = true;
+        geometry.computeVertexNormals();
+      }
+
+      generateAdvancedTerrainHeight(normal) {
+        const x = normal.x;
+        const y = normal.y;
+        const z = normal.z;
+        const scale = 2.0;
+        
+        // 1. Continental shelf
+        const continentalNoise = fractalNoise(x * scale * 0.5, y * scale * 0.5, z * scale * 0.5, 4, 0.5);
+        const continentalHeight = continentalNoise * 0.8;
+        
+        // 2. Mountain ranges
+        const mountainNoise = ridgedNoise(x * scale * 2.0, y * scale * 2.0, z * scale * 2.0, this.terrainOctaves);
+        const mountainHeight = Math.pow(mountainNoise, 1.5) * 0.6;
+        
+        // 3. Ridge networks
+        const ridgeNoise = ridgedNoise(x * scale * 4.0, y * scale * 4.0, z * scale * 4.0, 6);
+        const ridgeHeight = Math.pow(ridgeNoise, 2.0) * 0.3;
+        
+        // 4. Fine detail
+        const detailNoise = fractalNoise(x * scale * 16.0, y * scale * 16.0, z * scale * 16.0, 3, 0.3);
+        const detailHeight = detailNoise * this.terrainRoughness * 0.02;
+        
+        // 5. Erosion
+        const erosionNoise = noise3D(x * scale * 8.0, y * scale * 8.0, z * scale * 8.0);
+        const erosionFactor = 1.0 - (erosionNoise * 0.5 + 0.5) * 0.3;
+        
+        // Combine layers
+        let totalHeight = continentalHeight;
+        
+        // Mountains only above sea level
+        if (continentalHeight > -0.02) {
+          totalHeight += mountainHeight * Math.max(0, continentalHeight + 0.02);
+          totalHeight += ridgeHeight * Math.max(0, continentalHeight + 0.01);
+        }
+        
+        // Apply erosion and detail
+        totalHeight *= erosionFactor;
+        totalHeight += detailHeight;
+        
+        // Scale by height setting
+        totalHeight *= this.terrainHeight;
+        
+        return Math.max(-this.terrainHeight * 0.5, Math.min(this.terrainHeight * 2.0, totalHeight));
+      }
+
+      createPlanetMaterial() {
+        const planetTypes = {
+          earth: { color: 0x4a90e2, metalness: 0.1, roughness: 0.7 },
+          volcanic: { color: 0xdc2626, metalness: 0.2, roughness: 0.4 },
+          desert: { color: 0xd97706, metalness: 0.0, roughness: 0.9 },
+          ocean: { color: 0x1e40af, metalness: 0.1, roughness: 0.2 },
+          glacier: { color: 0x93c5fd, metalness: 0.1, roughness: 0.1 },
+          forest: { color: 0x166534, metalness: 0.0, roughness: 0.8 }
+        };
+        
+        const config = planetTypes[this.planetType] || planetTypes.earth;
+        
+        return new THREE.MeshStandardMaterial({
+          color: config.color,
+          metalness: config.metalness,
+          roughness: config.roughness,
+          wireframe: this.wireframeMode
+        });
+      }
+
+      getPlanetTypeName() {
+        const names = {
+          earth: 'Earth-like Planet',
+          volcanic: 'Volcanic World',
+          desert: 'Desert Planet',
+          ocean: 'Ocean World',
+          glacier: 'Ice World',
+          forest: 'Forest World'
+        };
+        return names[this.planetType] || 'Unknown Planet';
+      }
+
+      onWindowResize() {
+        const canvas = document.getElementById('terrain-canvas');
+        this.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      }
+
+      animate() {
+        this.animationId = requestAnimationFrame(() => this.animate());
+        
+        // Slow rotation
+        if (this.planetMesh) {
+          this.planetMesh.rotation.y += 0.003;
+        }
+        
+        // Update FPS
+        const now = performance.now();
+        if (!this.lastFrameTime) this.lastFrameTime = now;
+        const fps = Math.round(1000 / (now - this.lastFrameTime));
+        document.getElementById('fps-counter').textContent = fps;
+        this.lastFrameTime = now;
+        
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    // Initialize when page loads
+    window.addEventListener('load', () => {
+      new AdvancedTerrainGenerator();
+    });
+  </script>
+</body>
+</html>

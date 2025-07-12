@@ -282,13 +282,190 @@ export class Player {
 
   maybeDecide(now, world, gameState) {
     this.processMessages();
+
+    // Store world data for continuous positioning
+    this.lastWorld = world;
+    this.lastUpdateTime = now;
+
     if (this.controlledByUser) return;
+
+    // Continuous positioning updates (faster than decision making)
+    this.updateContinuousPositioning(world);
+
     if (now - this.lastDecision > this.reactionInterval) {
       this.lastDecision = now;
       this.bt.tick(this, world); // Behavior Tree entscheidet Ziel/Aktion
       const angle = (Math.atan2(world.ball.y - this.y, world.ball.x - this.x) * 180) / Math.PI;
       this.smoothTurnHeadTo(angle, this.derived.headTurnRate ?? 12);
     }
+  }
+
+  // Continuous positioning updates for ball-focused gameplay
+  updateContinuousPositioning(world) {
+    if (!world || !world.ball) return;
+
+    // Update spatial awareness every frame
+    this.updateSpatialAwareness(world);
+
+    // Adjust positioning based on ball movement
+    this.adjustToBallMovement(world);
+
+    // Maintain optimal distances from teammates and opponents
+    this.maintainOptimalSpacing(world);
+
+    // Update body orientation toward ball
+    this.adjustBodyOrientationToBall(world.ball);
+  }
+
+  // Update awareness of nearby players and ball
+  updateSpatialAwareness(world) {
+    // Track nearby teammates
+    this.nearbyTeammates = world.teammates.filter(t =>
+      t !== this && Math.hypot(this.x - t.x, this.y - t.y) < 50
+    );
+
+    // Track nearby opponents
+    this.nearbyOpponents = (world.opponents || []).filter(o =>
+      Math.hypot(this.x - o.x, this.y - o.y) < 50
+    );
+
+    // Update ball awareness
+    const ballDistance = Math.hypot(this.x - world.ball.x, this.y - world.ball.y);
+    this.ballAwareness = {
+      distance: ballDistance,
+      canReach: ballDistance < 15,
+      inRange: ballDistance < 30,
+      direction: Math.atan2(world.ball.y - this.y, world.ball.x - this.x)
+    };
+
+    // Track ball movement
+    if (this.lastBallPosition) {
+      this.ballMovement = {
+        x: world.ball.x - this.lastBallPosition.x,
+        y: world.ball.y - this.lastBallPosition.y
+      };
+    }
+    this.lastBallPosition = { x: world.ball.x, y: world.ball.y };
+  }
+
+  // Adjust positioning based on ball movement
+  adjustToBallMovement(world) {
+    if (!this.ballMovement) return;
+
+    const ballSpeed = Math.hypot(this.ballMovement.x, this.ballMovement.y);
+
+    if (ballSpeed > 2) { // Ball is moving significantly
+      // Predict ball future position
+      const predictionTime = 1.0; // 1 second ahead
+      const predictedBall = {
+        x: world.ball.x + this.ballMovement.x * predictionTime,
+        y: world.ball.y + this.ballMovement.y * predictionTime
+      };
+
+      // Adjust position to intercept or support based on role
+      const roleResponse = this.calculateRoleResponseToBallMovement(predictedBall, world);
+
+      // Apply small adjustment toward predicted position
+      const adjustmentStrength = 0.1;
+      this.targetX += roleResponse.x * adjustmentStrength;
+      this.targetY += roleResponse.y * adjustmentStrength;
+    }
+  }
+
+  // Calculate role-specific response to ball movement
+  calculateRoleResponseToBallMovement(predictedBall, world) {
+    const toPredicted = {
+      x: predictedBall.x - this.x,
+      y: predictedBall.y - this.y
+    };
+
+    // Role-based response intensity
+    const responseIntensity = {
+      'ST': 0.8, 'LS': 0.7, 'RS': 0.7,
+      'OM': 0.6, 'LF': 0.6, 'RF': 0.6,
+      'ZM': 0.4, 'LM': 0.5, 'RM': 0.5,
+      'DM': 0.3, 'IV': 0.2, 'LIV': 0.2, 'RIV': 0.2,
+      'LV': 0.3, 'RV': 0.3, 'TW': 0.1
+    };
+
+    const intensity = responseIntensity[this.role] || 0.4;
+
+    return {
+      x: toPredicted.x * intensity,
+      y: toPredicted.y * intensity
+    };
+  }
+
+  // Maintain optimal spacing from other players
+  maintainOptimalSpacing(world) {
+    let spacingAdjustment = { x: 0, y: 0 };
+
+    // Avoid clustering with teammates
+    this.nearbyTeammates.forEach(teammate => {
+      const distance = Math.hypot(this.x - teammate.x, this.y - teammate.y);
+      const minDistance = 18;
+
+      if (distance < minDistance && distance > 0) {
+        const separation = {
+          x: this.x - teammate.x,
+          y: this.y - teammate.y
+        };
+        const magnitude = Math.hypot(separation.x, separation.y);
+        const strength = (minDistance - distance) / minDistance * 2;
+
+        spacingAdjustment.x += (separation.x / magnitude) * strength;
+        spacingAdjustment.y += (separation.y / magnitude) * strength;
+      }
+    });
+
+    // Maintain pressure on nearby opponents
+    this.nearbyOpponents.forEach(opponent => {
+      const distance = Math.hypot(this.x - opponent.x, this.y - opponent.y);
+      const optimalDistance = 12; // Close enough to pressure, far enough to react
+
+      if (distance > 0) {
+        const toOpponent = {
+          x: opponent.x - this.x,
+          y: opponent.y - this.y
+        };
+        const magnitude = Math.hypot(toOpponent.x, toOpponent.y);
+
+        if (distance > optimalDistance + 5) {
+          // Move closer to apply pressure
+          const strength = 0.5;
+          spacingAdjustment.x += (toOpponent.x / magnitude) * strength;
+          spacingAdjustment.y += (toOpponent.y / magnitude) * strength;
+        } else if (distance < optimalDistance - 3) {
+          // Back off slightly to maintain reaction distance
+          const strength = 0.3;
+          spacingAdjustment.x -= (toOpponent.x / magnitude) * strength;
+          spacingAdjustment.y -= (toOpponent.y / magnitude) * strength;
+        }
+      }
+    });
+
+    // Apply spacing adjustments
+    this.targetX += spacingAdjustment.x;
+    this.targetY += spacingAdjustment.y;
+  }
+
+  // Adjust body orientation toward ball
+  adjustBodyOrientationToBall(ball) {
+    const ballAngle = Math.atan2(ball.y - this.y, ball.x - this.x) * 180 / Math.PI;
+
+    // Smooth turn toward ball
+    let angleDiff = ((ballAngle - this.bodyDirection + 540) % 360) - 180;
+    const maxTurn = 8; // degrees per update (smooth turning)
+
+    if (Math.abs(angleDiff) > maxTurn) {
+      this.bodyDirection += Math.sign(angleDiff) * maxTurn;
+    } else {
+      this.bodyDirection = ballAngle;
+    }
+
+    // Normalize angle
+    if (this.bodyDirection > 180) this.bodyDirection -= 360;
+    if (this.bodyDirection < -180) this.bodyDirection += 360;
   }
 
   // --- Movement & Perception ---
@@ -447,8 +624,148 @@ export class Player {
         this.phase = msg.phase;
         return false;
       }
+
+      // Enhanced coordination message processing
+      if (msg.type === "requestPass") {
+        this.handlePassRequest(msg);
+        return false;
+      }
+      if (msg.type === "supportAvailable") {
+        this.handleSupportAvailable(msg);
+        return false;
+      }
+      if (msg.type === "spaceCreated") {
+        this.handleSpaceCreated(msg);
+        return false;
+      }
+      if (msg.type === "overlapStarted") {
+        this.handleOverlapStarted(msg);
+        return false;
+      }
+      if (msg.type === "switchMark") {
+        this.handleMarkSwitch(msg);
+        return false;
+      }
+      if (msg.type === "offsideTrap") {
+        this.handleOffsideTrap(msg);
+        return false;
+      }
+      if (msg.type === "keeperOut") {
+        this.handleKeeperOut(msg);
+        return false;
+      }
+      if (msg.type === "shout") {
+        this.handleShout(msg);
+        return false;
+      }
+
       return true;
     });
+  }
+
+  // Enhanced message handlers for coordination
+  handlePassRequest(msg) {
+    if (!this.hasBall) return;
+
+    // Evaluate pass request and potentially execute
+    const passQuality = msg.quality || 0.5;
+    const urgency = msg.urgency || 0.5;
+
+    // Higher chance to pass if high quality/urgency and player is under pressure
+    const myPressure = this.calculateMyPressure();
+    const passChance = (passQuality * 0.4 + urgency * 0.3 + myPressure * 0.3);
+
+    if (Math.random() < passChance) {
+      this.pendingPassTarget = msg.target;
+      this.pendingPassUrgency = urgency;
+    }
+
+    console.log(`📞 PASS REQUEST: ${msg.target.role} requests pass (quality: ${(passQuality*100).toFixed(0)}%, urgency: ${(urgency*100).toFixed(0)}%)`);
+  }
+
+  handleSupportAvailable(msg) {
+    // Note available support option
+    this.availableSupport = {
+      player: msg.player,
+      position: msg.position,
+      timestamp: performance.now()
+    };
+
+    console.log(`🤝 SUPPORT: ${msg.player.role} available for support`);
+  }
+
+  handleSpaceCreated(msg) {
+    // Move into created space if beneficial
+    const spaceDistance = Math.hypot(this.x - msg.position.x, this.y - msg.position.y);
+
+    if (spaceDistance < 30 && this.currentAction === 'hold') {
+      this.targetX = msg.position.x;
+      this.targetY = msg.position.y;
+      this.currentAction = 'moveToSpace';
+    }
+
+    console.log(`🏃 SPACE: Moving to created space`);
+  }
+
+  handleOverlapStarted(msg) {
+    // Prepare for overlap pass
+    this.overlapTiming = msg.timing;
+    this.overlapRunner = msg.runner;
+
+    console.log(`🏃‍♂️ OVERLAP: ${msg.runner.role} starting overlap run`);
+  }
+
+  handleMarkSwitch(msg) {
+    // Switch marking assignment
+    this.markingTarget = msg.opponent;
+    this.markingReason = msg.reason;
+    this.currentAction = 'mark';
+
+    console.log(`🔄 MARK SWITCH: Now marking ${msg.opponent.role} (${msg.reason})`);
+  }
+
+  handleOffsideTrap(msg) {
+    // Coordinate offside trap
+    this.offsideTrapTiming = msg.timing;
+    this.offsideTrapCoordinator = msg.coordinator;
+
+    console.log(`🪤 OFFSIDE TRAP: Coordinated by ${msg.coordinator.role}`);
+  }
+
+  handleKeeperOut(msg) {
+    if (this.role !== 'TW') return;
+
+    // Goalkeeper decision to come out
+    if (msg.urgency > 0.7) {
+      this.currentAction = 'keeperOut';
+      this.targetX = this.x + (msg.situation === 'dangerous' ? 20 : 10);
+    }
+
+    console.log(`🥅 KEEPER: Coming out (${msg.situation})`);
+  }
+
+  handleShout(msg) {
+    // React to teammate shouts
+    this.lastShout = {
+      message: msg.message,
+      urgency: msg.urgency,
+      from: msg.from,
+      timestamp: msg.timestamp
+    };
+
+    // Adjust behavior based on shout urgency
+    if (msg.urgency > 0.8) {
+      this.reactionInterval = Math.max(100, this.reactionInterval * 0.7); // React faster
+    }
+
+    console.log(`📢 SHOUT: ${msg.message} (urgency: ${(msg.urgency*100).toFixed(0)}%)`);
+  }
+
+  // Calculate pressure on this player
+  calculateMyPressure() {
+    // This would be implemented based on nearby opponents
+    // For now, return a simple calculation
+    return Math.random() * 0.5; // Placeholder
   }
 
   updateHead(ball, dt = 0.016, world = null) {

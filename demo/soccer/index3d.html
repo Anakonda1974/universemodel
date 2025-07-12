@@ -218,8 +218,11 @@
     <!-- Quick Access Panel -->
     <div id="quickAccess" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.9); color: white; padding: 10px; border-radius: 8px; font-family: Arial, sans-serif; z-index: 1001;">
         <div style="font-weight: bold; margin-bottom: 10px;">🎮 Quick Controls</div>
+        <button id="toggleControlMode" style="margin: 2px; padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">🎮 Player Mode</button>
+        <br>
         <button id="toggleCameraPanel" style="margin: 2px; padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">📹 Camera</button>
         <button id="toggleGrassPanel" style="margin: 2px; padding: 5px 10px; background: #8BC34A; color: white; border: none; border-radius: 4px; cursor: pointer;">🌱 Grass</button>
+        <button id="toggleStadiumPanel" style="margin: 2px; padding: 5px 10px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer;">🏟️ Stadium</button>
         <button id="toggleDebugPanel" style="margin: 2px; padding: 5px 10px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer;">🔧 Debug</button>
         <button id="toggleGamePanel" style="margin: 2px; padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">⚽ Game</button>
     </div>
@@ -323,64 +326,17 @@
                     🔄 Reset All Wear
                 </button>
 
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #666;">
-                    <label>🏔️ Displacement Strength:</label>
-                    <input type="range" id="displacementStrength" min="0" max="3" step="0.1" value="1.5" style="width: 100%; margin: 5px 0;">
-                    <div style="font-size: 12px; color: #ccc;">Current: <span id="displacementValue">1.5</span></div>
 
-                    <label>🌱 Grass Height:</label>
-                    <input type="range" id="grassHeight" min="0.05" max="0.5" step="0.01" value="0.15" style="width: 100%; margin: 5px 0;">
-                    <div style="font-size: 12px; color: #ccc;">Current: <span id="grassHeightValue">0.15m</span></div>
 
-                    <label>🌾 Global Grass Density:</label>
-                    <input type="range" id="grassDensity" min="0.1" max="2.0" step="0.1" value="1.0" style="width: 100%; margin: 5px 0;">
-                    <div style="font-size: 12px; color: #ccc;">Current: <span id="grassDensityValue">1.0x</span></div>
-
-                    <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                        <label style="font-weight: bold;">🎯 LOD Level Densities:</label>
-
-                        <label>LOD 0 (Close 0-15m):</label>
-                        <input type="range" id="lodDensity0" min="0.1" max="2.0" step="0.1" value="1.0" style="width: 100%; margin: 5px 0;">
-                        <div style="font-size: 12px; color: #ccc;">Current: <span id="lodDensity0Value">1.0x</span></div>
-
-                        <label>LOD 1 (Medium 15-30m):</label>
-                        <input type="range" id="lodDensity1" min="0.1" max="2.0" step="0.1" value="0.8" style="width: 100%; margin: 5px 0;">
-                        <div style="font-size: 12px; color: #ccc;">Current: <span id="lodDensity1Value">0.8x</span></div>
-
-                        <label>LOD 2 (Far 30-60m):</label>
-                        <input type="range" id="lodDensity2" min="0.1" max="2.0" step="0.1" value="0.6" style="width: 100%; margin: 5px 0;">
-                        <div style="font-size: 12px; color: #ccc;">Current: <span id="lodDensity2Value">0.6x</span></div>
-
-                        <label>LOD 3 (Very Far 60-120m):</label>
-                        <input type="range" id="lodDensity3" min="0.1" max="2.0" step="0.1" value="0.4" style="width: 100%; margin: 5px 0;">
-                        <div style="font-size: 12px; color: #ccc;">Current: <span id="lodDensity3Value">0.4x</span></div>
-
-                        <label>LOD 4 (Distant 120m+):</label>
-                        <input type="range" id="lodDensity4" min="0.1" max="2.0" step="0.1" value="0.2" style="width: 100%; margin: 5px 0;">
-                        <div style="font-size: 12px; color: #ccc;">Current: <span id="lodDensity4Value">0.2x</span></div>
-                    </div>
-
-                    <label>
-                        <input type="checkbox" id="showWireframe" style="margin-right: 5px;"> 🔲 Show Wireframe
-                    </label></div>
-
-                    <button id="debugGrassInfo" style="width: 100%; padding: 8px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 10px;">
-                        🔍 Debug Grass Info
-                    </button>
-
-                    <button id="testWearPattern" style="width: 100%; padding: 8px; background: #8BC34A; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
-                        🌿 Test Wear Pattern
-                    </button>
-
-                    <button id="toggleDebugHelpers" style="width: 100%; padding: 8px; background: #607D8B; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
-                        🔍 Toggle Debug Helpers
+                    <button id="forceAllChunks" style="width: 100%; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 10px;">
+                        🌾 Ensure All Grass Visible
                     </button>
                 </div>
             </div>
         </details>
 
         <details>
-            <summary>🎥 Camera & Visual Settings</summary>
+            <summary>🎥 Camera Settings</summary>
             <div style="margin: 10px 0;">
                 <label>Camera Mode:</label>
                 <select id="cameraMode">
@@ -411,6 +367,121 @@
                 <label>
                     <input type="checkbox" id="autoFocus"> Auto Focus on Ball
                 </label>
+
+                <div style="margin-top: 15px; padding: 10px; background: rgba(76, 175, 80, 0.1); border-radius: 5px;">
+                    <div style="font-weight: bold; margin-bottom: 10px;">🎮 Navigation Controls</div>
+                    <div style="font-size: 12px; color: #ccc; margin-bottom: 10px;">
+                        Click on the 3D scene to activate navigation mode
+                    </div>
+
+                    <label>Move Speed: <span id="navSpeedValue">50</span></label>
+                    <input type="range" id="navSpeed" min="10" max="200" value="50" style="width: 100%; margin: 5px 0;">
+
+                    <label>Look Sensitivity: <span id="lookSensitivityValue">0.002</span></label>
+                    <input type="range" id="lookSensitivity" min="0.001" max="0.01" step="0.001" value="0.002" style="width: 100%; margin: 5px 0;">
+
+                    <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
+                        <strong>Controls:</strong> WASD (move), QE (up/down), Mouse (look), ESC (exit)
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <details>
+            <summary>🌱 Grass Settings</summary>
+            <div style="margin: 10px 0;">
+                <div style="margin-bottom: 15px;">
+                    <label>🏔️ Displacement Strength:</label>
+                    <input type="range" id="displacementStrength" min="0" max="2" step="0.1" value="0.5" style="width: 100%; margin: 5px 0;">
+                    <div style="font-size: 12px; color: #ccc;">Current: <span id="displacementValue">0.5</span></div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>🌱 Grass Height:</label>
+                    <input type="range" id="grassHeight" min="0.05" max="0.5" step="0.01" value="0.15" style="width: 100%; margin: 5px 0;">
+                    <div style="font-size: 12px; color: #ccc;">Current: <span id="grassHeightValue">0.15m</span></div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>🌾 Grass Density:</label>
+                    <input type="range" id="grassDensity" min="1.0" max="3.0" step="0.1" value="2.0" style="width: 100%; margin: 5px 0;">
+                    <div style="font-size: 12px; color: #ccc;">Current: <span id="grassDensityValue">2.0x</span> (Minimum 2000 blades guaranteed)</div>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <label>
+                        <input type="checkbox" id="showWireframe" style="margin-right: 5px;"> 🔲 Show Wireframe
+                    </label>
+                </div>
+            </div>
+        </details>
+
+        <details>
+            <summary>🏟️ Stadium Environment</summary>
+            <div style="margin: 10px 0;">
+                <div style="margin-bottom: 15px;">
+                    <label>🕐 Time of Day:</label>
+                    <input type="range" id="timeOfDay" min="0" max="24" step="0.5" value="14" style="width: 100%; margin: 5px 0;">
+                    <div style="font-size: 12px; color: #ccc;">Current: <span id="timeOfDayValue">14:00</span></div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>🌦️ Weather:</label>
+                    <select id="weatherType" style="width: 100%; margin: 5px 0; padding: 5px;">
+                        <option value="clear">☀️ Clear</option>
+                        <option value="cloudy">⛅ Cloudy</option>
+                        <option value="overcast">☁️ Overcast</option>
+                        <option value="rain">🌧️ Rain</option>
+                        <option value="storm">⛈️ Storm</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>🌪️ Weather Intensity:</label>
+                    <input type="range" id="weatherIntensity" min="0" max="1" step="0.1" value="0.2" style="width: 100%; margin: 5px 0;">
+                    <div style="font-size: 12px; color: #ccc;">Current: <span id="weatherIntensityValue">0.2</span></div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>
+                        <input type="checkbox" id="stadiumLights" style="margin-right: 5px;"> 💡 Stadium Lights
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>🔆 Floodlight Intensity:</label>
+                    <input type="range" id="floodlightIntensity" min="0" max="2" step="0.1" value="0.8" style="width: 100%; margin: 5px 0;">
+                    <div style="font-size: 12px; color: #ccc;">Current: <span id="floodlightIntensityValue">0.8</span></div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>🎨 Floodlight Color:</label>
+                    <select id="floodlightColor" style="width: 100%; margin: 5px 0; padding: 5px;">
+                        <option value="0xffffff">⚪ White</option>
+                        <option value="0xfff8dc">🟡 Warm White</option>
+                        <option value="0x87ceeb">🔵 Cool Blue</option>
+                        <option value="0xffd700">🟨 Golden</option>
+                        <option value="0xff6347">🔴 Warm Orange</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>🏟️ Stadium Style:</label>
+                    <select id="stadiumStyle" style="width: 100%; margin: 5px 0; padding: 5px;">
+                        <option value="modern">🏢 Modern</option>
+                        <option value="classic">🏛️ Classic</option>
+                        <option value="bowl">🥣 Bowl</option>
+                        <option value="arena">🏟️ Arena</option>
+                    </select>
+                </div>
+
+                <button id="debugStadiumInfo" style="width: 100%; padding: 8px; background: #2196F3; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 10px;">
+                    🔍 Debug Stadium Info
+                </button>
+
+                <button id="validateFIFACompliance" style="width: 100%; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;">
+                    ⚽ FIFA Compliance Check
+                </button>
             </div>
         </details>
 
